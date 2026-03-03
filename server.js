@@ -275,39 +275,103 @@ app.post("/guardar", (req, res) => {
 
 // ================= RELATÓRIO =================
 
-app.get("/relatorio", (req, res) => {
+res.send(`
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+    font-family: Arial;
+    padding: 15px;
+    background: #0f172a;
+    color: white;
+}
 
-    const registos = readData();
+h2 {
+    text-align: center;
+}
 
-    let lista = registos.map(r => `
-        <tr>
-            <td>${r.tipo}</td>
-            <td>${r.fornecedor}</td>
-            <td>${r.valor} €</td>
-            <td>${r.data}</td>
-            <td><a href="${r.ficheiro}" target="_blank">Abrir</a></td>
-        </tr>
-    `).join("");
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
 
-    res.send(`
-    <html>
-    <body style="font-family:Arial;padding:20px;">
-    <h2>Relatório</h2>
-    <table border="1" cellpadding="5">
-    <tr>
-        <th>Tipo</th>
-        <th>Fornecedor</th>
-        <th>Valor</th>
-        <th>Data</th>
-        <th>Documento</th>
-    </tr>
-    ${lista}
-    </table>
-    <br><a href="/">Voltar</a>
-    </body>
-    </html>
-    `);
-});
+th, td {
+    padding: 10px;
+    border: 1px solid #334155;
+    text-align: left;
+}
+
+th {
+    background: #1e293b;
+}
+
+a {
+    color: #60a5fa;
+}
+
+button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 20px;
+    border-radius: 10px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    font-weight: bold;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+
+    table, thead, tbody, th, td, tr {
+        display: block;
+    }
+
+    tr {
+        margin-bottom: 15px;
+        background: #1e293b;
+        padding: 10px;
+        border-radius: 12px;
+    }
+
+    th {
+        display: none;
+    }
+
+    td {
+        border: none;
+        padding: 6px 0;
+    }
+
+    td:before {
+        font-weight: bold;
+        display: block;
+    }
+}
+</style>
+</head>
+
+<body>
+<h2>Relatório</h2>
+
+<table>
+<tr>
+    <th>Tipo</th>
+    <th>Fornecedor</th>
+    <th>Valor</th>
+    <th>Data</th>
+    <th>Documento</th>
+</tr>
+${lista}
+</table>
+
+<a href="/"><button>Voltar</button></a>
+
+</body>
+</html>
+`):
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
