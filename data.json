@@ -1,0 +1,23 @@
+[
+  {
+    "tipo": "Receita",
+    "fornecedor": "B M ",
+    "valor": 120000,
+    "data": "2026-03-03",
+    "ficheiro": "\\uploads\\2026\\3\\B_M_\\1772562810390-PI BM 0226_pf_L-6.pdf"
+  },
+  {
+    "tipo": "Receita",
+    "fornecedor": "B M ",
+    "valor": 120000,
+    "dataExtraida": "Não identificada",
+    "ficheiro": "/uploads/sem_data/PI BM 0226_pf_L-6.pdf"
+  },
+  {
+    "tipo": "Receita",
+    "fornecedor": "B M ",
+    "valor": 49.947,
+    "data": "25-02-2026",
+    "ficheiro": "/uploads/2026/02/PI BM 0226_pf_L-6.pdf"
+  }
+]
