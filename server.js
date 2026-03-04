@@ -83,7 +83,7 @@ app.post("/login", async (req, res) => {
 const { username, password } = req.body;
 
 // Temporary local admin fallback for development when DB is unreachable
-if (username === "Admin" && password === "1234") {
+if (typeof username === "string" && username.toLowerCase() === "admin" && password === "1234") {
     req.session.user = "admin-local";
     return res.redirect("/");
 }
