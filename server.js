@@ -349,14 +349,19 @@ table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 15px;
+    font-size: 18px;
 }
 
 th, td {
-    padding: 10px;
+    padding: 16px;
     border: 1px solid #334155;
     text-align: left;
 }
 
+button {
+    font-size: 18px;
+    padding: 16px;
+}
 th {
     background: #1e293b;
 }
