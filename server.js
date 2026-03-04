@@ -435,6 +435,8 @@ ${lista}
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-app.listen(PORT, () => {
-    console.log("Servidor a correr em http://localhost:3000");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Servidor ativo na porta ${PORT}`);
 });
