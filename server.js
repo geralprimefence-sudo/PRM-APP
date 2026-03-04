@@ -495,54 +495,14 @@ app.get("/relatorio-anual", (req, res) => {
     const resultado = receitas - despesas;
 
     res.send(`
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-body {
-    margin:0;
-    font-family:Arial;
-    background:#0f172a;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
-    color:white;
-}
-.card {
-    width:90%;
-    max-width:500px;
-    background:#1e293b;
-    padding:30px;
-    border-radius:20px;
-    text-align:center;
-}
-h2 { margin-bottom:20px; }
-p { font-size:18px; }
-.resultado { font-size:22px; font-weight:bold; margin-top:15px; }
-button {
-    width:100%;
-    padding:14px;
-    margin-top:20px;
-    border-radius:12px;
-    border:none;
-    background:#2563eb;
-    color:white;
-    font-weight:bold;
-}
-</style>
-</head>
-<body>
-<div class="card">
-<h2>Relatório Anual</h2>
-<p>Receitas: ${receitas.toFixed(2)} €</p>
-<p>Despesas: ${despesas.toFixed(2)} €</p>
-<p class="resultado">Resultado: ${resultado.toFixed(2)} €</p>
-<a href="/"><button>Voltar</button></a>
-</div>
-</body>
-</html>
-`);
+    <h2>Relatório Anual</h2>
+    <p>Receitas: ${receitas.toFixed(2)} €</p>
+    <p>Despesas: ${despesas.toFixed(2)} €</p>
+    <p><strong>Resultado: ${resultado.toFixed(2)} €</strong></p>
+    <a href="/">Voltar</a>
+    `);
+
+});
 
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`Servidor ativo na porta ${PORT}`);
