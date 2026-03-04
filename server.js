@@ -65,9 +65,32 @@ function extractValue(text) {
 
 // ================= LOGIN =================
 
-const users = [
-    { username: "admin", password: bcrypt.hashSync("1234", 10) }
-];
+app.post("/login", async (req, res) => {
+
+const { username, password } = req.body;
+
+const result = await pool.query(
+"SELECT * FROM users WHERE username=$1",
+[username]
+);
+
+if (result.rows.length === 0) {
+return res.send("Utilizador não existe");
+}
+
+const user = result.rows[0];
+
+const valid = await bcrypt.compare(password, user.password);
+
+if (!valid) {
+return res.send("Password errada");
+}
+
+req.session.user = user.id;
+
+res.redirect("/");
+
+});
 
 app.get("/", (req, res) => {
 
@@ -206,21 +229,7 @@ img {
         </div>
     </div>
 
-    <h3>Novo Registo</h3>
-
-    <form method="POST" action="/analisar" enctype="multipart/form-data">
-    <select name="tipo" required>
-        <option value="">Selecionar Tipo</option>
-        <option value="Despesa">Despesa</option>
-        <option value="Receita">Receita</option>
-    </select>
-
-    <input type="text" name="fornecedor" placeholder="Fornecedor" required>
-
-    <input type="file" name="ficheiro" accept="image/*,application/pdf" capture="environment" required>
-
-    <button class="save">Analisar Documento</button>
-    </form>
+   <a href="/novo"><button class="save">Novo Registo</button></a>
 
     <a href="/relatorio"><button class="report">Ver Relatório</button></a>
     <a href="/logout"><button class="logout">Sair</button></a>
@@ -232,6 +241,21 @@ img {
 });
 
 // ================= LOGIN POST =================
+
+app.post("/register", async (req, res) => {
+
+const { username, password } = req.body;
+
+const hash = await bcrypt.hash(password, 10);
+
+await pool.query(
+"INSERT INTO users (username, password) VALUES ($1,$2)",
+[username, hash]
+);
+
+res.send("Utilizador criado");
+
+});
 
 app.post("/login", async (req, res) => {
     const { username, password } = req.body;
@@ -321,13 +345,17 @@ app.post("/guardar", (req, res) => {
 
     const registos = readData();
 
-    registos.push({
-        tipo: req.body.tipo,
-        fornecedor: req.body.fornecedor,
-        valor: parseFloat(req.body.valor),
-        data: req.body.data,
-        ficheiro: "/" + newPath.replace(/\\/g, "/")
-    });
+   await pool.query(
+"INSERT INTO registos (user_id,tipo,fornecedor,valor,data,ficheiro) VALUES ($1,$2,$3,$4,$5,$6)",
+[
+req.session.user,
+req.body.tipo,
+req.body.fornecedor,
+parseFloat(req.body.valor),
+req.body.data,
+"/" + newPath.replace(/\\/g,"/")
+]
+);
 
     saveData(registos);
 
@@ -338,7 +366,12 @@ app.post("/guardar", (req, res) => {
 
 app.get("/relatorio", (req, res) => {
 
-    const registos = readData();
+  const result = await pool.query(
+"SELECT * FROM registos WHERE user_id=$1",
+[req.session.user]
+);
+
+const registos = result.rows;
 
     let lista = registos.map(r => `
         <tr>
