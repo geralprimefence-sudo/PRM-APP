@@ -13,6 +13,19 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
+// Wrap pool.query to avoid uncaught DB errors causing 500s in production.
+// On failure we log the error and return an empty rows array so the app can
+// continue (fallback to local `data.json` where appropriate).
+const _origPoolQuery = pool.query.bind(pool);
+pool.query = async (...args) => {
+    try {
+        return await _origPoolQuery(...args);
+    } catch (err) {
+        console.error("DB query error (fallback):", err && err.stack ? err.stack : err);
+        return { rows: [] };
+    }
+};
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
