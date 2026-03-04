@@ -65,7 +65,7 @@ const users = [
 
 app.get("/", (req, res) => {
 
-   (!req.session.user) {
+   if (!req.session.user) {
  return res.send(`
 <!DOCTYPE html>
 <html>
@@ -330,108 +330,67 @@ app.post("/guardar", (req, res) => {
 
 // ================= RELATÓRIO =================
 
-res.send(`
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-body {
-    font-family: Arial;
-    padding: 15px;
-    background: #0f172a;
-    color: white;
-}
+app.get("/relatorio", (req, res) => {
 
-h2 {
-    text-align: center;
-}
+    const registos = readData();
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-    font-size: 18px;
-}
+    let lista = registos.map(r => `
+        <tr>
+            <td>${r.tipo}</td>
+            <td>${r.fornecedor}</td>
+            <td>${r.valor} €</td>
+            <td>${r.data}</td>
+            <td><a href="${r.ficheiro}" target="_blank">Abrir</a></td>
+        </tr>
+    `).join("");
 
-th, td {
-    padding: 16px;
-    border: 1px solid #334155;
-    text-align: left;
-}
+    res.send(`
+    <html>
+    <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+    body { font-family: Arial; padding: 15px; background: #0f172a; color: white; font-size: 18px; }
 
-button {
-    font-size: 18px;
-    padding: 16px;
-}
-th {
-    background: #1e293b;
-}
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
 
-a {
-    color: #60a5fa;
-}
+    th, td { padding: 14px; border: 1px solid #334155; text-align: left; }
 
-button {
-    width: 100%;
-    padding: 14px;
-    margin-top: 20px;
-    border-radius: 10px;
-    border: none;
-    background: #2563eb;
-    color: white;
-    font-weight: bold;
-}
+    th { background: #1e293b; }
 
-/* MOBILE */
-@media (max-width: 768px) {
-
-    table, thead, tbody, th, td, tr {
-        display: block;
-    }
-
-    tr {
-        margin-bottom: 15px;
-        background: #1e293b;
-        padding: 10px;
-        border-radius: 12px;
-    }
-
-    th {
-        display: none;
-    }
-
-    td {
+    button {
+        width: 100%;
+        padding: 16px;
+        margin-top: 20px;
+        border-radius: 10px;
         border: none;
-        padding: 6px 0;
-    }
-
-    td:before {
+        background: #2563eb;
+        color: white;
+        font-size: 18px;
         font-weight: bold;
-        display: block;
     }
-}
-</style>
-</head>
+    </style>
+    </head>
 
-<body>
-<h2>Relatório</h2>
+    <body>
+    <h2>Relatório</h2>
 
-<table>
-<tr>
-    <th>Tipo</th>
-    <th>Fornecedor</th>
-    <th>Valor</th>
-    <th>Data</th>
-    <th>Documento</th>
-</tr>
-${lista}
-</table>
+    <table>
+    <tr>
+        <th>Tipo</th>
+        <th>Fornecedor</th>
+        <th>Valor</th>
+        <th>Data</th>
+        <th>Documento</th>
+    </tr>
+    ${lista}
+    </table>
 
-<a href="/"><button>Voltar</button></a>
+    <a href="/"><button>Voltar</button></a>
 
-</body>
-</html>
-`):
+    </body>
+    </html>
+    `);
+});
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
