@@ -65,73 +65,74 @@ const users = [
 
 app.get("/", (req, res) => {
 
-    if (!req.session.user) {
-    return res.send(`
-    <html>
-    <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-    body {
-        font-family: Arial;
-        background:#0f172a;
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        height:100vh;
-        margin:0;
-        color:white;
-    }
+   (!req.session.user) {
+ return res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+    margin:0;
+    font-family:Arial;
+    background:#0f172a;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    color:white;
+}
 
-    .login-box {
-        background:#1e293b;
-        padding:40px;
-        border-radius:20px;
-        width:90%;
-        max-width:400px;
-        text-align:center;
-    }
+.box {
+    width:90%;
+    max-width:400px;
+    background:#1e293b;
+    padding:30px;
+    border-radius:20px;
+    text-align:center;
+}
 
-    input {
-        width:100%;
-        padding:15px;
-        margin-top:15px;
-        border-radius:10px;
-        border:none;
-        font-size:16px;
-    }
+input {
+    width:100%;
+    padding:15px;
+    margin-top:15px;
+    font-size:18px;
+    border-radius:10px;
+    border:none;
+}
 
-    button {
-        width:100%;
-        padding:15px;
-        margin-top:20px;
-        border-radius:12px;
-        border:none;
-        background:#16a34a;
-        color:white;
-        font-size:16px;
-        font-weight:bold;
-        cursor:pointer;
-    }
+button {
+    width:100%;
+    padding:15px;
+    margin-top:20px;
+    font-size:18px;
+    border-radius:12px;
+    border:none;
+    background:#16a34a;
+    color:white;
+    font-weight:bold;
+}
 
-    img {
-        max-width:120px;
-        margin-bottom:20px;
-    }
-    </style>
-    </head>
+img {
+    max-width:120px;
+    margin-bottom:20px;
+}
+</style>
+</head>
 
-    <body>
-        <div class="login-box">
-            <img src="/logo.png">
-            <form method="POST" action="/login">
-                <input name="username" placeholder="Utilizador" required>
-                <input type="password" name="password" placeholder="Password" required>
-                <button>Entrar</button>
-            </form>
-        </div>
-    </body>
-    </html>
-    `);
+<body>
+<div class="box">
+    <img src="/logo.png">
+    <form method="POST" action="/login">
+        <input name="username" placeholder="Utilizador" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button>Entrar</button>
+    </form>
+</div>
+</body>
+</html>
+`);
+
 }
 
     const registos = readData();
