@@ -6,6 +6,12 @@ const fs = require("fs");
 const path = require("path");
 const pdfParse = require("pdf-parse");
 const Tesseract = require("tesseract.js");
+const { Pool } = require("pg");
+
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -393,6 +399,150 @@ app.get("/relatorio", (req, res) => {
 });
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+app.get("/relatorio-mensal", (req, res) => {
+
+    const registos = readData();
+    const agora = new Date();
+    const mesAtual = agora.getMonth() + 1;
+    const anoAtual = agora.getFullYear();
+
+    let receitas = 0;
+    let despesas = 0;
+
+    registos.forEach(r => {
+        if (!r.data) return;
+
+        const partes = r.data.replace(/-/g,"/").split("/");
+        const ano = parseInt(partes[2] || partes[0]);
+        const mes = parseInt(partes[1]);
+
+        if (ano === anoAtual && mes === mesAtual) {
+            if (r.tipo === "Receita") receitas += r.valor;
+            if (r.tipo === "Despesa") despesas += r.valor;
+        }
+    });
+
+    const resultado = receitas - despesas;
+
+    res.send(`
+    <h2>Relatório Mensal</h2>
+    <p>Receitas: ${receitas.toFixed(2)} €</p>
+    <p>Despesas: ${despesas.toFixed(2)} €</p>
+    <p><strong>Resultado: ${resultado.toFixed(2)} €</strong></p>
+    <a href="/">Voltar</a>
+    `);
+});
+
+app.get("/relatorio-trimestral", (req, res) => {
+
+    const registos = readData();
+    const agora = new Date();
+    const anoAtual = agora.getFullYear();
+    const mesAtual = agora.getMonth() + 1;
+
+    const trimestre = Math.ceil(mesAtual / 3);
+
+    let receitas = 0;
+    let despesas = 0;
+
+    registos.forEach(r => {
+        if (!r.data) return;
+
+        const partes = r.data.replace(/-/g,"/").split("/");
+        const ano = parseInt(partes[2] || partes[0]);
+        const mes = parseInt(partes[1]);
+
+        const trimestreReg = Math.ceil(mes / 3);
+
+        if (ano === anoAtual && trimestreReg === trimestre) {
+            if (r.tipo === "Receita") receitas += r.valor;
+            if (r.tipo === "Despesa") despesas += r.valor;
+        }
+    });
+
+    const resultado = receitas - despesas;
+
+    res.send(`
+    <h2>Relatório Trimestral</h2>
+    <p>Receitas: ${receitas.toFixed(2)} €</p>
+    <p>Despesas: ${despesas.toFixed(2)} €</p>
+    <p><strong>Resultado: ${resultado.toFixed(2)} €</strong></p>
+    <a href="/">Voltar</a>
+    `);
+});
+
+app.get("/relatorio-anual", (req, res) => {
+
+    const registos = readData();
+    const anoAtual = new Date().getFullYear();
+
+    let receitas = 0;
+    let despesas = 0;
+
+    registos.forEach(r => {
+        if (!r.data) return;
+
+        const partes = r.data.replace(/-/g,"/").split("/");
+        const ano = parseInt(partes[2] || partes[0]);
+
+        if (ano === anoAtual) {
+            if (r.tipo === "Receita") receitas += r.valor;
+            if (r.tipo === "Despesa") despesas += r.valor;
+        }
+    });
+
+    const resultado = receitas - despesas;
+
+    res.send(`
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+    margin:0;
+    font-family:Arial;
+    background:#0f172a;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    color:white;
+}
+.card {
+    width:90%;
+    max-width:500px;
+    background:#1e293b;
+    padding:30px;
+    border-radius:20px;
+    text-align:center;
+}
+h2 { margin-bottom:20px; }
+p { font-size:18px; }
+.resultado { font-size:22px; font-weight:bold; margin-top:15px; }
+button {
+    width:100%;
+    padding:14px;
+    margin-top:20px;
+    border-radius:12px;
+    border:none;
+    background:#2563eb;
+    color:white;
+    font-weight:bold;
+}
+</style>
+</head>
+<body>
+<div class="card">
+<h2>Relatório Anual</h2>
+<p>Receitas: ${receitas.toFixed(2)} €</p>
+<p>Despesas: ${despesas.toFixed(2)} €</p>
+<p class="resultado">Resultado: ${resultado.toFixed(2)} €</p>
+<a href="/"><button>Voltar</button></a>
+</div>
+</body>
+</html>
+`);
 
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`Servidor ativo na porta ${PORT}`);
