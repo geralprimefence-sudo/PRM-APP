@@ -51,6 +51,13 @@ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 `)
 
+INSERT INTO users (username, password)
+SELECT 'admin', '$2b$10$8z5zP7VYjv8x9b8n1s3q8eYvK4G1QY4ZQY0p8X0bV1p1Y7J2F4VqS'
+WHERE NOT EXISTS (
+  SELECT 1 FROM users WHERE username='admin'
+)
+`)
+
 console.log("Tabelas verificadas")
 
 }
