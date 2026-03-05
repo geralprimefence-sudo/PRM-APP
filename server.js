@@ -1,625 +1,333 @@
-const express = require("express");
-const multer = require("multer");
-const session = require("express-session");
-const bcrypt = require("bcrypt");
-const fs = require("fs");
-const path = require("path");
-const pdfParse = require("pdf-parse");
-const Tesseract = require("tesseract.js");
-const { Pool } = require("pg");
+require("dotenv").config()
 
+const express = require("express")
+const multer = require("multer")
+const session = require("express-session")
+const bcrypt = require("bcrypt")
+const fs = require("fs")
+const path = require("path")
+const pdfParse = require("pdf-parse")
+const Tesseract = require("tesseract.js")
+const { Pool } = require("pg")
+
+const app = express()
+const PORT = process.env.PORT || 3000
+
+app.use(express.urlencoded({ extended: true }))
+app.use(express.json())
+
+app.use(express.static("public"))
+
+
+// DATABASE
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-});
+connectionString: process.env.DATABASE_URL,
+ssl:{rejectUnauthorized:false}
+})
 
-// Wrap pool.query to avoid uncaught DB errors causing 500s in production.
-// On failure we log the error and return an empty rows array so the app can
-// continue (fallback to local `data.json` where appropriate).
-const _origPoolQuery = pool.query.bind(pool);
-pool.query = async (...args) => {
-    try {
-        return await _origPoolQuery(...args);
-    } catch (err) {
-        console.error("DB query error (fallback):", err && err.stack ? err.stack : err);
-        return { rows: [] };
-    }
-};
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+// CRIAR TABELAS AUTOMATICAMENTE
+async function criarTabelas(){
 
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use(express.static("public"));
+await pool.query(`
+CREATE TABLE IF NOT EXISTS users(
+id SERIAL PRIMARY KEY,
+username TEXT UNIQUE NOT NULL,
+password TEXT NOT NULL,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+`)
+
+await pool.query(`
+CREATE TABLE IF NOT EXISTS registos(
+id SERIAL PRIMARY KEY,
+user_id INTEGER,
+tipo TEXT,
+fornecedor TEXT,
+valor NUMERIC,
+data DATE,
+ficheiro TEXT,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+`)
+
+console.log("Tabelas verificadas")
+
+}
+
+criarTabelas()
+
+
+// MIDDLEWARE
+app.use(express.urlencoded({extended:true}))
+app.use(express.json())
+
+app.use(express.static("public"))
+
+app.get("/login", (req, res) => {
+res.sendFile(__dirname + "/public/login.html")
+})
 
 app.use(session({
-    secret: "segredo_simples",
-    resave: false,
-    saveUninitialized: false
-}));
+secret:"prm-secret",
+resave:false,
+saveUninitialized:false
+}))
 
-// ================= BASE DADOS =================
 
-const dataFile = path.join(__dirname, "data.json");
 
-if (!fs.existsSync(dataFile)) {
-    fs.writeFileSync(dataFile, JSON.stringify([]));
+// UPLOAD
+const storage = multer.diskStorage({
+
+destination:"uploads",
+
+filename:(req,file,cb)=>{
+cb(null,Date.now()+"-"+file.originalname)
 }
 
-function readData() {
-    return JSON.parse(fs.readFileSync(dataFile));
+})
+
+const upload = multer({storage})
+
+
+
+
+// AUTH
+function auth(req,res,next){
+
+if(!req.session.userId){
+
+return res.redirect("/login")
+
 }
 
-function saveData(data) {
-    fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
+next()
+
 }
 
-// ================= EXTRAÇÃO =================
 
-function extractDate(text) {
-    const regex = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})|(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/g;
-    const match = text.match(regex);
-    return match ? match[0] : "";
+
+// OCR
+async function extrairTexto(file){
+
+const ext = path.extname(file).toLowerCase()
+
+if(ext==".pdf"){
+
+const dataBuffer = fs.readFileSync(file)
+
+const data = await pdfParse(dataBuffer)
+
+return data.text
+
 }
 
-function extractValue(text) {
-    const regex = /\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})/g;
-    const matches = text.match(regex);
-    if (!matches) return "";
+const result = await Tesseract.recognize(file,"por")
 
-    let values = matches.map(v =>
-        parseFloat(v.replace(/\./g, "").replace(",", "."))
-    ).filter(v => !isNaN(v));
+return result.data.text
 
-    if (values.length === 0) return "";
-    return Math.max(...values).toFixed(2);
 }
 
-// ================= LOGIN =================
 
-app.post("/login", async (req, res) => {
 
-const { username, password } = req.body;
+// PARSER VALOR
+function extrairValor(texto){
 
-// Temporary local admin fallback for development when DB is unreachable
-if (typeof username === "string" && username.toLowerCase() === "admin" && password === "1234") {
-    req.session.user = "admin-local";
-    return res.redirect("/");
+const regex = /(\d+[.,]\d{2})/g
+
+const valores = texto.match(regex)
+
+if(!valores) return 0
+
+return parseFloat(valores[valores.length-1].replace(",","."))
 }
+
+
+
+
+// ROTAS
+
+app.get("/login",(req,res)=>{
+res.sendFile(path.join(__dirname,"public/login.html"))
+})
+
+
+app.get("/register",(req,res)=>{
+res.sendFile(path.join(__dirname,"public/register.html"))
+})
+
+
+app.get("/dashboard",auth,(req,res)=>{
+res.sendFile(path.join(__dirname,"public/dashboard.html"))
+})
+
+
+app.get("/relatorio",auth,(req,res)=>{
+res.sendFile(path.join(__dirname,"public/relatorio.html"))
+})
+
+
+
+// LOGIN
+app.post("/login",async(req,res)=>{
+
+const {username,password} = req.body
 
 const result = await pool.query(
 "SELECT * FROM users WHERE username=$1",
 [username]
-);
+)
 
-if (result.rows.length === 0) {
-    return res.send("Utilizador não existe");
-}
+if(result.rows.length===0){
 
-const user = result.rows[0];
-
-const valid = await bcrypt.compare(password, user.password);
-
-if (!valid) {
-    return res.send("Password errada");
-}
-
-req.session.user = user.id;
-
-res.redirect("/");
-
-});
-
-app.get("/", (req, res) => {
-
-   if (!req.session.user) {
- return res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-body {
-    margin:0;
-    font-family:Arial;
-    background: red;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
-    color:white;
-}
-
-.box {
-    width:90%;
-    max-width:400px;
-    background: rgba(30,41,59,0.85);
-    padding:30px;
-    border-radius:20px;
-    text-align:center;
-}
-
-input {
-    width:100%;
-    padding:15px;
-    margin-top:15px;
-    font-size:18px;
-    border-radius:10px;
-    border:none;
-}
-
-button {
-    width:100%;
-    padding:15px;
-    margin-top:20px;
-    font-size:18px;
-    border-radius:12px;
-    border:none;
-    background:#16a34a;
-    color:white;
-    font-weight:bold;
-}
-
-img {
-    max-width:300px;
-    margin-bottom:20px;
-}
-</style>
-</head>
-
-<body>
-<div class="box">
-    <img src="/logo.png">
-    <form method="POST" action="/login">
-        <input name="username" placeholder="Utilizador" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <button>Entrar</button>
-    </form>
-</div>
-</body>
-</html>
-`);
+return res.send("Utilizador não encontrado")
 
 }
 
-    const registos = readData();
+const user = result.rows[0]
 
-    const agora = new Date();
-    const mesAtual = agora.getMonth() + 1;
-    const anoAtual = agora.getFullYear();
+const valid = await bcrypt.compare(password,user.password)
 
-    let receitasMes = 0;
-    let despesasMes = 0;
+if(!valid){
 
-    registos.forEach(r => {
-        if (!r.data) return;
+return res.send("Password errada")
 
-        const partes = r.data.replace(/-/g,"/").split("/");
-        let ano = partes[2] || partes[0];
-        let mes = partes[1];
+}
 
-        if (parseInt(ano) === anoAtual && parseInt(mes) === mesAtual) {
-            if (r.tipo === "Receita") receitasMes += r.valor;
-            if (r.tipo === "Despesa") despesasMes += r.valor;
-        }
-    });
+req.session.userId = user.id
 
-    const resultado = receitasMes - despesasMes;
-    const corResultado = resultado >= 0 ? "#16a34a" : "#dc2626";
+res.redirect("/dashboard")
 
-    res.send(`
-    <html>
-    <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-    body { font-family:Arial; background:#0f172a; color:white; padding:20px; }
-    .card { background:#1e293b; padding:25px; border-radius:15px; max-width:650px; margin:auto; }
-    .topo { display:flex; justify-content:space-between; margin-bottom:20px; }
-    .box { flex:1; margin:5px; padding:15px; border-radius:12px; text-align:center; }
-    .receita { background:#14532d; }
-    .despesa { background:#7f1d1d; }
-    .resultado { background:${corResultado}; font-weight:bold; }
-    input, select { width:100%; padding:12px; margin-top:10px; border-radius:8px; border:none; }
-    button { width:100%; padding:14px; margin-top:15px; border-radius:10px; border:none; font-weight:bold; cursor:pointer; }
-    .save { background:#16a34a; color:white; }
-    .report { background:#2563eb; color:white; }
-    .logout { background:#dc2626; color:white; }
-    img { max-width:300px; display:block; margin:auto; margin-bottom:20px; }
-    </style>
-    </head>
-    <body>
+})
 
-    <div class="card">
-    <img src="/logo.png">
 
-    <div class="topo">
-        <div class="box receita">
-            <h4>Receitas Mês</h4>
-            ${receitasMes.toFixed(2)} €
-        </div>
-        <div class="box despesa">
-            <h4>Despesas Mês</h4>
-            ${despesasMes.toFixed(2)} €
-        </div>
-        <div class="box resultado">
-            <h4>Resultado</h4>
-            ${resultado.toFixed(2)} €
-        </div>
-    </div>
 
-   <a href="/novo"><button class="save">Novo Registo</button></a>
+// REGISTO
+app.post("/register",async(req,res)=>{
 
-    <a href="/relatorio"><button class="report">Ver Relatório</button></a>
-    <a href="/logout"><button class="logout">Sair</button></a>
+const {username,password} = req.body
 
-    </div>
-    </body>
-    </html>
-    `);
-});
-
-// ================= LOGIN POST =================
-
-app.post("/register", async (req, res) => {
-
-const { username, password } = req.body;
-
-const hash = await bcrypt.hash(password, 10);
+const hash = await bcrypt.hash(password,10)
 
 await pool.query(
-"INSERT INTO users (username, password) VALUES ($1,$2)",
-[username, hash]
-);
+"INSERT INTO users(username,password) VALUES($1,$2)",
+[username,hash]
+)
 
-res.send("Utilizador criado");
+res.redirect("/login")
 
-});
+})
 
-app.post("/login", async (req, res) => {
-    const { username, password } = req.body;
-    const result = await pool.query(
-"SELECT * FROM users WHERE username=$1",
-[username]
-);
-    if (user && await bcrypt.compare(password, user.password)) {
-        req.session.user = username;
-        return res.redirect("/");
-    }
-    res.send("Login inválido");
-});
 
-app.get("/logout", (req, res) => {
-    req.session.destroy();
-    res.redirect("/");
-});
 
-// ================= NOVO REGISTO =================
+// LOGOUT
+app.get("/logout",(req,res)=>{
 
-app.get("/novo", (req, res) => {
+req.session.destroy()
 
-        res.send(`
-        <html>
-        <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-        body { font-family: Arial; background:#0f172a; color:white; padding:20px; }
-        .card { background:#1e293b; padding:20px; border-radius:12px; max-width:600px; margin:auto; }
-        input, select { width:100%; padding:12px; margin-top:10px; border-radius:8px; border:none; }
-        button { width:100%; padding:12px; margin-top:12px; border-radius:8px; background:#2563eb; color:white; border:none; font-weight:bold; }
-        </style>
-        </head>
-        <body>
-        <div class="card">
-            <h2>Novo Registo</h2>
-            <form method="POST" action="/analisar" enctype="multipart/form-data">
-                <label>Tipo</label>
-                <select name="tipo">
-                    <option>Despesa</option>
-                    <option>Receita</option>
-                </select>
+res.redirect("/login")
 
-                <label>Fornecedor</label>
-                <input name="fornecedor" placeholder="Nome do fornecedor">
+})
 
-                <label>Documento (PDF/Imagem)</label>
-                <input type="file" name="ficheiro" required>
 
-                <button>Enviar e Analisar</button>
-            </form>
 
-            <a href="/" style="display:block;margin-top:12px;text-align:center;color:#93c5fd">Cancelar</a>
-        </div>
-        </body>
-        </html>
-        `);
 
-});
+// UPLOAD FATURA
+app.post("/upload",auth,upload.single("file"),async(req,res)=>{
 
-// ================= ANALISAR =================
+try{
 
-const upload = multer({ dest: "temp/" });
+const file = req.file.path
 
-app.post("/analisar", upload.single("ficheiro"), async (req, res) => {
+const texto = await extrairTexto(file)
 
-    const filePath = req.file.path;
-    let text = "";
+const valor = extrairValor(texto)
 
-    try {
-        if (req.file.mimetype === "application/pdf") {
-            const buffer = fs.readFileSync(filePath);
-            const pdf = await pdfParse(buffer);
-            text = pdf.text;
-        } else {
-            const result = await Tesseract.recognize(filePath, "eng");
-            text = result.data.text;
-        }
-    } catch (err) {
-        console.log(err);
-    }
-
-    const detectedDate = extractDate(text);
-    const detectedValue = extractValue(text);
-
-    res.send(`
-    <html>
-    <body style="font-family:Arial;padding:20px;text-align:center;">
-    <h2>Confirmar Dados</h2>
-
-    <form method="POST" action="/guardar">
-
-    <input type="hidden" name="tempPath" value="${filePath}">
-    <input type="hidden" name="originalName" value="${req.file.originalname}">
-    <input type="hidden" name="tipo" value="${req.body.tipo}">
-    <input type="hidden" name="fornecedor" value="${req.body.fornecedor}">
-
-    <p>Data:</p>
-    <input name="data" value="${detectedDate}"><br><br>
-
-    <p>Valor (€):</p>
-    <input name="valor" value="${detectedValue}"><br><br>
-
-    <button>Confirmar e Guardar</button>
-
-    </form>
-    </body>
-    </html>
-    `);
-});
-
-// ================= GUARDAR =================
-
-app.post("/guardar", async (req, res) => {
-
-    let saveDir;
-
-    if (req.body.data) {
-        const partes = req.body.data.replace(/-/g,"/").split("/");
-        const year = partes[2] || partes[0];
-        const month = partes[1];
-        saveDir = path.join("uploads", year, month);
-    } else {
-        saveDir = path.join("uploads", "sem_data");
-    }
-
-    fs.mkdirSync(saveDir, { recursive: true });
-
-    const newPath = path.join(saveDir, req.body.originalName);
-    fs.renameSync(req.body.tempPath, newPath);
-
-    const registos = readData();
-
-   await pool.query(
-"INSERT INTO registos (user_id,tipo,fornecedor,valor,data,ficheiro) VALUES ($1,$2,$3,$4,$5,$6)",
+await pool.query(
+`INSERT INTO registos
+(user_id,tipo,fornecedor,valor,data,ficheiro)
+VALUES($1,$2,$3,$4,$5,$6)`,
 [
-req.session.user,
-req.body.tipo,
-req.body.fornecedor,
-parseFloat(req.body.valor),
-req.body.data,
-"/" + newPath.replace(/\\/g,"/")
+req.session.userId,
+"despesa",
+"automatico",
+valor,
+new Date(),
+req.file.filename
 ]
-);
+)
 
-    saveData(registos);
+res.redirect("/dashboard")
 
-    res.redirect("/");
-});
+}catch(err){
 
-// ================= RELATÓRIO =================
+console.error(err)
 
-app.get("/relatorio", async (req, res) => {
+res.send("Erro ao processar documento")
 
-  const result = await pool.query(
-"SELECT * FROM registos WHERE user_id=$1",
-[req.session.user]
-);
+}
 
-const registos = result.rows;
+})
 
-    let lista = registos.map(r => `
-        <tr>
-            <td>${r.tipo}</td>
-            <td>${r.fornecedor}</td>
-            <td>${r.valor} €</td>
-            <td>${r.data}</td>
-            <td><a href="${r.ficheiro}" target="_blank">Abrir</a></td>
-        </tr>
-    `).join("");
 
-    res.send(`
-    <html>
-    <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-    body { font-family: Arial; padding: 15px; background: #0f172a; color: white; font-size: 18px; }
-    .actions { display:flex; gap:10px; margin-bottom:15px; }
-    .actions a { flex:1; }
-    .btn { display:block; padding:12px; border-radius:10px; text-align:center; text-decoration:none; color:white; background:#2563eb; font-weight:bold; }
 
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { padding: 14px; border: 1px solid #334155; text-align: left; }
-    th { background: #1e293b; }
-    </style>
-    </head>
 
-    <body>
-    <h2>Relatório</h2>
+// API REGISTOS
+app.get("/api/registos",auth,async(req,res)=>{
 
-    <div class="actions">
-        <a class="btn" href="/relatorio-mensal">Relatório Mensal</a>
-        <a class="btn" href="/relatorio-trimestral">Relatório Trimestral</a>
-        <a class="btn" href="/relatorio-anual">Relatório Anual</a>
-    </div>
+const result = await pool.query(
 
-    <table>
-    <tr>
-        <th>Tipo</th>
-        <th>Fornecedor</th>
-        <th>Valor</th>
-        <th>Data</th>
-        <th>Documento</th>
-    </tr>
-    ${lista}
-    </table>
+"SELECT * FROM registos WHERE user_id=$1 ORDER BY data DESC",
 
-    <a href="/"><button style="margin-top:18px;padding:12px;border-radius:8px;background:#111827;color:white;border:none;">Voltar</button></a>
+[req.session.userId]
 
-    </body>
-    </html>
-    `);
-});
+)
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+res.json(result.rows)
 
-app.get("/relatorio-mensal", async (req, res) => {
+})
 
-    const result = await pool.query(
-        "SELECT * FROM registos WHERE user_id=$1",
-        [req.session.user]
-    );
 
-    const registos = result.rows;
-    const agora = new Date();
-    const mesAtual = agora.getMonth() + 1;
-    const anoAtual = agora.getFullYear();
 
-    const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-    const nomeMes = meses[mesAtual - 1] || mesAtual;
+// API DASHBOARD
+app.get("/api/dashboard",auth,async(req,res)=>{
 
-    let receitas = 0;
-    let despesas = 0;
+const receitas = await pool.query(
 
-    registos.forEach(r => {
-        if (!r.data) return;
+`SELECT COALESCE(SUM(valor),0) total
+FROM registos
+WHERE user_id=$1 AND tipo='receita'`,
 
-        const partes = r.data.replace(/-/g,"/").split("/");
-        const ano = parseInt(partes[2] || partes[0]);
-        const mes = parseInt(partes[1]);
+[req.session.userId]
 
-        if (ano === anoAtual && mes === mesAtual) {
-            if (r.tipo === "Receita") receitas += r.valor;
-            if (r.tipo === "Despesa") despesas += r.valor;
-        }
-    });
+)
 
-    const resultado = receitas - despesas;
+const despesas = await pool.query(
 
-    res.send(`
-    <html><body style="font-family:Arial;padding:20px;color:white;background:#0f172a;">
-    <h2>Relatório Mensal — ${nomeMes} ${anoAtual}</h2>
-    <p>Receitas: ${receitas.toFixed(2)} €</p>
-    <p>Despesas: ${despesas.toFixed(2)} €</p>
-    <p><strong>Resultado: ${resultado.toFixed(2)} €</strong></p>
-    <p><a href="/relatorio" style="color:#93c5fd">Voltar ao Relatório</a></p>
-    </body></html>
-    `);
-});
+`SELECT COALESCE(SUM(valor),0) total
+FROM registos
+WHERE user_id=$1 AND tipo='despesa'`,
 
-app.get("/relatorio-trimestral", async (req, res) => {
+[req.session.userId]
 
-    const result = await pool.query(
-        "SELECT * FROM registos WHERE user_id=$1",
-        [req.session.user]
-    );
+)
 
-    const registos = result.rows;
-    const agora = new Date();
-    const anoAtual = agora.getFullYear();
-    const mesAtual = agora.getMonth() + 1;
+res.json({
 
-    const trimestre = Math.ceil(mesAtual / 3);
+receitas:receitas.rows[0].total,
 
-    let receitas = 0;
-    let despesas = 0;
+despesas:despesas.rows[0].total
 
-    registos.forEach(r => {
-        if (!r.data) return;
+})
 
-        const partes = r.data.replace(/-/g,"/").split("/");
-        const ano = parseInt(partes[2] || partes[0]);
-        const mes = parseInt(partes[1]);
+})
 
-        const trimestreReg = Math.ceil(mes / 3);
 
-        if (ano === anoAtual && trimestreReg === trimestre) {
-            if (r.tipo === "Receita") receitas += r.valor;
-            if (r.tipo === "Despesa") despesas += r.valor;
-        }
-    });
 
-    const resultado = receitas - despesas;
 
-    res.send(`
-    <html><body style="font-family:Arial;padding:20px;color:white;background:#0f172a;">
-    <h2>Relatório Trimestral — Trimestre ${trimestre} de ${anoAtual}</h2>
-    <p>Receitas: ${receitas.toFixed(2)} €</p>
-    <p>Despesas: ${despesas.toFixed(2)} €</p>
-    <p><strong>Resultado: ${resultado.toFixed(2)} €</strong></p>
-    <p><a href="/relatorio" style="color:#93c5fd">Voltar ao Relatório</a></p>
-    </body></html>
-    `);
-});
+// START
+app.listen(PORT,()=>{
 
-app.get("/relatorio-anual", async (req, res) => {
+console.log("Servidor ativo na porta",PORT)
 
-    const result = await pool.query(
-        "SELECT * FROM registos WHERE user_id=$1",
-        [req.session.user]
-    );
-
-    const registos = result.rows;
-    const anoAtual = new Date().getFullYear();
-
-    let receitas = 0;
-    let despesas = 0;
-
-    registos.forEach(r => {
-        if (!r.data) return;
-
-        const partes = r.data.replace(/-/g,"/").split("/");
-        const ano = parseInt(partes[2] || partes[0]);
-
-        if (ano === anoAtual) {
-            if (r.tipo === "Receita") receitas += r.valor;
-            if (r.tipo === "Despesa") despesas += r.valor;
-        }
-    });
-
-    const resultado = receitas - despesas;
-
-    res.send(`
-    <html><body style="font-family:Arial;padding:20px;color:white;background:#0f172a;">
-    <h2>Relatório Anual — ${anoAtual}</h2>
-    <p>Receitas: ${receitas.toFixed(2)} €</p>
-    <p>Despesas: ${despesas.toFixed(2)} €</p>
-    <p><strong>Resultado: ${resultado.toFixed(2)} €</strong></p>
-    <p><a href="/relatorio" style="color:#93c5fd">Voltar ao Relatório</a></p>
-    </body></html>
-    `);
-
-});
-
-app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Servidor ativo na porta ${PORT}`);
-});
+})
