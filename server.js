@@ -294,6 +294,48 @@ app.get("/logout", (req, res) => {
     res.redirect("/");
 });
 
+// ================= NOVO REGISTO =================
+
+app.get("/novo", (req, res) => {
+
+        res.send(`
+        <html>
+        <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+        body { font-family: Arial; background:#0f172a; color:white; padding:20px; }
+        .card { background:#1e293b; padding:20px; border-radius:12px; max-width:600px; margin:auto; }
+        input, select { width:100%; padding:12px; margin-top:10px; border-radius:8px; border:none; }
+        button { width:100%; padding:12px; margin-top:12px; border-radius:8px; background:#2563eb; color:white; border:none; font-weight:bold; }
+        </style>
+        </head>
+        <body>
+        <div class="card">
+            <h2>Novo Registo</h2>
+            <form method="POST" action="/analisar" enctype="multipart/form-data">
+                <label>Tipo</label>
+                <select name="tipo">
+                    <option>Despesa</option>
+                    <option>Receita</option>
+                </select>
+
+                <label>Fornecedor</label>
+                <input name="fornecedor" placeholder="Nome do fornecedor">
+
+                <label>Documento (PDF/Imagem)</label>
+                <input type="file" name="ficheiro" required>
+
+                <button>Enviar e Analisar</button>
+            </form>
+
+            <a href="/" style="display:block;margin-top:12px;text-align:center;color:#93c5fd">Cancelar</a>
+        </div>
+        </body>
+        </html>
+        `);
+
+});
+
 // ================= ANALISAR =================
 
 const upload = multer({ dest: "temp/" });
@@ -411,29 +453,24 @@ const registos = result.rows;
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
     body { font-family: Arial; padding: 15px; background: #0f172a; color: white; font-size: 18px; }
+    .actions { display:flex; gap:10px; margin-bottom:15px; }
+    .actions a { flex:1; }
+    .btn { display:block; padding:12px; border-radius:10px; text-align:center; text-decoration:none; color:white; background:#2563eb; font-weight:bold; }
 
     table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-
     th, td { padding: 14px; border: 1px solid #334155; text-align: left; }
-
     th { background: #1e293b; }
-
-    button {
-        width: 100%;
-        padding: 16px;
-        margin-top: 20px;
-        border-radius: 10px;
-        border: none;
-        background: #2563eb;
-        color: white;
-        font-size: 18px;
-        font-weight: bold;
-    }
     </style>
     </head>
 
     <body>
     <h2>Relatório</h2>
+
+    <div class="actions">
+        <a class="btn" href="/relatorio-mensal">Relatório Mensal</a>
+        <a class="btn" href="/relatorio-trimestral">Relatório Trimestral</a>
+        <a class="btn" href="/relatorio-anual">Relatório Anual</a>
+    </div>
 
     <table>
     <tr>
@@ -446,7 +483,7 @@ const registos = result.rows;
     ${lista}
     </table>
 
-    <a href="/"><button>Voltar</button></a>
+    <a href="/"><button style="margin-top:18px;padding:12px;border-radius:8px;background:#111827;color:white;border:none;">Voltar</button></a>
 
     </body>
     </html>
@@ -455,12 +492,20 @@ const registos = result.rows;
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-app.get("/relatorio-mensal", (req, res) => {
+app.get("/relatorio-mensal", async (req, res) => {
 
-    const registos = readData();
+    const result = await pool.query(
+        "SELECT * FROM registos WHERE user_id=$1",
+        [req.session.user]
+    );
+
+    const registos = result.rows;
     const agora = new Date();
     const mesAtual = agora.getMonth() + 1;
     const anoAtual = agora.getFullYear();
+
+    const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    const nomeMes = meses[mesAtual - 1] || mesAtual;
 
     let receitas = 0;
     let despesas = 0;
@@ -481,17 +526,24 @@ app.get("/relatorio-mensal", (req, res) => {
     const resultado = receitas - despesas;
 
     res.send(`
-    <h2>Relatório Mensal</h2>
+    <html><body style="font-family:Arial;padding:20px;color:white;background:#0f172a;">
+    <h2>Relatório Mensal — ${nomeMes} ${anoAtual}</h2>
     <p>Receitas: ${receitas.toFixed(2)} €</p>
     <p>Despesas: ${despesas.toFixed(2)} €</p>
     <p><strong>Resultado: ${resultado.toFixed(2)} €</strong></p>
-    <a href="/">Voltar</a>
+    <p><a href="/relatorio" style="color:#93c5fd">Voltar ao Relatório</a></p>
+    </body></html>
     `);
 });
 
-app.get("/relatorio-trimestral", (req, res) => {
+app.get("/relatorio-trimestral", async (req, res) => {
 
-    const registos = readData();
+    const result = await pool.query(
+        "SELECT * FROM registos WHERE user_id=$1",
+        [req.session.user]
+    );
+
+    const registos = result.rows;
     const agora = new Date();
     const anoAtual = agora.getFullYear();
     const mesAtual = agora.getMonth() + 1;
@@ -519,17 +571,24 @@ app.get("/relatorio-trimestral", (req, res) => {
     const resultado = receitas - despesas;
 
     res.send(`
-    <h2>Relatório Trimestral</h2>
+    <html><body style="font-family:Arial;padding:20px;color:white;background:#0f172a;">
+    <h2>Relatório Trimestral — Trimestre ${trimestre} de ${anoAtual}</h2>
     <p>Receitas: ${receitas.toFixed(2)} €</p>
     <p>Despesas: ${despesas.toFixed(2)} €</p>
     <p><strong>Resultado: ${resultado.toFixed(2)} €</strong></p>
-    <a href="/">Voltar</a>
+    <p><a href="/relatorio" style="color:#93c5fd">Voltar ao Relatório</a></p>
+    </body></html>
     `);
 });
 
-app.get("/relatorio-anual", (req, res) => {
+app.get("/relatorio-anual", async (req, res) => {
 
-    const registos = readData();
+    const result = await pool.query(
+        "SELECT * FROM registos WHERE user_id=$1",
+        [req.session.user]
+    );
+
+    const registos = result.rows;
     const anoAtual = new Date().getFullYear();
 
     let receitas = 0;
@@ -550,11 +609,13 @@ app.get("/relatorio-anual", (req, res) => {
     const resultado = receitas - despesas;
 
     res.send(`
-    <h2>Relatório Anual</h2>
+    <html><body style="font-family:Arial;padding:20px;color:white;background:#0f172a;">
+    <h2>Relatório Anual — ${anoAtual}</h2>
     <p>Receitas: ${receitas.toFixed(2)} €</p>
     <p>Despesas: ${despesas.toFixed(2)} €</p>
     <p><strong>Resultado: ${resultado.toFixed(2)} €</strong></p>
-    <a href="/">Voltar</a>
+    <p><a href="/relatorio" style="color:#93c5fd">Voltar ao Relatório</a></p>
+    </body></html>
     `);
 
 });
