@@ -213,7 +213,17 @@ row.innerHTML = `
 <td>${r.fornecedor}</td>
 <td>${r.tipo}</td>
 <td>${Number(r.valor).toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
-``
+
+<td class="acoes">
+
+<button onclick="verFatura('${r.ficheiro}')" class="btn-ver">👁</button>
+
+<button onclick="editar(${r.id})" class="btn-editar">✏️</button>
+
+<button onclick="apagar(${r.id})" class="btn-apagar">🗑</button>
+
+</td>
+`
 
 tabela.appendChild(row)
 
@@ -228,6 +238,38 @@ carregarRegistos()
 
 </script>
 
+function verFatura(ficheiro){
+
+window.open("/uploads/"+ficheiro,"_blank")
+
+}
+
+async function apagar(id){
+
+if(!confirm("Apagar este registo?")) return
+
+await fetch("/api/delete/"+id,{method:"DELETE"})
+
+location.reload()
+
+}
+
+function editar(id){
+
+const novoValor = prompt("Novo valor")
+
+if(!novoValor) return
+
+fetch("/api/update/"+id,{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({valor:novoValor})
+})
+.then(()=>location.reload())
+
+}
 
 </body>
 </html>

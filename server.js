@@ -19,6 +19,8 @@ app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 app.use(express.static("public"))
 
+app.use("/uploads",express.static("uploads"))
+
 app.use(session({
     secret: "prm-secret",
     resave: false,
@@ -413,7 +415,27 @@ app.get("/api/dashboard",auth,async(req,res)=>{
 
 })
 
+app.delete("/api/delete/:id",auth,async(req,res)=>{
 
+await pool.query(
+"DELETE FROM registos WHERE id=$1 AND user_id=$2",
+[req.params.id,req.session.userId]
+)
+
+res.json({ok:true})
+
+})app.post("/api/update/:id",auth,async(req,res)=>{
+
+const {valor} = req.body
+
+await pool.query(
+"UPDATE registos SET valor=$1 WHERE id=$2 AND user_id=$3",
+[valor,req.params.id,req.session.userId]
+)
+
+res.json({ok:true})
+
+})
 
 // START
 app.listen(PORT,()=>{

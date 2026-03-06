@@ -41,3 +41,47 @@ width:100%;
 font-size:16px;
 font-weight:bold;
 }
+
+/* BOTÕES TABELA */
+
+.acoes button{
+
+padding:10px 14px;
+font-size:18px;
+margin:3px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+
+}
+
+.btn-ver{
+background:#3498db;
+color:white;
+}
+
+.btn-editar{
+background:#f39c12;
+color:white;
+}
+
+.btn-apagar{
+background:#e74c3c;
+color:white;
+}
+
+
+/* RESPONSIVO PARA TELEMÓVEL */
+
+@media(max-width:700px){
+
+table{
+font-size:14px;
+}
+
+.acoes button{
+padding:12px;
+font-size:20px;
+}
+
+}
