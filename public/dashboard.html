@@ -209,11 +209,11 @@ registos.forEach(r=>{
 const row = document.createElement("tr")
 
 row.innerHTML = `
-<td>${new Date(r.data).toLocaleDateString()}</td>
+<td>${r.data}</td>
 <td>${r.fornecedor}</td>
 <td>${r.tipo}</td>
-<td>${r.valor} €</td>
-`
+<td>${Number(r.valor).toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
+``
 
 tabela.appendChild(row)
 
