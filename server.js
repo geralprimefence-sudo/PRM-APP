@@ -51,17 +51,23 @@ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 `)
 
-const hash = await bcrypt.hash("admin123",10)
+const admin = await pool.query(
+"SELECT * FROM users WHERE username=$1",
+["admin"]
+)
 
-await pool.query(`
-DELETE FROM users WHERE username='admin'
-`)
+if(admin.rows.length === 0){
+
+const hash = await bcrypt.hash("admin123",10)
 
 await pool.query(
 "INSERT INTO users (username,password) VALUES ($1,$2)",
-["admin", hash]
+["admin",hash]
 )
 
+console.log("Admin criado")
+
+}
 console.log("Tabelas verificadas")
 
 }
