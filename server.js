@@ -139,46 +139,97 @@ async function extrairTexto(file){
 // EXTRAIR VALOR
 function extrairDadosFatura(texto){
 
-// VALOR
-const valorRegex = /\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})/g
+let valor = 0
+let data = new Date()
+let empresa = "desconhecido"
+let tipo = "despesa"
+
+const textoLower = texto.toLowerCase()
+
+
+
+// VALOR TOTAL
+const totalRegex = /(total\s*(a\s*pagar)?|valor\s*total)[^\d]*(\d+[.,]\d{2})/i
+const totalMatch = texto.match(totalRegex)
+
+if(totalMatch){
+
+let v = totalMatch[3]
+v = v.replace(",",".")
+valor = parseFloat(v)
+
+}else{
+
+const valorRegex = /\d+[.,]\d{2}/g
 const valores = texto.match(valorRegex)
 
-let valor = 0
-
 if(valores){
+
 let v = valores[valores.length-1]
-v = v.replace(/\./g,"").replace(",",".")
+v = v.replace(",",".")
 valor = parseFloat(v)
+
 }
+
+}
+
 
 
 // DATA
 const dataRegex = /\d{2}[\/\-\.]\d{2}[\/\-\.]\d{4}/
 const dataMatch = texto.match(dataRegex)
 
-let data = new Date()
-
 if(dataMatch){
-data = new Date(dataMatch[0].split(/[\/\-\.]/).reverse().join("-"))
+
+data = new Date(
+dataMatch[0].split(/[\/\-\.]/).reverse().join("-")
+)
+
 }
 
 
-// FORNECEDOR (primeiras linhas do documento)
-let fornecedor = "desconhecido"
 
+// EMPRESA
 const linhas = texto.split("\n")
 
 for(let linha of linhas){
 
 linha = linha.trim()
 
-if(linha.length > 3 && linha.length < 40){
+if(linha.length > 4 && linha.length < 50){
 
 if(!linha.match(/[0-9]/)){
-fornecedor = linha
+
+if(!linha.toLowerCase().includes("nif") &&
+!linha.toLowerCase().includes("fatura") &&
+!linha.toLowerCase().includes("total") &&
+!linha.toLowerCase().includes("iva")){
+
+empresa = linha
 break
+
 }
 
+}
+
+}
+
+}
+
+
+
+// DETETAR RECEITA
+if(
+textoLower.includes("cliente") ||
+textoLower.includes("invoice") ||
+textoLower.includes("fatura emitida")
+){
+tipo = "receita"
+}
+
+return {valor,data,empresa,tipo}
+
+}
 }
 
 }
@@ -274,23 +325,20 @@ app.post("/upload",auth,upload.single("file"),async(req,res)=>{
 
         const file = req.file.path
 
-        const texto = await extrairTexto(file)
-
-	const dados = extrairDadosFatura(texto)
-
         await pool.query(
 `INSERT INTO registos
 (user_id,tipo,fornecedor,valor,data,ficheiro)
 VALUES($1,$2,$3,$4,$5,$6)`,
 [
 req.session.userId,
-"despesa",
-dados.fornecedor,
+dados.tipo,
+dados.empresa,
 dados.valor,
 dados.data,
 req.file.filename
 ]
 )
+
         res.redirect("/dashboard")
 
     }catch(err){
