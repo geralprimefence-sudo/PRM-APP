@@ -137,16 +137,56 @@ async function extrairTexto(file){
 
 
 // EXTRAIR VALOR
-function extrairValor(texto){
+function extrairDadosFatura(texto){
 
-    const regex = /(\d+[.,]\d{2})/g
-    const valores = texto.match(regex)
+// VALOR
+const valorRegex = /\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})/g
+const valores = texto.match(valorRegex)
 
-    if(!valores) return 0
+let valor = 0
 
-    return parseFloat(valores[valores.length-1].replace(",","."))
+if(valores){
+let v = valores[valores.length-1]
+v = v.replace(/\./g,"").replace(",",".")
+valor = parseFloat(v)
 }
 
+
+// DATA
+const dataRegex = /\d{2}[\/\-\.]\d{2}[\/\-\.]\d{4}/
+const dataMatch = texto.match(dataRegex)
+
+let data = new Date()
+
+if(dataMatch){
+data = new Date(dataMatch[0].split(/[\/\-\.]/).reverse().join("-"))
+}
+
+
+// FORNECEDOR (primeiras linhas do documento)
+let fornecedor = "desconhecido"
+
+const linhas = texto.split("\n")
+
+for(let linha of linhas){
+
+linha = linha.trim()
+
+if(linha.length > 3 && linha.length < 40){
+
+if(!linha.match(/[0-9]/)){
+fornecedor = linha
+break
+}
+
+}
+
+}
+
+
+return {valor,data,fornecedor}
+
+}
 
 
 // PAGINAS
@@ -236,20 +276,21 @@ app.post("/upload",auth,upload.single("file"),async(req,res)=>{
 
         const texto = await extrairTexto(file)
 
-        const valor = extrairValor(texto)
+	const dados = extrairDadosFatura(texto)
 
         await pool.query(
         `INSERT INTO registos
         (user_id,tipo,fornecedor,valor,data,ficheiro)
         VALUES($1,$2,$3,$4,$5,$6)`,
         [
-            req.session.userId,
-            "despesa",
-            "automatico",
-            valor,
-            new Date(),
-            req.file.filename
-        ]
+	req.session.userId,
+	"despesa",
+	dados.fornecedor,
+	dados.valor,
+	dados.data,
+	req.file.filename
+	]
+
         )
 
         res.redirect("/dashboard")
