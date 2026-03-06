@@ -142,14 +142,15 @@ function extrairDadosFatura(texto){
 let valor = 0
 let data = new Date()
 let empresa = "desconhecido"
+let nif = ""
 let tipo = "despesa"
 
 const textoLower = texto.toLowerCase()
 
 
 
-// VALOR TOTAL
-const totalRegex = /(total\s*(a\s*pagar)?|valor\s*total)[^\d]*(\d+[.,]\d{2})/i
+// ---------- VALOR ----------
+const totalRegex = /(total\s*(a\s*pagar)?|valor\s*total|total\s*eur)[^\d]*(\d+[.,]\d{2})/i
 const totalMatch = texto.match(totalRegex)
 
 if(totalMatch){
@@ -160,8 +161,7 @@ valor = parseFloat(v)
 
 }else{
 
-const valorRegex = /\d+[.,]\d{2}/g
-const valores = texto.match(valorRegex)
+const valores = texto.match(/\d+[.,]\d{2}/g)
 
 if(valores){
 
@@ -174,8 +174,14 @@ valor = parseFloat(v)
 }
 
 
+// corrigir erros OCR
+if(valor > 10000){
+valor = valor / 100
+}
 
-// DATA
+
+
+// ---------- DATA ----------
 const dataRegex = /\d{2}[\/\-\.]\d{2}[\/\-\.]\d{4}/
 const dataMatch = texto.match(dataRegex)
 
@@ -189,21 +195,39 @@ dataMatch[0].split(/[\/\-\.]/).reverse().join("-")
 
 
 
-// EMPRESA
+// ---------- NIF ----------
+const nifRegex = /nif[:\s]*([0-9]{9})/i
+const nifMatch = texto.match(nifRegex)
+
+if(nifMatch){
+nif = nifMatch[1]
+}
+
+
+
+// ---------- EMPRESA ----------
 const linhas = texto.split("\n")
 
 for(let linha of linhas){
 
 linha = linha.trim()
 
-if(linha.length > 4 && linha.length < 50){
+if(linha.length > 4 && linha.length < 60){
 
-if(!linha.match(/[0-9]/)){
+const lower = linha.toLowerCase()
 
-if(!linha.toLowerCase().includes("nif") &&
-!linha.toLowerCase().includes("fatura") &&
-!linha.toLowerCase().includes("total") &&
-!linha.toLowerCase().includes("iva")){
+if(
+!linha.match(/[0-9]/) &&
+!lower.includes("fatura") &&
+!lower.includes("natureza") &&
+!lower.includes("nif") &&
+!lower.includes("total") &&
+!lower.includes("iva") &&
+!lower.includes("data") &&
+!lower.includes("pagamento") &&
+!lower.includes("cliente") &&
+!lower.includes("recibo")
+){
 
 empresa = linha
 break
@@ -214,31 +238,23 @@ break
 
 }
 
-}
 
 
-
-// DETETAR RECEITA
+// ---------- TIPO ----------
 if(
+textoLower.includes("fatura emitida") ||
 textoLower.includes("cliente") ||
 textoLower.includes("invoice") ||
-textoLower.includes("fatura emitida")
+textoLower.includes("recibo verde")
 ){
 tipo = "receita"
 }
 
-return {valor,data,empresa,tipo}
+
+
+return {valor,data,empresa,nif,tipo}
 
 }
-}
-
-}
-
-
-return {valor,data,fornecedor}
-
-}
-
 
 // PAGINAS
 app.get("/login",(req,res)=>{
@@ -321,11 +337,18 @@ app.get("/logout",(req,res)=>{
 // UPLOAD FATURA
 app.post("/upload",auth,upload.single("file"),async(req,res)=>{
 
-    try{
+try{
 
-        const file = req.file.path
+const file = req.file.path
 
-        await pool.query(
+// OCR
+const texto = await extrairTexto(file)
+console.log(texto)
+
+// Extrair dados da fatura
+const dados = extrairDadosFatura(texto)
+
+await pool.query(
 `INSERT INTO registos
 (user_id,tipo,fornecedor,valor,data,ficheiro)
 VALUES($1,$2,$3,$4,$5,$6)`,
@@ -339,19 +362,16 @@ req.file.filename
 ]
 )
 
-        res.redirect("/dashboard")
+res.redirect("/dashboard")
 
-    }catch(err){
+}catch(err){
 
-        console.error(err)
+console.error(err)
+res.send("Erro ao processar documento")
 
-        res.send("Erro ao processar documento")
-
-    }
+}
 
 })
-
-
 
 // API REGISTOS
 app.get("/api/registos",auth,async(req,res)=>{
