@@ -32,6 +32,7 @@ padding:30px;
 display:flex;
 gap:20px;
 margin-bottom:30px;
+flex-wrap:wrap;
 }
 
 .card{
@@ -39,6 +40,7 @@ background:white;
 padding:20px;
 border-radius:10px;
 flex:1;
+min-width:200px;
 box-shadow:0 2px 8px rgba(0,0,0,0.1);
 }
 
@@ -87,6 +89,51 @@ background:#1d4ed8;
 
 .logout{
 background:#ef4444;
+}
+
+/* BOTÕES AÇÕES */
+
+.acoes button{
+padding:8px 12px;
+margin:2px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+font-size:16px;
+}
+
+.btn-ver{
+background:#3498db;
+color:white;
+}
+
+.btn-editar{
+background:#f39c12;
+color:white;
+}
+
+.btn-apagar{
+background:#e74c3c;
+color:white;
+}
+
+/* MOBILE */
+
+@media(max-width:700px){
+
+.cards{
+flex-direction:column;
+}
+
+table{
+font-size:14px;
+}
+
+.acoes button{
+padding:12px;
+font-size:20px;
+}
+
 }
 
 </style>
@@ -159,6 +206,7 @@ background:#ef4444;
 <th>Fornecedor</th>
 <th>Tipo</th>
 <th>Valor</th>
+<th>Ações</th>
 </tr>
 
 </thead>
@@ -179,16 +227,18 @@ background:#ef4444;
 async function carregarDashboard(){
 
 const res = await fetch("/api/dashboard")
-
 const data = await res.json()
 
-document.getElementById("receitas").innerText = data.receitas + " €"
+document.getElementById("receitas").innerText =
+Number(data.receitas).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
 
-document.getElementById("despesas").innerText = data.despesas + " €"
+document.getElementById("despesas").innerText =
+Number(data.despesas).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
 
 const saldo = data.receitas - data.despesas
 
-document.getElementById("saldo").innerText = saldo + " €"
+document.getElementById("saldo").innerText =
+Number(saldo).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
 
 }
 
@@ -197,7 +247,6 @@ document.getElementById("saldo").innerText = saldo + " €"
 async function carregarRegistos(){
 
 const res = await fetch("/api/registos")
-
 const registos = await res.json()
 
 const tabela = document.getElementById("tabelaRegistos")
@@ -233,16 +282,13 @@ tabela.appendChild(row)
 
 
 
-carregarDashboard()
-carregarRegistos()
-
-</script>
-
 function verFatura(ficheiro){
 
 window.open("/uploads/"+ficheiro,"_blank")
 
 }
+
+
 
 async function apagar(id){
 
@@ -253,6 +299,8 @@ await fetch("/api/delete/"+id,{method:"DELETE"})
 location.reload()
 
 }
+
+
 
 function editar(id){
 
@@ -270,6 +318,14 @@ body:JSON.stringify({valor:novoValor})
 .then(()=>location.reload())
 
 }
+
+
+
+carregarDashboard()
+carregarRegistos()
+
+</script>
+
 
 </body>
 </html>

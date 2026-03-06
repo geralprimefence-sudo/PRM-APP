@@ -14,103 +14,99 @@ const app = express()
 const PORT = process.env.PORT || 3000
 
 
-// MIDDLEWARE BASE
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 app.use(express.static("public"))
-
 app.use("/uploads",express.static("uploads"))
 
 app.use(session({
-    secret: "prm-secret",
-    resave: false,
-    saveUninitialized: false
+secret:"prm-secret",
+resave:false,
+saveUninitialized:false
 }))
 
 
-// DATABASE
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+connectionString:process.env.DATABASE_URL,
+ssl:{rejectUnauthorized:false}
 })
 
 
-// CRIAR TABELAS AUTOMATICAMENTE
 async function criarTabelas(){
 
-    await pool.query(`
-    CREATE TABLE IF NOT EXISTS users(
-        id SERIAL PRIMARY KEY,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    `)
+await pool.query(`
+CREATE TABLE IF NOT EXISTS users(
+id SERIAL PRIMARY KEY,
+username TEXT UNIQUE NOT NULL,
+password TEXT NOT NULL,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+`)
 
-    await pool.query(`
-    CREATE TABLE IF NOT EXISTS registos(
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER,
-        tipo TEXT,
-        fornecedor TEXT,
-        valor NUMERIC,
-        data DATE,
-        ficheiro TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-    `)
+await pool.query(`
+CREATE TABLE IF NOT EXISTS registos(
+id SERIAL PRIMARY KEY,
+user_id INTEGER,
+tipo TEXT,
+fornecedor TEXT,
+valor NUMERIC,
+data DATE,
+ficheiro TEXT,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+`)
 
-    const admin = await pool.query(
-        "SELECT * FROM users WHERE username=$1",
-        ["admin"]
-    )
+const admin = await pool.query(
+"SELECT * FROM users WHERE username=$1",
+["admin"]
+)
 
-    if(admin.rows.length === 0){
+if(admin.rows.length===0){
 
-        const hash = await bcrypt.hash("admin123",10)
+const hash = await bcrypt.hash("admin123",10)
 
-        await pool.query(
-            "INSERT INTO users (username,password) VALUES ($1,$2)",
-            ["admin",hash]
-        )
+await pool.query(
+"INSERT INTO users (username,password) VALUES ($1,$2)",
+["admin",hash]
+)
 
-        console.log("Admin criado")
-    }
+console.log("Admin criado")
 
-    console.log("Tabelas verificadas")
+}
+
+console.log("Tabelas verificadas")
+
 }
 
 criarTabelas().catch(console.error)
 
 
 
-// REDIRECT ROOT
 app.get("/",(req,res)=>{
-    res.redirect("/login")
+res.redirect("/login")
 })
 
 
 
-// AUTH MIDDLEWARE
 function auth(req,res,next){
 
-    if(!req.session.userId){
-        return res.redirect("/login")
-    }
+if(!req.session.userId){
+return res.redirect("/login")
+}
 
-    next()
+next()
+
 }
 
 
 
-// UPLOAD CONFIG
 const storage = multer.diskStorage({
 
-    destination:"uploads",
+destination:"uploads",
 
-    filename:(req,file,cb)=>{
-        cb(null,Date.now()+"-"+file.originalname)
-    }
+filename:(req,file,cb)=>{
+cb(null,Date.now()+"-"+file.originalname)
+}
 
 })
 
@@ -118,27 +114,27 @@ const upload = multer({storage})
 
 
 
-// OCR
 async function extrairTexto(file){
 
-    const ext = path.extname(file).toLowerCase()
+const ext = path.extname(file).toLowerCase()
 
-    if(ext==".pdf"){
+if(ext==".pdf"){
 
-        const dataBuffer = fs.readFileSync(file)
-        const data = await pdfParse(dataBuffer)
+const dataBuffer = fs.readFileSync(file)
+const data = await pdfParse(dataBuffer)
 
-        return data.text
-    }
+return data.text
 
-    const result = await Tesseract.recognize(file,"por")
+}
 
-    return result.data.text
+const result = await Tesseract.recognize(file,"por")
+
+return result.data.text
+
 }
 
 
 
-// EXTRAIR VALOR
 function extrairDadosFatura(texto){
 
 let valor = 0
@@ -151,7 +147,6 @@ const textoLower = texto.toLowerCase()
 
 
 
-// ---------- VALOR ----------
 const totalRegex = /(total\s*(a\s*pagar)?|valor\s*total|total\s*eur)[^\d]*(\d+[.,]\d{2})/i
 const totalMatch = texto.match(totalRegex)
 
@@ -175,15 +170,12 @@ valor = parseFloat(v)
 
 }
 
-
-// corrigir erros OCR
 if(valor > 10000){
 valor = valor / 100
 }
 
 
 
-// ---------- DATA ----------
 const dataRegex = /\d{2}[\/\-\.]\d{2}[\/\-\.]\d{4}/
 const dataMatch = texto.match(dataRegex)
 
@@ -197,7 +189,6 @@ dataMatch[0].split(/[\/\-\.]/).reverse().join("-")
 
 
 
-// ---------- NIF ----------
 const nifRegex = /nif[:\s]*([0-9]{9})/i
 const nifMatch = texto.match(nifRegex)
 
@@ -207,7 +198,6 @@ nif = nifMatch[1]
 
 
 
-// ---------- EMPRESA ----------
 const linhas = texto.split("\n")
 
 for(let linha of linhas){
@@ -242,7 +232,6 @@ break
 
 
 
-// ---------- TIPO ----------
 if(
 textoLower.includes("fatura emitida") ||
 textoLower.includes("cliente") ||
@@ -252,102 +241,95 @@ textoLower.includes("recibo verde")
 tipo = "receita"
 }
 
-
-
 return {valor,data,empresa,nif,tipo}
 
 }
 
-// PAGINAS
+
+
 app.get("/login",(req,res)=>{
-    res.sendFile(path.join(__dirname,"public/login.html"))
+res.sendFile(path.join(__dirname,"public/login.html"))
 })
 
 app.get("/register",(req,res)=>{
-    res.sendFile(path.join(__dirname,"public/register.html"))
+res.sendFile(path.join(__dirname,"public/register.html"))
 })
 
 app.get("/dashboard",auth,(req,res)=>{
-    res.sendFile(path.join(__dirname,"public/dashboard.html"))
+res.sendFile(path.join(__dirname,"public/dashboard.html"))
 })
 
 app.get("/relatorio",auth,(req,res)=>{
-    res.sendFile(path.join(__dirname,"public/relatorio.html"))
+res.sendFile(path.join(__dirname,"public/relatorio.html"))
 })
 
 
 
-// LOGIN
 app.post("/login",async(req,res)=>{
 
-    const {username,password} = req.body
+const {username,password} = req.body
 
-    const result = await pool.query(
-        "SELECT * FROM users WHERE username=$1",
-        [username]
-    )
+const result = await pool.query(
+"SELECT * FROM users WHERE username=$1",
+[username]
+)
 
-    if(result.rows.length===0){
-        return res.send("Utilizador não encontrado")
-    }
+if(result.rows.length===0){
+return res.send("Utilizador não encontrado")
+}
 
-    const user = result.rows[0]
+const user = result.rows[0]
 
-    const valid = await bcrypt.compare(password,user.password)
+const valid = await bcrypt.compare(password,user.password)
 
-    if(!valid){
-        return res.send("Password errada")
-    }
+if(!valid){
+return res.send("Password errada")
+}
 
-    req.session.userId = user.id
+req.session.userId = user.id
 
-    res.redirect("/dashboard")
+res.redirect("/dashboard")
 
 })
 
 
 
-// REGISTO
 app.post("/register",async(req,res)=>{
 
-    const {username,password} = req.body
+const {username,password} = req.body
 
-    const hash = await bcrypt.hash(password,10)
+const hash = await bcrypt.hash(password,10)
 
-    await pool.query(
-        "INSERT INTO users(username,password) VALUES($1,$2)",
-        [username,hash]
-    )
+await pool.query(
+"INSERT INTO users(username,password) VALUES($1,$2)",
+[username,hash]
+)
 
-    res.redirect("/login")
+res.redirect("/login")
 
 })
 
 
 
-// LOGOUT
 app.get("/logout",(req,res)=>{
 
-    req.session.destroy()
+req.session.destroy()
 
-    res.redirect("/login")
+res.redirect("/login")
 
 })
 
 
 
-// UPLOAD FATURA
 app.post("/upload",auth,upload.single("file"),async(req,res)=>{
 
 try{
 
 const file = req.file.path
 
-// OCR
 const texto = await extrairTexto(file)
 console.log(texto)
 
-// Extrair dados da fatura
 const dados = extrairDadosFatura(texto)
 
 await pool.query(
@@ -375,45 +357,45 @@ res.send("Erro ao processar documento")
 
 })
 
-// API REGISTOS
+
+
 app.get("/api/registos",auth,async(req,res)=>{
 
-    const result = await pool.query(
-        "SELECT * FROM registos WHERE user_id=$1 ORDER BY data DESC",
-        [req.session.userId]
-    )
+const result = await pool.query(
+"SELECT * FROM registos WHERE user_id=$1 ORDER BY data DESC",
+[req.session.userId]
+)
 
-    res.json(result.rows)
+res.json(result.rows)
 
 })
 
 
 
-// API DASHBOARD
 app.get("/api/dashboard",auth,async(req,res)=>{
 
-    const receitas = await pool.query(
-    `SELECT COALESCE(SUM(valor),0) total
-    FROM registos
-    WHERE user_id=$1 AND tipo='receita'`,
-    [req.session.userId]
-    )
+const receitas = await pool.query(
+`SELECT COALESCE(SUM(valor),0) total
+FROM registos
+WHERE user_id=$1 AND tipo='receita'`,
+[req.session.userId]
+)
 
-    const despesas = await pool.query(
-    `SELECT COALESCE(SUM(valor),0) total
-    FROM registos
-    WHERE user_id=$1 AND tipo='despesa'`,
-    [req.session.userId]
-    )
+const despesas = await pool.query(
+`SELECT COALESCE(SUM(valor),0) total
+FROM registos
+WHERE user_id=$1 AND tipo='despesa'`,
+[req.session.userId]
+)
 
-    res.json({
-
-        receitas:receitas.rows[0].total,
-        despesas:despesas.rows[0].total
-
-    })
+res.json({
+receitas:receitas.rows[0].total,
+despesas:despesas.rows[0].total
+})
 
 })
+
+
 
 app.delete("/api/delete/:id",auth,async(req,res)=>{
 
@@ -424,7 +406,11 @@ await pool.query(
 
 res.json({ok:true})
 
-})app.post("/api/update/:id",auth,async(req,res)=>{
+})
+
+
+
+app.post("/api/update/:id",auth,async(req,res)=>{
 
 const {valor} = req.body
 
@@ -437,9 +423,10 @@ res.json({ok:true})
 
 })
 
-// START
+
+
 app.listen(PORT,()=>{
 
-    console.log("Servidor ativo na porta",PORT)
+console.log("Servidor ativo na porta",PORT)
 
 })
