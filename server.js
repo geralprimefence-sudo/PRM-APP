@@ -279,20 +279,18 @@ app.post("/upload",auth,upload.single("file"),async(req,res)=>{
 	const dados = extrairDadosFatura(texto)
 
         await pool.query(
-        `INSERT INTO registos
-        (user_id,tipo,fornecedor,valor,data,ficheiro)
-        VALUES($1,$2,$3,$4,$5,$6)`,
-        [
-	req.session.userId,
-	"despesa",
-	dados.fornecedor,
-	dados.valor,
-	dados.data,
-	req.file.filename
-	]
-
-        )
-
+`INSERT INTO registos
+(user_id,tipo,fornecedor,valor,data,ficheiro)
+VALUES($1,$2,$3,$4,$5,$6)`,
+[
+req.session.userId,
+"despesa",
+dados.fornecedor,
+dados.valor,
+dados.data,
+req.file.filename
+]
+)
         res.redirect("/dashboard")
 
     }catch(err){
