@@ -918,9 +918,14 @@ async function apagar(id){
 
 if(!confirm("Apagar este registo?")) return
 
-await fetch("/api/delete/"+id,{method:"DELETE"})
+const res = await fetch("/api/delete/"+id,{method:"DELETE"})
+if(!res.ok){
+alert("Erro ao apagar registo.")
+return
+}
 
-location.reload()
+todosRegistos = todosRegistos.filter((r)=> Number(r.id)!==Number(id))
+renderPeriodoAtual()
 
 }
 
@@ -939,7 +944,35 @@ headers:{
 },
 body:JSON.stringify({valor:novoValor})
 })
-.then(()=>location.reload())
+.then(async (res)=>{
+if(!res.ok){
+alert("Erro ao atualizar valor.")
+return
+}
+
+const valorNormalizado = Number(
+String(novoValor)
+.replace(/\s+/g,"")
+.replace(/\./g,"")
+.replace(",",".")
+)
+
+if(Number.isNaN(valorNormalizado)){
+renderPeriodoAtual()
+return
+}
+
+todosRegistos = todosRegistos.map((r)=>{
+if(Number(r.id)!==Number(id)) return r
+return {
+...r,
+valor:valorNormalizado,
+valor_total:valorNormalizado
+}
+})
+
+renderPeriodoAtual()
+})
 
 }
 
