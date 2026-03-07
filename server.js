@@ -176,6 +176,8 @@ return parseFloat(s)
 
 function dataParaInput(raw){
 
+if(raw===null || raw===undefined || raw==="") return ""
+
 const d = raw instanceof Date ? raw : new Date(raw)
 if(Number.isNaN(d.getTime())) return ""
 
@@ -388,12 +390,78 @@ return /[a-zA-Z\u00C0-\u017F]/.test(l)
 
 }
 
+function construirDataValida(dia,mes,ano){
+
+const d = Number(dia)
+const m = Number(mes)
+let y = Number(ano)
+
+if([d,m,y].some((n)=> Number.isNaN(n))) return null
+if(y < 100) y += 2000
+if(m < 1 || m > 12 || d < 1 || d > 31) return null
+
+const data = new Date(y,m-1,d)
+if(
+data.getFullYear()!==y ||
+data.getMonth()!==(m-1) ||
+data.getDate()!==d
+) return null
+
+const anoAtual = new Date().getFullYear()
+if(y < 2018 || y > anoAtual + 1) return null
+
+return data
+
+}
+
+function extrairDataDoTexto(texto){
+
+const linhas = String(texto || "").split("\n").map((l)=> l.trim()).filter(Boolean)
+const candidatos = []
+
+const regexDMY = /(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/g
+const regexYMD = /(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/g
+
+for(let i=0;i<linhas.length;i++){
+
+const linha = linhas[i]
+const l = linha.toLowerCase()
+
+let pesoBase = 1
+if(i < 35) pesoBase += 1
+
+if(/data|emiss|emissao|factura|fatura|invoice|doc\.?/.test(l)) pesoBase += 4
+if(/venc|due|pagamento limite|validade/.test(l)) pesoBase -= 3
+
+for(const match of linha.matchAll(regexDMY)){
+const data = construirDataValida(match[1],match[2],match[3])
+if(data) candidatos.push({data,peso:pesoBase})
+}
+
+for(const match of linha.matchAll(regexYMD)){
+const data = construirDataValida(match[3],match[2],match[1])
+if(data) candidatos.push({data,peso:pesoBase + 1})
+}
+
+}
+
+if(!candidatos.length) return null
+
+candidatos.sort((a,b)=>{
+if(b.peso!==a.peso) return b.peso - a.peso
+return b.data.getTime() - a.data.getTime()
+})
+
+return candidatos[0].data
+
+}
+
 
 
 function extrairDadosFatura(texto){
 
 let valor = 0
-let data = new Date()
+let data = null
 let empresa = "desconhecido"
 let nif = ""
 let tipo = "despesa"
@@ -409,18 +477,7 @@ if(Number.isNaN(valor)){
 valor = 0
 }
 
-
-
-const dataRegex = /\d{2}[\/\-\.]\d{2}[\/\-\.]\d{4}/
-const dataMatch = textoTratado.match(dataRegex)
-
-if(dataMatch){
-
-data = new Date(
-dataMatch[0].split(/[\/\-\.]/).reverse().join("-")
-)
-
-}
+data = extrairDataDoTexto(textoTratado)
 
 
 
