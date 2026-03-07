@@ -61,7 +61,7 @@ margin:auto;
 
 .cards{
 display:grid;
-grid-template-columns:repeat(3,minmax(0,1fr));
+grid-template-columns:repeat(4,minmax(0,1fr));
 gap:14px;
 margin-bottom:20px;
 }
@@ -402,7 +402,7 @@ background:#cbd5e1;
 }
 
 @media(max-width:980px){
-.cards{grid-template-columns:repeat(3,minmax(0,1fr));}
+.cards{grid-template-columns:repeat(4,minmax(0,1fr));}
 .tabelas-grid{grid-template-columns:1fr;}
 }
 
@@ -457,7 +457,7 @@ display:flex;
 }
 
 .cards{
-grid-template-columns:repeat(3,minmax(0,1fr));
+grid-template-columns:repeat(2,minmax(0,1fr));
 gap:8px;
 }
 
@@ -561,6 +561,11 @@ font-style:italic;
 <div class="card">
 <h3>Saldo</h3>
 <h2 id="saldo">0 €</h2>
+</div>
+
+<div class="card">
+<h3>IVA</h3>
+<h2 id="iva">0 €</h2>
 </div>
 
 </div>
@@ -850,6 +855,16 @@ const despesas = registos
 
 const saldo = receitas - despesas
 
+const ivaRecebido = registos
+.filter(r => (r.tipo || "").toLowerCase()==="receita")
+.reduce((acc,r)=>acc + Number(r.valor_iva ?? 0),0)
+
+const ivaPago = registos
+.filter(r => (r.tipo || "").toLowerCase()!=="receita")
+.reduce((acc,r)=>acc + Number(r.valor_iva ?? 0),0)
+
+const saldoIva = ivaRecebido - ivaPago
+
 document.getElementById("receitas").innerText =
 Number(receitas).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
 
@@ -858,6 +873,10 @@ Number(despesas).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
 
 document.getElementById("saldo").innerText =
 Number(saldo).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
+
+const prefixoIva = saldoIva < 0 ? "-" : ""
+document.getElementById("iva").innerText =
+prefixoIva + Math.abs(Number(saldoIva)).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
 
 }
 
