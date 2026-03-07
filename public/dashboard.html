@@ -806,6 +806,7 @@ const dataCurta = formatarData(r.data)
 const valorSemIva = Number(r.valor_sem_iva ?? 0)
 const valorIva = Number(r.valor_iva ?? 0)
 const valorTotal = Number(r.valor_total ?? r.valor ?? 0)
+const refDoc = encodeURIComponent(String(r.ficheiro || ""))
 
 const row = document.createElement("tr")
 
@@ -818,7 +819,7 @@ row.innerHTML = `
 
 <td class="acoes" data-label="Acoes">
 
-<button title="Ver" aria-label="Ver" onclick="verFatura('${r.ficheiro}')" class="btn-ver">Ver</button>
+<button title="Ver" aria-label="Ver" onclick="verFatura('${refDoc}')" class="btn-ver">Ver</button>
 
 <button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar">Edit.</button>
 
@@ -900,7 +901,14 @@ return texto
 
 function verFatura(ficheiro){
 
-window.open("/uploads/"+ficheiro,"_blank")
+const ref = decodeURIComponent(String(ficheiro || "")).trim()
+if(!ref){
+alert("Documento indisponivel neste registo.")
+return
+}
+
+const url = "/api/documento?ficheiro=" + encodeURIComponent(ref)
+window.open(url,"_blank")
 
 }
 

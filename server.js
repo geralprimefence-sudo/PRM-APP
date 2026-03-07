@@ -198,6 +198,53 @@ return `${yyyy}-${mm}-${dd}`
 
 function apagarUploadSilencioso(nomeFicheiro){
 
+function encontrarFicheiroPorBasename(dir,nomeBase,maxDepth = 5,depth = 0){
+
+	if(depth > maxDepth) return null
+
+	let itens = []
+	try{
+		itens = fs.readdirSync(dir,{withFileTypes:true})
+	}catch(_){
+		return null
+	}
+
+	for(const item of itens){
+		const full = path.join(dir,item.name)
+		if(item.isFile() && item.name === nomeBase){
+			return full
+		}
+	}
+
+	for(const item of itens){
+		if(!item.isDirectory()) continue
+		const full = path.join(dir,item.name)
+		const encontrado = encontrarFicheiroPorBasename(full,nomeBase,maxDepth,depth + 1)
+		if(encontrado) return encontrado
+	}
+
+	return null
+
+}
+
+function resolverCaminhoUploadSeguro(refFicheiro){
+
+	if(!refFicheiro) return null
+
+	const uploadsRoot = path.join(__dirname,"uploads")
+	const normalizado = String(refFicheiro).replace(/\\/g,"/").replace(/^\/+/,"").trim()
+	if(!normalizado) return null
+
+	const direto = path.join(uploadsRoot,normalizado)
+	if(fs.existsSync(direto) && fs.statSync(direto).isFile()) return direto
+
+	const nomeBase = path.basename(normalizado)
+	if(!nomeBase) return null
+
+	return encontrarFicheiroPorBasename(uploadsRoot,nomeBase)
+
+}
+
 if(!nomeFicheiro) return
 
 const seguro = path.basename(nomeFicheiro)
@@ -1034,6 +1081,19 @@ if(req.session.pendingUpload && req.session.pendingUpload.ficheiro){
 apagarUploadSilencioso(req.session.pendingUpload.ficheiro)
 }
 
+
+app.get("/api/documento",auth,(req,res)=>{
+
+	const ref = req.query.ficheiro
+	const full = resolverCaminhoUploadSeguro(ref)
+
+	if(!full){
+		return res.status(404).send("Documento nao encontrado")
+	}
+
+	res.sendFile(full)
+
+})
 req.session.pendingUpload = null
 
 res.json({ok:true,redirect:"/dashboard"})
