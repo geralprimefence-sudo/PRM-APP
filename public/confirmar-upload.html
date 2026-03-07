@@ -146,6 +146,7 @@ const inputValorTotal = document.getElementById("valorTotal")
 const inputData = document.getElementById("data")
 const inputTipo = document.getElementById("tipo")
 const inputNif = document.getElementById("nif")
+let ocrEmCurso = false
 
 function parseNumeroPt(raw){
   if(raw===null || raw===undefined) return NaN
@@ -208,6 +209,13 @@ function hideMsg(delayMs = 0){
   fechar()
 }
 
+function fetchComTimeout(url,options = {},timeoutMs = 20000){
+  const controller = new AbortController()
+  const timer = setTimeout(()=> controller.abort(),timeoutMs)
+  return fetch(url,{...options,signal:controller.signal})
+    .finally(()=> clearTimeout(timer))
+}
+
 async function carregarPendente(){
   const res = await fetch("/api/pending-upload")
   const data = await res.json().catch(() => ({ ok:false }))
@@ -256,14 +264,26 @@ function precisaOCRAssincrono(p){
 }
 
 async function executarOCRAssincrono(){
+  if(ocrEmCurso) return
+  ocrEmCurso = true
   showMsg("A extrair dados automaticamente (fornecedor, data e valor)...", "success")
 
-  const res = await fetch("/api/pending-upload/ocr", { method: "POST" })
-  const data = await res.json().catch(() => ({ ok:false }))
+  let res
+  let data
+  try{
+    res = await fetchComTimeout("/api/pending-upload/ocr", { method: "POST" }, 25000)
+    data = await res.json().catch(() => ({ ok:false }))
+  }catch(_){
+    showMsg("A extracao demorou demasiado. Podes preencher manualmente.", "error")
+    hideMsg(3000)
+    ocrEmCurso = false
+    return
+  }
 
   if(!res.ok || !data.ok || !data.pending){
     showMsg("Nao foi possivel preencher automaticamente. Podes corrigir manualmente.", "error")
     hideMsg(2600)
+    ocrEmCurso = false
     return
   }
 
@@ -293,6 +313,7 @@ async function executarOCRAssincrono(){
 
   showMsg("Dados lidos automaticamente. Confirma antes de guardar.", "success")
   hideMsg(1800)
+  ocrEmCurso = false
 }
 
 form.addEventListener("submit", async (e) => {
