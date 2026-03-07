@@ -1431,6 +1431,30 @@ if(Number.isNaN(valor)){
 valor = 0
 }
 
+function qualidadeDadosExtraidos(dados){
+	const total = Number(dados?.valorTotal ?? dados?.valor ?? 0)
+	const dataValida = Boolean(dataParaInput(dados?.data))
+	const fornecedorValido = Boolean(dados?.empresa && dados.empresa !== "desconhecido")
+	const nifValido = Boolean(dados?.nif && /^\d{9}$/.test(String(dados.nif)))
+	const ivaValido = Number(dados?.valorIva ?? 0) >= 0
+
+	let score = 0
+	if(total > 0) score += 45
+	if(dataValida) score += 28
+	if(fornecedorValido) score += 22
+	if(nifValido) score += 10
+	if(ivaValido) score += 5
+
+	return score
+}
+
+function dadosCriticosOk(dados){
+	const total = Number(dados?.valorTotal ?? dados?.valor ?? 0)
+	const dataValida = Boolean(dataParaInput(dados?.data))
+	const fornecedorValido = Boolean(dados?.empresa && dados.empresa !== "desconhecido")
+	return total > 0 && dataValida && fornecedorValido
+}
+
 data = extrairDataDoTexto(textoTratado)
 
 
@@ -1766,10 +1790,30 @@ ocrErro:"Documento nao encontrado"
 return res.status(404).json({ok:false,erro:"Documento nao encontrado",pending:req.session.pendingUpload})
 }
 
-const texto = await extrairTexto(full,{fast:true,allowExternal:false})
-let dados = extrairDadosFatura(texto)
-const dadosQr = await extrairDadosQrDaImagem(full)
-dados = combinarDadosComQr(dados,dadosQr)
+	const textoRapido = await extrairTexto(full,{fast:true,allowExternal:false})
+	let dados = extrairDadosFatura(textoRapido)
+	const dadosQr = await extrairDadosQrDaImagem(full)
+	dados = combinarDadosComQr(dados,dadosQr)
+
+	if(!dadosCriticosOk(dados)){
+		try{
+			const textoCompleto = await Promise.race([
+				extrairTexto(full,{fast:false,allowExternal:true}),
+				new Promise((resolve)=> setTimeout(()=> resolve(""),18000))
+			])
+
+			if(String(textoCompleto || "").trim()){
+				let dadosCompletos = extrairDadosFatura(String(textoCompleto || ""))
+				dadosCompletos = combinarDadosComQr(dadosCompletos,dadosQr)
+
+				if(qualidadeDadosExtraidos(dadosCompletos) >= qualidadeDadosExtraidos(dados)){
+					dados = dadosCompletos
+				}
+			}
+		}catch(errFull){
+			console.error("Fallback OCR completo falhou",errFull?.message || errFull)
+		}
+	}
 
 const userResult = await pool.query(
 "SELECT nome,contribuinte FROM users WHERE id=$1",
