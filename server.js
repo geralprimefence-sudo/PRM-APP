@@ -10,6 +10,13 @@ const pdfParse = require("pdf-parse")
 const Tesseract = require("tesseract.js")
 const { Pool } = require("pg")
 
+let sharp = null
+try{
+sharp = require("sharp")
+}catch(_){
+// Sharp is optional at runtime; OCR still works without it.
+}
+
 const app = express()
 const PORT = process.env.PORT || 3000
 const SESSION_SECRET = process.env.SESSION_SECRET || "prm-secret"
@@ -170,6 +177,42 @@ return score
 
 }
 
+function textoOCRSuficientementeBom(texto,score){
+	const t = String(texto || "").toLowerCase()
+	if(!t.trim()) return false
+	const temTotal = /\btotal\b|a pagar|valor total/.test(t)
+	const temData = /\bdata\b|\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}/.test(t)
+	const temNumero = (t.match(/\d/g) || []).length >= 8
+	return score >= 70 && temNumero && (temTotal || temData)
+}
+
+async function preprocessarImagemParaOCR(file){
+
+	if(!sharp) return null
+
+	const ext = path.extname(file || "").toLowerCase()
+	if(![".jpg",".jpeg",".png",".webp"].includes(ext)) return null
+
+	const tmpName = `ocr-${Date.now()}-${Math.random().toString(16).slice(2)}.png`
+	const out = path.join(__dirname,"temp",tmpName)
+
+	try{
+		await sharp(file)
+			.rotate()
+			.resize({width:1700,height:1700,fit:"inside",withoutEnlargement:true})
+			.grayscale()
+			.normalize()
+			.sharpen({sigma:1.15,m1:0.9,m2:0.35,x1:2,y2:10,y3:20})
+			.png({compressionLevel:9})
+			.toFile(out)
+		return out
+	}catch(err){
+		console.error("Falha no preprocessamento OCR",err?.message || err)
+		return null
+	}
+
+}
+
 async function reconhecerTextoOCRImagem(file){
 
 const tentativas = [
@@ -190,6 +233,9 @@ const score = pontuarTextoOCR(texto)
 if(score > melhorScore){
 melhorScore = score
 melhorTexto = texto
+}
+if(textoOCRSuficientementeBom(texto,score)){
+break
 }
 }catch(err){
 console.error(`Falha OCR (${tentativa.name})`,err?.message || err)
@@ -228,7 +274,22 @@ return textoPdf
 
 const texto = await reconhecerTextoOCRImagem(file)
 
-return texto
+let tmpPre = null
+try{
+	tmpPre = await preprocessarImagemParaOCR(file)
+	if(tmpPre){
+		const textoPre = await reconhecerTextoOCRImagem(tmpPre)
+		if(pontuarTextoOCR(textoPre) >= pontuarTextoOCR(texto)){
+			return textoPre
+		}
+	}
+
+	return texto
+}finally{
+	if(tmpPre){
+		try{ fs.unlinkSync(tmpPre) }catch(_){ }
+	}
+}
 
 }
 
