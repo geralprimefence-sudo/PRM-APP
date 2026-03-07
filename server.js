@@ -3,6 +3,7 @@ require("dotenv").config()
 const express = require("express")
 const multer = require("multer")
 const session = require("express-session")
+const PgSession = require("connect-pg-simple")(session)
 const bcrypt = require("bcrypt")
 const fs = require("fs")
 const path = require("path")
@@ -48,22 +49,27 @@ app.use(express.json())
 app.use(express.static("public"))
 app.use("/uploads",express.static("uploads"))
 
+
+const pool = new Pool({
+connectionString:process.env.DATABASE_URL,
+ssl:{rejectUnauthorized:false}
+})
+
 app.use(session({
 secret:SESSION_SECRET,
 resave:false,
 saveUninitialized:false,
+store:new PgSession({
+pool,
+tableName:"user_sessions",
+createTableIfMissing:true
+}),
 cookie:{
 httpOnly:true,
 sameSite:"lax",
 secure:process.env.NODE_ENV === "production"
 }
 }))
-
-
-const pool = new Pool({
-connectionString:process.env.DATABASE_URL,
-ssl:{rejectUnauthorized:false}
-})
 
 
 async function criarTabelas(){
