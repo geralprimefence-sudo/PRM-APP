@@ -504,6 +504,7 @@ const numeroRegex = /\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d{2})|\d+[.,]\d{2}|\d{3,6}/g
 let total = null
 let iva = null
 let semIva = null
+const taxaPadraoIva = 0.23
 
 for(const linha of linhas){
 
@@ -535,9 +536,19 @@ const eLinhaTotal =
 
 const eLinhaIva = /\biva\b|imposto/.test(l)
 const eLinhaSemIva = /sem iva|subtotal|base tributavel|incidencia|valor liquido/.test(l)
+const linhaTaxa23 = /\b23(?:[.,]0+)?\s*%/.test(l) || /\b0[.,]23\b/.test(l)
 
 if(eLinhaTotal && (total===null || maior > total)) total = maior
-if(eLinhaIva && (iva===null || maior > iva)) iva = maior
+
+if(eLinhaIva){
+let candidatoIva = maior
+if(linhaTaxa23 && valores.length > 1){
+// In lines like "IVA 23% ...", the smallest monetary token is usually IVA amount.
+candidatoIva = Math.min(...valores)
+}
+if(iva===null || candidatoIva > iva) iva = candidatoIva
+}
+
 if(eLinhaSemIva && (semIva===null || maior > semIva)) semIva = maior
 
 }
@@ -556,6 +567,30 @@ if(semIva!==null && iva!==null && total===null){
 
 if(total!==null && semIva!==null && iva===null){
 	iva = Math.max(0,total - semIva)
+}
+
+if(total!==null && semIva===null){
+	semIva = total / (1 + taxaPadraoIva)
+}
+
+if(total!==null && iva===null && semIva!==null){
+	iva = Math.max(0,total - semIva)
+}
+
+if(semIva!==null && iva===null){
+	iva = semIva * taxaPadraoIva
+}
+
+if(iva!==null && semIva===null){
+	if(total!==null){
+		semIva = Math.max(0,total - iva)
+	}else{
+		semIva = iva / taxaPadraoIva
+	}
+}
+
+if(total===null && semIva!==null && iva!==null){
+	total = semIva + iva
 }
 
 if(total!==null && semIva!==null && iva!==null){
@@ -646,6 +681,43 @@ return limpa
 
 }
 
+function extrairTituloFornecedorDoTexto(texto){
+
+const linhas = String(texto || "").split("\n").map((l)=> limparLinhaEmpresa(l.trim())).filter(Boolean)
+if(!linhas.length) return "desconhecido"
+
+const bloqueadas = /fatura|factura|recibo|nif|contribuinte|total|iva|imposto|data|hora|pagamento|cliente|artigo|descricao|quantidade|preco|valor|terminal|cartao|mbway|multibanco|iban|www|http|email|telefone/i
+
+let melhor = "desconhecido"
+let melhorScore = -1
+
+for(let i=0;i<Math.min(linhas.length,18);i++){
+const linha = linhas[i]
+const l = linha.toLowerCase()
+if(linha.length < 3 || linha.length > 70) continue
+if(bloqueadas.test(l)) continue
+if(!/[a-zA-Z\u00C0-\u017F]/.test(linha)) continue
+
+let score = 1
+if(i < 4) score += 5
+else if(i < 10) score += 2
+
+if(linha === linha.toUpperCase()) score += 2
+if(/\b(lda|s\.?a\.?|unipessoal|sociedade|supermercado|restaurante|cafe|farmacia|combustiveis|postos?)\b/i.test(linha)) score += 3
+
+const nPalavras = linha.split(/\s+/).length
+if(nPalavras >= 1 && nPalavras <= 6) score += 1
+
+if(score > melhorScore){
+melhorScore = score
+melhor = linha
+}
+}
+
+return melhor
+
+}
+
 function linhaTemRuidoMoradaOuContacto(linha){
 
 const l = String(linha || "").toLowerCase()
@@ -658,6 +730,8 @@ function extrairFornecedorDoTexto(texto,nif){
 
 const linhas = String(texto || "").split("\n").map((l)=> l.trim()).filter(Boolean)
 if(!linhas.length) return "desconhecido"
+
+const tituloFornecedor = extrairTituloFornecedorDoTexto(texto)
 
 const linhasPrioritarias = linhas.slice(0,60)
 let melhor = "desconhecido"
@@ -683,6 +757,7 @@ if(linhaTemRuidoMoradaOuContacto(original)) score -= 3
 if(linha.length > 45) score -= 1
 if(/emitente|fornecedor|merchant|seller|empresa/.test(atual)) score += 5
 if(/emitente|fornecedor|merchant|seller|empresa/.test(anterior)) score += 4
+if(tituloFornecedor!="desconhecido" && normalizarTextoComparacao(linha) === normalizarTextoComparacao(tituloFornecedor)) score += 8
 
 if(nif){
 const idxNif = linhasPrioritarias.findIndex((l)=> l.includes(nif))
@@ -700,7 +775,11 @@ melhor = linha
 
 }
 
-return melhor || "desconhecido"
+if(tituloFornecedor!=="desconhecido" && melhorScore < 4){
+return tituloFornecedor
+}
+
+return melhor || tituloFornecedor || "desconhecido"
 
 }
 
