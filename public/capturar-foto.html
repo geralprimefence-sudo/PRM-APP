@@ -117,6 +117,8 @@ const modoNormalBtn = document.getElementById("modoNormalBtn")
 
 let stream = null
 let modoScan = true
+const MAX_LADO_OCR = 1400
+const MAX_LADO_NORMAL = 1100
 
 function atualizarModoBotoes(){
   modoScanBtn.classList.toggle("ativo", modoScan)
@@ -145,7 +147,7 @@ function melhorarParaOCR(ctx,w,h){
 async function iniciarCamera(){
   try{
     stream = await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode:{ ideal:"environment" }, width:{ ideal:1920 }, height:{ ideal:1080 } },
+      video:{ facingMode:{ ideal:"environment" }, width:{ ideal:1280 }, height:{ ideal:720 } },
       audio:false
     })
     video.srcObject = stream
@@ -200,13 +202,18 @@ captureBtn.addEventListener("click", async ()=>{
   const sw = Math.max(1, Math.floor(fw * rw))
   const sh = Math.max(1, Math.floor(fh * rh))
 
-  canvas.width = sw
-  canvas.height = sh
+  const maxLado = modoScan ? MAX_LADO_OCR : MAX_LADO_NORMAL
+  const escala = Math.min(1, maxLado / Math.max(sw, sh))
+  const tw = Math.max(1, Math.round(sw * escala))
+  const th = Math.max(1, Math.round(sh * escala))
+
+  canvas.width = tw
+  canvas.height = th
   const ctx = canvas.getContext("2d")
-  ctx.drawImage(video,sx,sy,sw,sh,0,0,sw,sh)
+  ctx.drawImage(video,sx,sy,sw,sh,0,0,tw,th)
 
   if(modoScan){
-    melhorarParaOCR(ctx,sw,sh)
+    melhorarParaOCR(ctx,tw,th)
   }
 
   canvas.toBlob(async (blob)=>{
@@ -215,7 +222,7 @@ captureBtn.addEventListener("click", async ()=>{
       return
     }
 
-    msg.textContent = "A enviar foto..."
+    msg.textContent = "A processar e enviar foto..."
     captureBtn.disabled = true
     try{
       await enviarBlob(blob)
@@ -224,7 +231,7 @@ captureBtn.addEventListener("click", async ()=>{
       retryBtn.style.display = "inline-block"
       captureBtn.disabled = false
     }
-  }, "image/jpeg", 0.92)
+  }, "image/jpeg", modoScan ? 0.78 : 0.72)
 })
 
 retryBtn.addEventListener("click", ()=>{

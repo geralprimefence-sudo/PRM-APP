@@ -863,7 +863,6 @@ try{
 const file = req.file.path
 
 const texto = await extrairTexto(file)
-console.log(texto)
 
 const dados = extrairDadosFatura(texto)
 
