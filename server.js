@@ -198,6 +198,21 @@ return `${yyyy}-${mm}-${dd}`
 
 function apagarUploadSilencioso(nomeFicheiro){
 
+if(!nomeFicheiro) return
+
+const seguro = path.basename(nomeFicheiro)
+const full = path.join(__dirname,"uploads",seguro)
+
+try{
+if(fs.existsSync(full)){
+fs.unlinkSync(full)
+}
+}catch(err){
+console.error("Falha a apagar upload pendente",err)
+}
+
+}
+
 function encontrarFicheiroPorBasename(dir,nomeBase,maxDepth = 5,depth = 0){
 
 	if(depth > maxDepth) return null
@@ -242,21 +257,6 @@ function resolverCaminhoUploadSeguro(refFicheiro){
 	if(!nomeBase) return null
 
 	return encontrarFicheiroPorBasename(uploadsRoot,nomeBase)
-
-}
-
-if(!nomeFicheiro) return
-
-const seguro = path.basename(nomeFicheiro)
-const full = path.join(__dirname,"uploads",seguro)
-
-try{
-if(fs.existsSync(full)){
-fs.unlinkSync(full)
-}
-}catch(err){
-console.error("Falha a apagar upload pendente",err)
-}
 
 }
 
