@@ -418,9 +418,16 @@ function combinarDadosComQr(dados,qr){
 
 }
 
-async function reconhecerTextoOCRImagem(file){
+async function reconhecerTextoOCRImagem(file,opcoes = {}){
 
-const tentativas = [
+const modoRapido = Boolean(opcoes.fast)
+
+const tentativas = modoRapido
+? [
+{name:"psm6",options:{tessedit_pageseg_mode:"6",preserve_interword_spaces:"1"}},
+{name:"psm11",options:{tessedit_pageseg_mode:"11",preserve_interword_spaces:"1"}}
+]
+: [
 {name:"psm6",options:{tessedit_pageseg_mode:"6",preserve_interword_spaces:"1"}},
 {name:"psm4",options:{tessedit_pageseg_mode:"4",preserve_interword_spaces:"1"}},
 {name:"psm11",options:{tessedit_pageseg_mode:"11",preserve_interword_spaces:"1"}},
@@ -565,7 +572,10 @@ async function reconhecerTextoPaddleOCRApi(file){
 
 }
 
-async function extrairTexto(file){
+async function extrairTexto(file,opcoes = {}){
+
+const modoRapido = Boolean(opcoes.fast)
+const usarApisExternas = opcoes.allowExternal !== false
 
 const ext = path.extname(file).toLowerCase()
 
@@ -581,7 +591,7 @@ return textoPdf
 }
 
 try{
-const resultadoOcr = await reconhecerTextoOCRImagem(file)
+const resultadoOcr = await reconhecerTextoOCRImagem(file,{fast:modoRapido})
 const textoOcr = String(resultadoOcr?.texto || "")
 if(textoOcr.length >= 12) return textoOcr
 }catch(_){
@@ -596,17 +606,19 @@ const candidatos = []
 let tmpPreA = null
 let tmpPreB = null
 try{
-	const base = await reconhecerTextoOCRImagem(file)
+	const base = await reconhecerTextoOCRImagem(file,{fast:modoRapido})
 	candidatos.push(base)
 
 	tmpPreA = await preprocessarImagemParaOCR(file,"balanced")
 	if(tmpPreA){
-		candidatos.push(await reconhecerTextoOCRImagem(tmpPreA))
+		candidatos.push(await reconhecerTextoOCRImagem(tmpPreA,{fast:modoRapido}))
 	}
 
-	tmpPreB = await preprocessarImagemParaOCR(file,"threshold")
-	if(tmpPreB){
-		candidatos.push(await reconhecerTextoOCRImagem(tmpPreB))
+	if(!modoRapido){
+		tmpPreB = await preprocessarImagemParaOCR(file,"threshold")
+		if(tmpPreB){
+			candidatos.push(await reconhecerTextoOCRImagem(tmpPreB,{fast:false}))
+		}
 	}
 
 	const validos = candidatos
@@ -626,20 +638,22 @@ try{
 		return melhorLocal.texto
 	}
 
-	const paddle = await reconhecerTextoPaddleOCRApi(file)
-	if(paddle.texto){
-		validos.push(paddle)
-		validos.sort((a,b)=> b.score - a.score)
-		const melhorComPaddle = validos[0]
-		if(temCamposCriticosOCR(melhorComPaddle.texto)){
-			return melhorComPaddle.texto
+	if(usarApisExternas){
+		const paddle = await reconhecerTextoPaddleOCRApi(file)
+		if(paddle.texto){
+			validos.push(paddle)
+			validos.sort((a,b)=> b.score - a.score)
+			const melhorComPaddle = validos[0]
+			if(temCamposCriticosOCR(melhorComPaddle.texto)){
+				return melhorComPaddle.texto
+			}
 		}
-	}
 
-	const remoto = await reconhecerTextoOCRApiGratis(file)
-	if(remoto.texto){
-		validos.push(remoto)
-		validos.sort((a,b)=> b.score - a.score)
+		const remoto = await reconhecerTextoOCRApiGratis(file)
+		if(remoto.texto){
+			validos.push(remoto)
+			validos.sort((a,b)=> b.score - a.score)
+		}
 	}
 
 	return validos[0].texto
@@ -1752,7 +1766,7 @@ ocrErro:"Documento nao encontrado"
 return res.status(404).json({ok:false,erro:"Documento nao encontrado",pending:req.session.pendingUpload})
 }
 
-const texto = await extrairTexto(full)
+const texto = await extrairTexto(full,{fast:true,allowExternal:false})
 let dados = extrairDadosFatura(texto)
 const dadosQr = await extrairDadosQrDaImagem(full)
 dados = combinarDadosComQr(dados,dadosQr)
