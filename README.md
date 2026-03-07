@@ -23,6 +23,14 @@ SESSION_SECRET=uma-chave-forte-aqui
 PORT=3000
 ```
 
+Opcional para OCR com API gratuita (fallback):
+
+```env
+OCRSPACE_ENABLED=1
+OCRSPACE_API_KEY=helloworld
+OCRSPACE_TIMEOUT_MS=15000
+```
+
 3. Arrancar servidor:
 
 ```bash

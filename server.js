@@ -17,6 +17,10 @@ sharp = require("sharp")
 // Sharp is optional at runtime; OCR still works without it.
 }
 
+const OCRSPACE_ENABLED = String(process.env.OCRSPACE_ENABLED || "1") !== "0"
+const OCRSPACE_API_KEY = process.env.OCRSPACE_API_KEY || "helloworld"
+const OCRSPACE_TIMEOUT_MS = Number(process.env.OCRSPACE_TIMEOUT_MS || 15000)
+
 const app = express()
 const PORT = process.env.PORT || 3000
 const SESSION_SECRET = process.env.SESSION_SECRET || "prm-secret"
@@ -177,6 +181,23 @@ return score
 
 }
 
+function pontuarResultadoOCR(texto){
+const scoreTexto = pontuarTextoOCR(texto)
+const scoreCampos = pontuarCamposExtraidos(texto)
+return scoreTexto + (scoreCampos * 1.8)
+}
+
+function temCamposCriticosOCR(texto){
+	const totais = extrairTotaisDoTexto(texto)
+	const data = extrairDataDoTexto(texto)
+	const nif = extrairNifDoTexto(texto)
+	const fornecedor = extrairFornecedorDoTexto(texto,nif)
+	const totalOk = Number(totais.total || 0) > 0
+	const dataOk = Boolean(data)
+	const fornecedorOk = Boolean(fornecedor && fornecedor !== "desconhecido")
+	return totalOk && dataOk && fornecedorOk
+}
+
 function pontuarCamposExtraidos(texto){
 
 const totais = extrairTotaisDoTexto(texto)
@@ -263,9 +284,7 @@ for(const tentativa of tentativas){
 try{
 const result = await Tesseract.recognize(file,"por+eng",tentativa.options)
 const texto = String(result?.data?.text || "").trim()
-const scoreTexto = pontuarTextoOCR(texto)
-const scoreCampos = pontuarCamposExtraidos(texto)
-const score = scoreTexto + (scoreCampos * 1.8)
+const score = pontuarResultadoOCR(texto)
 
 if(score > melhorScoreGeral){
 melhorScoreGeral = score
@@ -283,6 +302,67 @@ return {
 texto:melhorTexto,
 score:melhorScoreGeral
 }
+
+}
+
+async function reconhecerTextoOCRApiGratis(file){
+
+	if(!OCRSPACE_ENABLED) return {texto:"",score:-Infinity}
+
+	const ext = path.extname(file || "").toLowerCase()
+	const mimeByExt = {
+		".jpg":"image/jpeg",
+		".jpeg":"image/jpeg",
+		".png":"image/png",
+		".webp":"image/webp"
+	}
+
+	const mime = mimeByExt[ext]
+	if(!mime) return {texto:"",score:-Infinity}
+
+	const controller = new AbortController()
+	const timer = setTimeout(()=> controller.abort(),OCRSPACE_TIMEOUT_MS)
+
+	try{
+		const b64 = fs.readFileSync(file).toString("base64")
+		const params = new URLSearchParams()
+		params.set("base64Image",`data:${mime};base64,${b64}`)
+		params.set("language","por")
+		params.set("isOverlayRequired","false")
+		params.set("OCREngine","2")
+		params.set("scale","true")
+
+		const res = await fetch("https://api.ocr.space/parse/image",{
+			method:"POST",
+			headers:{
+				"apikey":OCRSPACE_API_KEY,
+				"Content-Type":"application/x-www-form-urlencoded"
+			},
+			body:params.toString(),
+			signal:controller.signal
+		})
+
+		if(!res.ok) return {texto:"",score:-Infinity}
+
+		const data = await res.json().catch(()=> null)
+		const parsed = (data?.ParsedResults || [])
+			.map((r)=> String(r?.ParsedText || "").trim())
+			.filter(Boolean)
+			.join("\n")
+			.trim()
+
+		if(!parsed) return {texto:"",score:-Infinity}
+
+		return {
+			texto:parsed,
+			score:pontuarResultadoOCR(parsed)
+		}
+	}catch(err){
+		console.error("Falha OCR API gratis",err?.message || err)
+		return {texto:"",score:-Infinity}
+	}finally{
+		clearTimeout(timer)
+	}
 
 }
 
@@ -337,6 +417,22 @@ try{
 	if(!validos.length) return ""
 
 	validos.sort((a,b)=> b.score - a.score)
+
+	const melhorLocal = validos[0]
+	const localBom =
+		melhorLocal.score >= 180 &&
+		temCamposCriticosOCR(melhorLocal.texto)
+
+	if(localBom){
+		return melhorLocal.texto
+	}
+
+	const remoto = await reconhecerTextoOCRApiGratis(file)
+	if(remoto.texto){
+		validos.push(remoto)
+		validos.sort((a,b)=> b.score - a.score)
+	}
+
 	return validos[0].texto
 }finally{
 	if(tmpPreA){ try{ fs.unlinkSync(tmpPreA) }catch(_){ } }
