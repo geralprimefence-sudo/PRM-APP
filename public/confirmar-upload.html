@@ -195,6 +195,19 @@ function showMsg(text, tipo){
   msg.classList.add(tipo)
 }
 
+function hideMsg(delayMs = 0){
+  const fechar = ()=>{
+    msg.classList.add("hidden")
+    msg.classList.remove("error","success")
+    msg.textContent = ""
+  }
+  if(delayMs>0){
+    setTimeout(fechar,delayMs)
+    return
+  }
+  fechar()
+}
+
 async function carregarPendente(){
   const res = await fetch("/api/pending-upload")
   const data = await res.json().catch(() => ({ ok:false }))
@@ -250,6 +263,7 @@ async function executarOCRAssincrono(){
 
   if(!res.ok || !data.ok || !data.pending){
     showMsg("Nao foi possivel preencher automaticamente. Podes corrigir manualmente.", "error")
+    hideMsg(2600)
     return
   }
 
@@ -278,6 +292,7 @@ async function executarOCRAssincrono(){
   }
 
   showMsg("Dados lidos automaticamente. Confirma antes de guardar.", "success")
+  hideMsg(1800)
 }
 
 form.addEventListener("submit", async (e) => {
