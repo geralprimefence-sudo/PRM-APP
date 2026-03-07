@@ -117,37 +117,56 @@ const modoNormalBtn = document.getElementById("modoNormalBtn")
 
 let stream = null
 let modoScan = true
-const MAX_LADO_OCR = 1600
-const MAX_LADO_NORMAL = 1800
+const MAX_LADO_OCR = 1100
+const MAX_LADO_NORMAL = 1280
 let aProcessar = false
 
 function definirEstadoProcessamento(ativo){
   aProcessar = ativo
   captureBtn.disabled = ativo
   retryBtn.disabled = ativo
-  modoScanBtn.disabled = ativo
-  modoNormalBtn.disabled = ativo
 }
 
 function atualizarModoBotoes(){
   modoScanBtn.classList.toggle("ativo", modoScan)
   modoNormalBtn.classList.toggle("ativo", !modoScan)
+  modoScanBtn.setAttribute("aria-pressed", String(modoScan))
+  modoNormalBtn.setAttribute("aria-pressed", String(!modoScan))
   scanFrame.style.display = modoScan ? "block" : "none"
   msg.textContent = modoScan
     ? "Modo Scan ativo: usa moldura e melhora contraste para OCR."
     : "Modo Normal ativo: capta imagem completa original."
 }
 
+function selecionarModo(scan){
+  if(aProcessar) return
+  modoScan = !!scan
+  atualizarModoBotoes()
+}
+
+function ligarEventosModo(){
+  const bind = (btn,scan)=>{
+    btn.addEventListener("click",()=> selecionarModo(scan))
+    btn.addEventListener("touchend",(e)=>{
+      e.preventDefault()
+      selecionarModo(scan)
+    },{passive:false})
+  }
+
+  bind(modoScanBtn,true)
+  bind(modoNormalBtn,false)
+}
+
 function melhorarParaOCR(ctx,w,h){
   const img = ctx.getImageData(0,0,w,h)
   const p = img.data
 
-  // Grayscale + contrast boost + light threshold to highlight text.
+  // Fast grayscale + contrast boost with light threshold.
   for(let i=0;i<p.length;i+=4){
-    const g = (0.2126*p[i]) + (0.7152*p[i+1]) + (0.0722*p[i+2])
-    let v = (g - 128) * 1.55 + 128
+    const g = ((p[i] * 38) + (p[i+1] * 75) + (p[i+2] * 15)) >> 7
+    let v = g * 1.22
     v = Math.max(0,Math.min(255,v))
-    if(v > 205) v = 255
+    if(v > 198) v = 255
     p[i] = p[i+1] = p[i+2] = v
   }
 
@@ -231,6 +250,13 @@ captureBtn.addEventListener("click", async ()=>{
   canvas.width = tw
   canvas.height = th
   const ctx = canvas.getContext("2d")
+
+  definirEstadoProcessamento(true)
+  msg.textContent = "A capturar foto..."
+
+  // Yield one frame so UI updates before image processing.
+  await new Promise((resolve)=> requestAnimationFrame(resolve))
+
   ctx.drawImage(video,sx,sy,sw,sh,0,0,tw,th)
 
   if(modoScan){
@@ -240,11 +266,11 @@ captureBtn.addEventListener("click", async ()=>{
   canvas.toBlob(async (blob)=>{
     if(!blob){
       msg.textContent = "Falha ao capturar foto."
+      definirEstadoProcessamento(false)
       return
     }
 
     msg.textContent = "A preparar imagem..."
-    definirEstadoProcessamento(true)
     try{
       await enviarBlob(blob)
     }catch(err){
@@ -252,23 +278,13 @@ captureBtn.addEventListener("click", async ()=>{
       retryBtn.style.display = "inline-block"
       definirEstadoProcessamento(false)
     }
-  }, "image/jpeg", modoScan ? 0.86 : 0.9)
+  }, "image/jpeg", modoScan ? 0.78 : 0.84)
 })
 
 retryBtn.addEventListener("click", ()=>{
   atualizarModoBotoes()
   retryBtn.style.display = "none"
   definirEstadoProcessamento(false)
-})
-
-modoScanBtn.addEventListener("click",()=>{
-  modoScan = true
-  atualizarModoBotoes()
-})
-
-modoNormalBtn.addEventListener("click",()=>{
-  modoScan = false
-  atualizarModoBotoes()
 })
 
 fallbackInput.addEventListener("change",(e)=>{
@@ -284,6 +300,7 @@ cancelBtn.addEventListener("click", ()=>{
 
 window.addEventListener("beforeunload", pararCamera)
 iniciarCamera()
+ligarEventosModo()
 atualizarModoBotoes()
 </script>
 </body>
