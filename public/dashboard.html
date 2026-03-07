@@ -258,7 +258,7 @@ margin:1px;
 border:none;
 border-radius:8px;
 cursor:pointer;
-font-size:12px;
+font-size:11px;
 font-weight:700;
 min-width:28px;
 min-height:28px;
@@ -377,7 +377,7 @@ width:100%;
 min-width:0;
 min-height:26px;
 max-height:26px;
-font-size:12px;
+font-size:11px;
 line-height:1;
 padding:2px 4px;
 border-radius:6px;
@@ -407,6 +407,8 @@ display:none;
 <header>
 
 <h1>PRM Dashboard</h1>
+
+<small style="color:#93c5fd;font-weight:700;">build: 2026-03-07-fix4</small>
 
 <a href="/logout">
 <button class="logout">Logout</button>
@@ -667,11 +669,11 @@ row.innerHTML = `
 
 <td class="acoes" data-label="Acoes">
 
-<button title="Ver" aria-label="Ver" onclick="verFatura('${r.ficheiro}')" class="btn-ver">V</button>
+<button title="Ver" aria-label="Ver" onclick="verFatura('${r.ficheiro}')" class="btn-ver">VER</button>
 
-<button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar">E</button>
+<button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar">EDITAR</button>
 
-<button title="Apagar" aria-label="Apagar" onclick="apagar(${r.id})" class="btn-apagar">X</button>
+<button title="Apagar" aria-label="Apagar" onclick="apagar(${r.id})" class="btn-apagar">APAGAR</button>
 
 </td>
 `
