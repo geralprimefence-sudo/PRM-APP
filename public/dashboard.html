@@ -366,16 +366,17 @@ letter-spacing:0.2px;
 }
 
 td.acoes{
-display:flex;
-align-items:center;
-flex-wrap:wrap;
-gap:8px;
+display:grid;
+grid-template-columns:repeat(3,minmax(0,1fr));
+gap:6px;
 }
 
 td.acoes button{
-min-width:54px;
-min-height:44px;
-font-size:19px;
+width:100%;
+min-width:0;
+min-height:36px;
+font-size:16px;
+padding:7px 8px;
 }
 
 .linha-vazia td{
