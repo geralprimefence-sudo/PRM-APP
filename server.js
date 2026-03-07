@@ -589,6 +589,23 @@ if(iva!==null && semIva===null){
 	}
 }
 
+// OCR sometimes swaps base and VAT values. If ratio suggests inversion, swap.
+if(total!==null && semIva!==null && iva!==null){
+	const soma = semIva + iva
+	const somaValida = Math.abs(soma - total) <= 0.08
+	if(somaValida && iva > semIva){
+		const r1 = semIva / Math.max(iva,0.0001)
+		const r2 = iva / Math.max(semIva,0.0001)
+		const semPareceTaxa = r1 > 0.19 && r1 < 0.27
+		const ivaPareceTaxa = r2 > 0.19 && r2 < 0.27
+		if(semPareceTaxa && !ivaPareceTaxa){
+			const tmp = semIva
+			semIva = iva
+			iva = tmp
+		}
+	}
+}
+
 if(total===null && semIva!==null && iva!==null){
 	total = semIva + iva
 }
