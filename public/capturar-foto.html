@@ -161,12 +161,44 @@ function melhorarParaOCR(ctx,w,h){
   const img = ctx.getImageData(0,0,w,h)
   const p = img.data
 
-  // Fast grayscale + contrast boost with light threshold.
-  for(let i=0;i<p.length;i+=4){
+  // 1) grayscale + 2) high contrast
+  const gray = new Uint8ClampedArray(w * h)
+  for(let i=0,px=0;i<p.length;i+=4,px++){
     const g = ((p[i] * 38) + (p[i+1] * 75) + (p[i+2] * 15)) >> 7
-    let v = g * 1.22
+    // Stronger contrast around mid-tones for thermal receipts.
+    let v = (g - 128) * 1.75 + 128
     v = Math.max(0,Math.min(255,v))
-    if(v > 198) v = 255
+    gray[px] = v
+  }
+
+  // 3) sharpen (3x3 kernel: 0 -1 0 / -1 5 -1 / 0 -1 0)
+  const sharpened = new Uint8ClampedArray(gray.length)
+  for(let y=0;y<h;y++){
+    for(let x=0;x<w;x++){
+      const idx = y * w + x
+
+      if(x===0 || y===0 || x===w-1 || y===h-1){
+        sharpened[idx] = gray[idx]
+        continue
+      }
+
+      const c = gray[idx]
+      const l = gray[idx - 1]
+      const r = gray[idx + 1]
+      const t = gray[idx - w]
+      const b = gray[idx + w]
+
+      let v = (5 * c) - l - r - t - b
+      v = Math.max(0,Math.min(255,v))
+
+      // Light threshold after sharpen to clean background noise.
+      if(v > 210) v = 255
+      sharpened[idx] = v
+    }
+  }
+
+  for(let i=0,px=0;i<p.length;i+=4,px++){
+    const v = sharpened[px]
     p[i] = p[i+1] = p[i+2] = v
   }
 
