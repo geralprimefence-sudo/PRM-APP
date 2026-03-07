@@ -462,6 +462,73 @@ return /[a-zA-Z\u00C0-\u017F]/.test(l)
 
 }
 
+function limparLinhaEmpresa(linha){
+
+if(!linha) return ""
+
+let limpa = String(linha)
+limpa = limpa.replace(/^(emitente|fornecedor|empresa|nome|merchant|seller|loja)\s*[:\-]\s*/i,"")
+limpa = limpa.replace(/\s{2,}/g," ").trim()
+limpa = limpa.replace(/^[\-–•\s]+/,"").replace(/[\s,;:\-]+$/g,"")
+
+return limpa
+
+}
+
+function linhaTemRuidoMoradaOuContacto(linha){
+
+const l = String(linha || "").toLowerCase()
+
+return /\b(rua|av\.?|avenida|estrada|lote|andar|apartado|telefone|telemovel|tel\.?|email|e-mail|www|http|codigo postal|cp\b|iban|swift)\b/.test(l)
+
+}
+
+function extrairFornecedorDoTexto(texto,nif){
+
+const linhas = String(texto || "").split("\n").map((l)=> l.trim()).filter(Boolean)
+if(!linhas.length) return "desconhecido"
+
+const linhasPrioritarias = linhas.slice(0,60)
+let melhor = "desconhecido"
+let melhorScore = -1
+
+for(let i=0;i<linhasPrioritarias.length;i++){
+
+const original = linhasPrioritarias[i]
+let linha = limparLinhaEmpresa(original)
+if(!linhaPareceEmpresa(linha)) continue
+
+let score = 1
+
+if(i < 8) score += 4
+else if(i < 20) score += 2
+
+if(/\b(lda|s\.?a\.?|unipessoal|sociedade|supermercado|hipermercado|restaurante|cafe|minimercado|farmacia|combustiveis|postos?)\b/i.test(linha)) score += 4
+if(linha.split(" ").length >= 2) score += 1
+if(linha === linha.toUpperCase()) score += 1
+if(linhaTemRuidoMoradaOuContacto(original)) score -= 3
+if(linha.length > 45) score -= 1
+
+if(nif){
+const idxNif = linhasPrioritarias.findIndex((l)=> l.includes(nif))
+if(idxNif>=0){
+if(i===idxNif) score += 2
+if(i===idxNif-1) score += 4
+if(i===idxNif-2) score += 2
+}
+}
+
+if(score > melhorScore){
+melhorScore = score
+melhor = linha
+}
+
+}
+
+return melhor || "desconhecido"
+
+}
+
 function construirDataValida(dia,mes,ano){
 
 const d = Number(dia)
@@ -580,26 +647,7 @@ if(nifMatch){
 nif = nifMatch[1]
 }
 
-
-
-const linhas = textoTratado.split("\n").map((l) => l.trim()).filter(Boolean)
-
-let melhorScore = -1
-const linhasPrioritarias = linhas.slice(0,40)
-for(let i=0;i<linhasPrioritarias.length;i++){
-const linha = linhasPrioritarias[i]
-if(!linhaPareceEmpresa(linha)) continue
-
-let score = 1
-if(i < 10) score += 2
-if(/\b(lda|sa|unipessoal|supermercado|restaurante|cafe|minimercado|loja)\b/i.test(linha)) score += 2
-if(linha.split(" ").length >= 2) score += 1
-
-if(score > melhorScore){
-melhorScore = score
-empresa = linha
-}
-}
+empresa = extrairFornecedorDoTexto(textoTratado,nif)
 
 
 
