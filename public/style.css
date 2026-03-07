@@ -31,6 +31,36 @@ border-radius:10px;
 border:none;
 }
 
+.password-wrap{
+position:relative;
+}
+
+.password-wrap input{
+padding-right:96px;
+}
+
+.toggle-password{
+position:absolute;
+right:8px;
+top:18px;
+padding:7px 10px;
+font-size:13px;
+border-radius:6px;
+background:#334155;
+}
+
+select{
+width:100%;
+padding:14px;
+margin-top:12px;
+border-radius:10px;
+border:none;
+}
+
+.hidden{
+display:none;
+}
+
 button{
 background:#2563eb;
 color:white;
@@ -40,6 +70,41 @@ border-radius:8px;
 font-size:16px;
 font-weight:bold;
 cursor:pointer;
+}
+
+.form-link{
+margin-top:18px;
+font-size:14px;
+}
+
+.form-link a{
+color:#60a5fa;
+text-decoration:none;
+font-weight:600;
+}
+
+.form-link a:hover{
+text-decoration:underline;
+}
+
+.form-message{
+margin:8px 0 14px 0;
+padding:10px 12px;
+border-radius:8px;
+font-size:14px;
+text-align:left;
+}
+
+.form-message.error{
+background:#7f1d1d;
+color:#fee2e2;
+border:1px solid #ef4444;
+}
+
+.form-message.success{
+background:#14532d;
+color:#dcfce7;
+border:1px solid #22c55e;
 }
 
 /* DASHBOARD */

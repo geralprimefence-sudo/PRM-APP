@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8">
+<title>Relatorio</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{
+font-family:Arial;
+background:#f4f6f9;
+margin:0;
+padding:0;
+}
+header{
+background:#1f2937;
+color:#fff;
+padding:20px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+.container{
+padding:30px;
+}
+.cards{
+display:flex;
+gap:20px;
+flex-wrap:wrap;
+margin-bottom:30px;
+}
+.card{
+background:#fff;
+padding:20px;
+border-radius:10px;
+box-shadow:0 2px 8px rgba(0,0,0,0.1);
+min-width:220px;
+flex:1;
+}
+h2{
+margin:0;
+font-size:28px;
+}
+table{
+width:100%;
+border-collapse:collapse;
+background:#fff;
+box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+th,td{
+padding:12px;
+border-bottom:1px solid #eee;
+text-align:left;
+}
+th{
+background:#f0f0f0;
+}
+button{
+padding:10px 16px;
+border:none;
+background:#2563eb;
+color:#fff;
+border-radius:5px;
+cursor:pointer;
+}
+button.logout{
+background:#ef4444;
+}
+@media(max-width:700px){
+.cards{flex-direction:column;}
+table{font-size:14px;}
+}
+</style>
+</head>
+
+<body>
+<header>
+<h1>Relatorio</h1>
+<div>
+<a href="/dashboard"><button>Dashboard</button></a>
+<a href="/logout"><button class="logout">Logout</button></a>
+</div>
+</header>
+
+<div class="container">
+<div class="cards">
+<div class="card">
+<h3>Total Receitas</h3>
+<h2 id="receitas">0,00 EUR</h2>
+</div>
+<div class="card">
+<h3>Total Despesas</h3>
+<h2 id="despesas">0,00 EUR</h2>
+</div>
+<div class="card">
+<h3>Saldo</h3>
+<h2 id="saldo">0,00 EUR</h2>
+</div>
+</div>
+
+<h3>Ultimos Registos</h3>
+<table>
+<thead>
+<tr>
+<th>Data</th>
+<th>Fornecedor</th>
+<th>Tipo</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody id="linhas"></tbody>
+</table>
+</div>
+
+<script>
+function eur(v){
+return Number(v).toLocaleString("pt-PT", { minimumFractionDigits: 2 }) + " EUR"
+}
+
+async function carregar(){
+const [dRes, rRes] = await Promise.all([
+fetch("/api/dashboard"),
+fetch("/api/registos")
+])
+
+if(!dRes.ok || !rRes.ok){
+return
+}
+
+const dashboard = await dRes.json()
+const registos = await rRes.json()
+
+const receitas = Number(dashboard.receitas || 0)
+const despesas = Number(dashboard.despesas || 0)
+
+document.getElementById("receitas").textContent = eur(receitas)
+document.getElementById("despesas").textContent = eur(despesas)
+document.getElementById("saldo").textContent = eur(receitas - despesas)
+
+const linhas = document.getElementById("linhas")
+linhas.innerHTML = ""
+
+registos.slice(0, 20).forEach((r) => {
+const tr = document.createElement("tr")
+tr.innerHTML = `
+<td>${r.data}</td>
+<td>${r.fornecedor}</td>
+<td>${r.tipo}</td>
+<td>${eur(r.valor)}</td>
+`
+linhas.appendChild(tr)
+})
+}
+
+carregar()
+</script>
+</body>
+
+</html>

@@ -5,6 +5,7 @@
 
 <meta charset="UTF-8">
 <title>PRM Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
 
@@ -26,6 +27,8 @@ align-items:center;
 
 .container{
 padding:30px;
+max-width:1200px;
+margin:auto;
 }
 
 .cards{
@@ -55,6 +58,85 @@ padding:20px;
 border-radius:10px;
 margin-bottom:30px;
 box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+
+.upload-hint{
+margin-top:10px;
+font-size:13px;
+color:#4b5563;
+}
+
+.upload-actions{
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+margin-top:8px;
+}
+
+.auto-upload-btn{
+position:relative;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+padding:12px 16px;
+border:none;
+border-radius:8px;
+font-size:15px;
+font-weight:700;
+cursor:pointer;
+overflow:hidden;
+}
+
+.btn-camera{
+background:#2563eb;
+color:#fff;
+}
+
+.btn-documento{
+background:#0f766e;
+color:#fff;
+}
+
+.auto-upload-input{
+position:absolute;
+inset:0;
+opacity:0;
+width:100%;
+height:100%;
+cursor:pointer;
+}
+
+.tabelas-grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+}
+
+.bloco-tabela h3{
+margin:0 0 10px 0;
+}
+
+.filtros-periodo{
+display:flex;
+gap:10px;
+margin-bottom:16px;
+flex-wrap:wrap;
+}
+
+.btn-periodo{
+background:#e5e7eb;
+color:#111827;
+border:1px solid #d1d5db;
+padding:8px 14px;
+border-radius:999px;
+font-weight:600;
+cursor:pointer;
+}
+
+.btn-periodo.ativo{
+background:#2563eb;
+color:#fff;
+border-color:#1d4ed8;
 }
 
 table{
@@ -121,12 +203,58 @@ color:white;
 
 @media(max-width:700px){
 
+body{
+font-size:16px;
+}
+
+header{
+padding:14px;
+}
+
+header h1{
+font-size:22px;
+margin:0;
+}
+
 .cards{
 flex-direction:column;
 }
 
+.card{
+padding:16px;
+}
+
+.card h2{
+font-size:34px;
+}
+
+.container{
+padding:14px;
+}
+
+.upload{
+padding:16px;
+}
+
+.tabelas-grid{
+grid-template-columns:1fr;
+}
+
+.upload-actions .picker-block{
+width:100%;
+}
+
+.upload-actions input[type="file"]{
+max-width:100%;
+font-size:16px;
+}
+
 table{
-font-size:14px;
+font-size:16px;
+}
+
+th,td{
+padding:10px 8px;
 }
 
 .acoes button{
@@ -183,39 +311,63 @@ font-size:20px;
 
 <h3>Carregar Fatura</h3>
 
-<form action="/upload" method="POST" enctype="multipart/form-data">
+<div class="upload-actions">
+<button type="button" class="auto-upload-btn btn-camera" onclick="abrirScannerFoto()">Foto (Scan)</button>
 
-<input type="file" name="file" required>
-
-<button type="submit">Upload</button>
-
+<form id="formDoc" action="/upload" method="POST" enctype="multipart/form-data">
+<button type="button" class="auto-upload-btn btn-documento">
+Documento/PDF
+<input id="docInput" class="auto-upload-input" type="file" name="file" accept="application/pdf" required>
+</button>
 </form>
+</div>
+
+<p class="upload-hint">Foto (Scan) abre a camara com moldura para focar o documento. Documento/PDF abre apenas ficheiros PDF.</p>
 
 </div>
 
 
-
 <h3>Registos</h3>
 
+<div class="filtros-periodo">
+<button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
+<button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
+<button type="button" class="btn-periodo" onclick="selecionarPeriodo('ano', this)">Ano</button>
+</div>
+
+<div class="tabelas-grid">
+
+<div class="bloco-tabela">
+<h3>Receitas</h3>
 <table>
-
 <thead>
-
 <tr>
 <th>Data</th>
 <th>Fornecedor</th>
-<th>Tipo</th>
 <th>Valor</th>
 <th>Ações</th>
 </tr>
-
 </thead>
-
-<tbody id="tabelaRegistos">
-
-</tbody>
-
+<tbody id="tabelaReceitas"></tbody>
 </table>
+</div>
+
+<div class="bloco-tabela">
+<h3>Despesas</h3>
+<table>
+<thead>
+<tr>
+<th>Data</th>
+<th>Fornecedor</th>
+<th>Valor</th>
+<th>Ações</th>
+</tr>
+</thead>
+<tbody id="tabelaDespesas"></tbody>
+</table>
+</div>
+
+</div>
 
 
 </div>
@@ -224,43 +376,122 @@ font-size:20px;
 
 <script>
 
-async function carregarDashboard(){
+let todosRegistos = []
+let periodoAtual = "mes"
 
-const res = await fetch("/api/dashboard")
-const data = await res.json()
+function abrirScannerFoto(){
+window.location.href = "/capturar-foto"
+}
+
+document.getElementById("docInput").addEventListener("change",(e)=>{
+if(e.target.files && e.target.files.length){
+document.getElementById("formDoc").submit()
+}
+})
+
+function parseDataRegisto(dataBruta){
+
+if(!dataBruta) return null
+
+const texto = String(dataBruta)
+const dataISO = texto.includes("T") ? texto.split("T")[0] : texto
+const partes = dataISO.split("-")
+
+if(partes.length===3){
+const ano = Number(partes[0])
+const mes = Number(partes[1]) - 1
+const dia = Number(partes[2])
+if(!Number.isNaN(ano) && !Number.isNaN(mes) && !Number.isNaN(dia)){
+return new Date(ano,mes,dia)
+}
+}
+
+const fallback = new Date(texto)
+return Number.isNaN(fallback.getTime()) ? null : fallback
+
+}
+
+function registoNoPeriodo(registo,periodo){
+
+const data = parseDataRegisto(registo.data)
+if(!data) return false
+
+const agora = new Date()
+const mesmoAno = data.getFullYear()===agora.getFullYear()
+
+if(periodo==="ano"){
+return mesmoAno
+}
+
+if(periodo==="mes"){
+return mesmoAno && data.getMonth()===agora.getMonth()
+}
+
+if(periodo==="trimestre"){
+const trimestreData = Math.floor(data.getMonth()/3)
+const trimestreAtual = Math.floor(agora.getMonth()/3)
+return mesmoAno && trimestreData===trimestreAtual
+}
+
+return true
+
+}
+
+function atualizarCards(registos){
+
+const receitas = registos
+.filter(r => (r.tipo || "").toLowerCase()==="receita")
+.reduce((acc,r)=>acc + Number(r.valor || 0),0)
+
+const despesas = registos
+.filter(r => (r.tipo || "").toLowerCase()!=="receita")
+.reduce((acc,r)=>acc + Number(r.valor || 0),0)
+
+const saldo = receitas - despesas
 
 document.getElementById("receitas").innerText =
-Number(data.receitas).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
+Number(receitas).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
 
 document.getElementById("despesas").innerText =
-Number(data.despesas).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
-
-const saldo = data.receitas - data.despesas
+Number(despesas).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
 
 document.getElementById("saldo").innerText =
 Number(saldo).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
 
 }
 
-
-
-async function carregarRegistos(){
+async function carregarDados(){
 
 const res = await fetch("/api/registos")
-const registos = await res.json()
+todosRegistos = await res.json()
 
-const tabela = document.getElementById("tabelaRegistos")
+renderPeriodoAtual()
 
-tabela.innerHTML = ""
+}
+
+
+
+function renderPeriodoAtual(){
+
+const registos = todosRegistos.filter(r => registoNoPeriodo(r,periodoAtual))
+
+atualizarCards(registos)
+
+const tabelaReceitas = document.getElementById("tabelaReceitas")
+const tabelaDespesas = document.getElementById("tabelaDespesas")
+
+tabelaReceitas.innerHTML = ""
+tabelaDespesas.innerHTML = ""
 
 registos.forEach(r=>{
+
+const dataCurta = formatarData(r.data)
 
 const row = document.createElement("tr")
 
 row.innerHTML = `
-<td>${r.data}</td>
+<td>${dataCurta}</td>
 <td>${r.fornecedor}</td>
-<td>${r.tipo}</td>
 <td>${Number(r.valor).toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
 
 <td class="acoes">
@@ -274,9 +505,59 @@ row.innerHTML = `
 </td>
 `
 
-tabela.appendChild(row)
+if((r.tipo || "").toLowerCase()==="receita"){
+tabelaReceitas.appendChild(row)
+}else{
+tabelaDespesas.appendChild(row)
+}
 
 })
+
+if(!tabelaReceitas.children.length){
+tabelaReceitas.innerHTML = `<tr><td colspan="4">Sem receitas.</td></tr>`
+}
+
+if(!tabelaDespesas.children.length){
+tabelaDespesas.innerHTML = `<tr><td colspan="4">Sem despesas.</td></tr>`
+}
+
+}
+
+
+
+function selecionarPeriodo(periodo,botao){
+
+periodoAtual = periodo
+
+document.querySelectorAll(".btn-periodo").forEach(b => b.classList.remove("ativo"))
+botao.classList.add("ativo")
+
+renderPeriodoAtual()
+
+}
+
+
+
+function formatarData(dataBruta){
+
+if(!dataBruta) return "-"
+
+const texto = String(dataBruta)
+
+if(texto.includes("T")){
+const dataISO = texto.split("T")[0]
+const partes = dataISO.split("-")
+if(partes.length===3){
+return `${partes[2]}/${partes[1]}/${partes[0]}`
+}
+}
+
+const partes = texto.split("-")
+if(partes.length===3){
+return `${partes[2]}/${partes[1]}/${partes[0]}`
+}
+
+return texto
 
 }
 
@@ -321,8 +602,7 @@ body:JSON.stringify({valor:novoValor})
 
 
 
-carregarDashboard()
-carregarRegistos()
+carregarDados()
 
 </script>
 

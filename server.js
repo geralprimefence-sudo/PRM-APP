@@ -12,6 +12,11 @@ const { Pool } = require("pg")
 
 const app = express()
 const PORT = process.env.PORT || 3000
+const SESSION_SECRET = process.env.SESSION_SECRET || "prm-secret"
+
+// Ensure runtime folders exist on fresh hosts.
+fs.mkdirSync(path.join(__dirname,"uploads"),{recursive:true})
+fs.mkdirSync(path.join(__dirname,"temp"),{recursive:true})
 
 
 app.use(express.urlencoded({ extended: true }))
@@ -20,9 +25,14 @@ app.use(express.static("public"))
 app.use("/uploads",express.static("uploads"))
 
 app.use(session({
-secret:"prm-secret",
+secret:SESSION_SECRET,
 resave:false,
-saveUninitialized:false
+saveUninitialized:false,
+cookie:{
+httpOnly:true,
+sameSite:"lax",
+secure:process.env.NODE_ENV === "production"
+}
 }))
 
 
@@ -42,6 +52,13 @@ password TEXT NOT NULL,
 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 `)
+
+await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS tipo_entidade TEXT")
+await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS nome TEXT")
+await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS contribuinte TEXT")
+await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS endereco TEXT")
+await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT")
+await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS telefone TEXT")
 
 await pool.query(`
 CREATE TABLE IF NOT EXISTS registos(
@@ -133,6 +150,241 @@ return result.data.text
 
 }
 
+function normalizarValor(raw){
+
+if(raw===null || raw===undefined) return NaN
+
+let s = String(raw).trim()
+s = s.replace(/[^\d,.\s-]/g,"")
+s = s.replace(/\s+/g,"")
+
+const temVirgula = s.includes(",")
+const temPonto = s.includes(".")
+
+if(temVirgula && temPonto){
+s = s.replace(/\./g,"").replace(",",".")
+}else if(temVirgula){
+s = s.replace(",",".")
+}
+
+return parseFloat(s)
+
+}
+
+function dataParaInput(raw){
+
+const d = raw instanceof Date ? raw : new Date(raw)
+if(Number.isNaN(d.getTime())) return ""
+
+const yyyy = d.getFullYear()
+const mm = String(d.getMonth()+1).padStart(2,"0")
+const dd = String(d.getDate()).padStart(2,"0")
+
+return `${yyyy}-${mm}-${dd}`
+
+}
+
+function apagarUploadSilencioso(nomeFicheiro){
+
+if(!nomeFicheiro) return
+
+const seguro = path.basename(nomeFicheiro)
+const full = path.join(__dirname,"uploads",seguro)
+
+try{
+if(fs.existsSync(full)){
+fs.unlinkSync(full)
+}
+}catch(err){
+console.error("Falha a apagar upload pendente",err)
+}
+
+}
+
+function normalizarNif(raw){
+
+if(raw===null || raw===undefined) return ""
+
+return String(raw).replace(/\D/g,"")
+
+}
+
+function normalizarTextoComparacao(raw){
+
+if(raw===null || raw===undefined) return ""
+
+return String(raw)
+.normalize("NFD")
+.replace(/[\u0300-\u036f]/g,"")
+.toLowerCase()
+.replace(/[^a-z0-9]/g,"")
+
+}
+
+function normalizarTextoOCR(texto){
+
+if(!texto) return ""
+
+let t = String(texto)
+
+// Corrige ruido tipico de OCR em recibos termicos (O->0, I/l->1 em contexto numerico)
+t = t.replace(/(?<=\d)[oO](?=\d)/g,"0")
+t = t.replace(/(?<=\d)[iIl](?=\d)/g,"1")
+t = t.replace(/(?<=\d)[sS](?=\d)/g,"5")
+
+// Uniformiza separadores e remove duplicacoes de espaco
+t = t.replace(/\u00A0/g," ").replace(/[^\S\r\n]+/g," ")
+t = t.replace(/\s*([.,])\s*/g,"$1")
+
+// Reintroduz quebras onde normalmente existem no talao
+t = t.replace(/(TOTAL|IVA|TAXA|CARTAO|BALCAO)/gi,"\n$1")
+
+return t
+
+}
+
+function classificarTipoPorEntidade(dados,perfil){
+
+const nifFatura = normalizarNif(dados.nif)
+const nifRegistado = normalizarNif(perfil.contribuinte)
+
+if(nifRegistado && nifFatura && nifRegistado===nifFatura){
+return "receita"
+}
+
+const nomeRegistado = normalizarTextoComparacao(perfil.nome)
+const empresaFatura = normalizarTextoComparacao(dados.empresa)
+
+if(
+nomeRegistado &&
+empresaFatura &&
+(empresaFatura.includes(nomeRegistado) || nomeRegistado.includes(empresaFatura))
+){
+return "receita"
+}
+
+return "despesa"
+
+}
+
+function extrairValorDoTexto(texto){
+
+const linhas = texto.split("\n").map((l) => l.trim()).filter(Boolean)
+const numeroRegex = /\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d{2})|\d+[.,]\d{2}|\d{3,6}/g
+
+const candidatos = []
+
+function pushCandidato(token,peso,contextoTotal){
+if(!token) return
+
+let v = NaN
+if(/[.,]/.test(token)){
+v = normalizarValor(token)
+}else if(contextoTotal){
+// Em OCR de taloes, "2650" em linha de total costuma significar 26,50
+const intVal = Number(token)
+if(!Number.isNaN(intVal) && intVal >= 100 && intVal <= 999999){
+v = intVal / 100
+}
+}
+
+if(!Number.isNaN(v) && v > 0){
+candidatos.push({valor:v,peso})
+}
+}
+
+for(let i=0;i<linhas.length;i++){
+const linha = linhas[i]
+const lower = linha.toLowerCase()
+
+const totalForte =
+lower.includes("total a pagar") ||
+lower.includes("valor total") ||
+lower.includes("total liqu") ||
+lower.includes("a pagar")
+
+const totalFraco = lower.includes("total")
+const linhaNegativa = lower.includes("iva") || lower.includes("taxa") || lower.includes("base")
+
+// Recibos termicos: a linha final costuma conter o total mais fiavel
+const estaNoFim = i >= Math.max(0, linhas.length - 12)
+
+const contexto = `${linha} ${linhas[i+1] || ""}`
+const tokens = contexto.match(numeroRegex) || []
+
+for(const token of tokens){
+let peso = 1
+if(totalFraco) peso += 2
+if(totalForte) peso += 4
+if(linhaNegativa) peso -= 2
+if(estaNoFim) peso += 2
+if(/eur|€/.test(contexto.toLowerCase())) peso += 1
+pushCandidato(token,peso,totalForte || totalFraco)
+}
+}
+
+if(candidatos.length){
+const filtrados = candidatos.filter((c)=> c.valor > 0 && c.valor < 100000)
+
+if(filtrados.length){
+filtrados.sort((a,b)=> (b.peso - a.peso) || (b.valor - a.valor))
+return filtrados[0].valor
+}
+}
+
+return 0
+
+}
+
+function linhaPareceEmpresa(linha){
+
+if(!linha) return false
+
+const l = linha.toLowerCase().trim()
+if(l.length < 4 || l.length > 60) return false
+
+if(/[0-9]/.test(l)) return false
+
+const bloqueadas = [
+"fatura",
+"recibo",
+"nif",
+"contribuinte",
+"total",
+"iva",
+"data",
+"pagamento",
+"cliente",
+"natureza",
+"referencia",
+"resumo",
+"isento",
+"artigo",
+"observa",
+"telefone",
+"email",
+"e-mail",
+"site",
+"www",
+"iban",
+"swift",
+"bank",
+"original",
+"balcao",
+"cartao",
+"debito",
+"talhao",
+"terminal",
+"operador",
+"documento"
+]
+
+if(bloqueadas.some((b) => l.includes(b))) return false
+
+return /[a-zA-Z\u00C0-\u017F]/.test(l)
+
+}
+
 
 
 function extrairDadosFatura(texto){
@@ -143,41 +395,21 @@ let empresa = "desconhecido"
 let nif = ""
 let tipo = "despesa"
 
-const textoLower = texto.toLowerCase()
+const textoTratado = normalizarTextoOCR(texto)
+const textoLower = textoTratado.toLowerCase()
 
 
 
-const totalRegex = /(total\s*(a\s*pagar)?|valor\s*total|total\s*eur)[^\d]*(\d+[.,]\d{2})/i
-const totalMatch = texto.match(totalRegex)
+valor = extrairValorDoTexto(textoTratado)
 
-if(totalMatch){
-
-let v = totalMatch[3]
-v = v.replace(",",".")
-valor = parseFloat(v)
-
-}else{
-
-const valores = texto.match(/\d+[.,]\d{2}/g)
-
-if(valores){
-
-let v = valores[valores.length-1]
-v = v.replace(",",".")
-valor = parseFloat(v)
-
-}
-
-}
-
-if(valor > 10000){
-valor = valor / 100
+if(Number.isNaN(valor)){
+valor = 0
 }
 
 
 
 const dataRegex = /\d{2}[\/\-\.]\d{2}[\/\-\.]\d{4}/
-const dataMatch = texto.match(dataRegex)
+const dataMatch = textoTratado.match(dataRegex)
 
 if(dataMatch){
 
@@ -190,7 +422,7 @@ dataMatch[0].split(/[\/\-\.]/).reverse().join("-")
 
 
 const nifRegex = /nif[:\s]*([0-9]{9})/i
-const nifMatch = texto.match(nifRegex)
+const nifMatch = textoTratado.match(nifRegex)
 
 if(nifMatch){
 nif = nifMatch[1]
@@ -198,36 +430,23 @@ nif = nifMatch[1]
 
 
 
-const linhas = texto.split("\n")
+const linhas = textoTratado.split("\n").map((l) => l.trim()).filter(Boolean)
 
-for(let linha of linhas){
+let melhorScore = -1
+const linhasPrioritarias = linhas.slice(0,40)
+for(let i=0;i<linhasPrioritarias.length;i++){
+const linha = linhasPrioritarias[i]
+if(!linhaPareceEmpresa(linha)) continue
 
-linha = linha.trim()
+let score = 1
+if(i < 10) score += 2
+if(/\b(lda|sa|unipessoal|supermercado|restaurante|cafe|minimercado|loja)\b/i.test(linha)) score += 2
+if(linha.split(" ").length >= 2) score += 1
 
-if(linha.length > 4 && linha.length < 60){
-
-const lower = linha.toLowerCase()
-
-if(
-!linha.match(/[0-9]/) &&
-!lower.includes("fatura") &&
-!lower.includes("natureza") &&
-!lower.includes("nif") &&
-!lower.includes("total") &&
-!lower.includes("iva") &&
-!lower.includes("data") &&
-!lower.includes("pagamento") &&
-!lower.includes("cliente") &&
-!lower.includes("recibo")
-){
-
+if(score > melhorScore){
+melhorScore = score
 empresa = linha
-break
-
 }
-
-}
-
 }
 
 
@@ -263,19 +482,52 @@ app.get("/relatorio",auth,(req,res)=>{
 res.sendFile(path.join(__dirname,"public/relatorio.html"))
 })
 
+app.get("/capturar-foto",auth,(req,res)=>{
+res.sendFile(path.join(__dirname,"public/capturar-foto.html"))
+})
+
+app.get("/confirmar-upload",auth,(req,res)=>{
+res.sendFile(path.join(__dirname,"public/confirmar-upload.html"))
+})
+
 
 
 app.post("/login",async(req,res)=>{
 
 const {username,password} = req.body
+const usernameTrim = (username || "").trim()
+const ajaxLogin = req.get("x-requested-with") === "fetch-login"
+const loginErro = (msg)=>`/login?error=${encodeURIComponent(msg)}&username=${encodeURIComponent(usernameTrim)}`
 
-const result = await pool.query(
-"SELECT * FROM users WHERE username=$1",
-[username]
+const responderErro = (status,msg)=>{
+if(ajaxLogin){
+return res.status(status).json({ok:false,error:msg})
+}
+return res.redirect(loginErro(msg))
+}
+
+if(!usernameTrim || !password){
+return responderErro(400,"Utilizador e password sao obrigatorios")
+}
+
+let result
+
+try{
+
+result = await pool.query(
+"SELECT * FROM users WHERE LOWER(username)=LOWER($1) LIMIT 1",
+[usernameTrim]
 )
 
+}catch(err){
+
+console.error(err)
+return responderErro(500,"Erro ao validar login")
+
+}
+
 if(result.rows.length===0){
-return res.send("Utilizador não encontrado")
+return responderErro(401,"Username ou password errada")
 }
 
 const user = result.rows[0]
@@ -283,10 +535,14 @@ const user = result.rows[0]
 const valid = await bcrypt.compare(password,user.password)
 
 if(!valid){
-return res.send("Password errada")
+return responderErro(401,"Username ou password errada")
 }
 
 req.session.userId = user.id
+
+if(ajaxLogin){
+return res.json({ok:true,redirect:"/dashboard"})
+}
 
 res.redirect("/dashboard")
 
@@ -296,16 +552,74 @@ res.redirect("/dashboard")
 
 app.post("/register",async(req,res)=>{
 
-const {username,password} = req.body
+const {
+username,
+password,
+tipoEntidade,
+nome,
+contribuinte,
+endereco,
+email,
+telefone
+} = req.body
+
+const tipoNormalizado = (tipoEntidade || "").trim().toLowerCase()
+const usernameTrim = (username || "").trim()
+const nomeTrim = (nome || "").trim()
+const contribuinteTrim = (contribuinte || "").trim()
+const enderecoTrim = (endereco || "").trim()
+const emailTrim = (email || "").trim()
+const telefoneTrim = (telefone || "").trim()
+const mensagemErro = (msg)=>`/register?error=${encodeURIComponent(msg)}`
+
+if(!usernameTrim || !password){
+return res.redirect(mensagemErro("Utilizador e password sao obrigatorios"))
+}
+
+if(tipoNormalizado!=="empresa" && tipoNormalizado!=="pessoal"){
+return res.redirect(mensagemErro("Escolhe se e empresa ou pessoal"))
+}
+
+if(!nomeTrim || !enderecoTrim || !emailTrim || !telefoneTrim){
+return res.redirect(mensagemErro("Nome, endereco, email e telefone sao obrigatorios"))
+}
+
+if(tipoNormalizado==="empresa" && !contribuinteTrim){
+return res.redirect(mensagemErro("Contribuinte e obrigatorio para empresa"))
+}
 
 const hash = await bcrypt.hash(password,10)
 
+try{
+
 await pool.query(
-"INSERT INTO users(username,password) VALUES($1,$2)",
-[username,hash]
+`INSERT INTO users
+(username,password,tipo_entidade,nome,contribuinte,endereco,email,telefone)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
+[
+usernameTrim,
+hash,
+tipoNormalizado,
+nomeTrim,
+tipoNormalizado==="empresa" ? contribuinteTrim : null,
+enderecoTrim,
+emailTrim,
+telefoneTrim
+]
 )
 
-res.redirect("/login")
+}catch(err){
+
+if(err && err.code==="23505"){
+return res.redirect(mensagemErro("Utilizador ja existe"))
+}
+
+console.error(err)
+return res.redirect(mensagemErro("Erro ao criar conta"))
+
+}
+
+res.redirect("/register?success=" + encodeURIComponent("Conta criada com sucesso. Ja podes fazer login."))
 
 })
 
@@ -332,21 +646,28 @@ console.log(texto)
 
 const dados = extrairDadosFatura(texto)
 
-await pool.query(
-`INSERT INTO registos
-(user_id,tipo,fornecedor,valor,data,ficheiro)
-VALUES($1,$2,$3,$4,$5,$6)`,
-[
-req.session.userId,
-dados.tipo,
-dados.empresa,
-dados.valor,
-dados.data,
-req.file.filename
-]
+const userResult = await pool.query(
+"SELECT nome,contribuinte FROM users WHERE id=$1",
+[req.session.userId]
 )
 
-res.redirect("/dashboard")
+const perfil = userResult.rows[0] || {}
+dados.tipo = classificarTipoPorEntidade(dados,perfil)
+
+if(req.session.pendingUpload && req.session.pendingUpload.ficheiro){
+apagarUploadSilencioso(req.session.pendingUpload.ficheiro)
+}
+
+req.session.pendingUpload = {
+tipo:dados.tipo,
+fornecedor:dados.empresa,
+valor:dados.valor,
+data:dataParaInput(dados.data),
+nif:dados.nif,
+ficheiro:req.file.filename
+}
+
+return res.redirect("/confirmar-upload")
 
 }catch(err){
 
@@ -354,6 +675,69 @@ console.error(err)
 res.send("Erro ao processar documento")
 
 }
+
+})
+
+app.get("/api/pending-upload",auth,(req,res)=>{
+
+if(!req.session.pendingUpload){
+return res.status(404).json({ok:false,erro:"Sem upload pendente"})
+}
+
+res.json({ok:true,pending:req.session.pendingUpload})
+
+})
+
+app.post("/api/confirmar-upload",auth,async(req,res)=>{
+
+if(!req.session.pendingUpload){
+return res.status(400).json({ok:false,erro:"Sem upload pendente"})
+}
+
+const pendente = req.session.pendingUpload
+
+const fornecedor = (req.body.fornecedor || pendente.fornecedor || "desconhecido").trim()
+const tipo = (req.body.tipo || pendente.tipo || "despesa").trim().toLowerCase()==="receita" ? "receita" : "despesa"
+const valorNormalizado = normalizarValor(req.body.valor ?? pendente.valor)
+const dataFinal = dataParaInput(req.body.data || pendente.data)
+
+if(Number.isNaN(valorNormalizado) || valorNormalizado<=0){
+return res.status(400).json({ok:false,erro:"Valor invalido"})
+}
+
+if(!dataFinal){
+return res.status(400).json({ok:false,erro:"Data invalida"})
+}
+
+await pool.query(
+`INSERT INTO registos
+(user_id,tipo,fornecedor,valor,data,ficheiro)
+VALUES($1,$2,$3,$4,$5,$6)`,
+[
+req.session.userId,
+tipo,
+fornecedor,
+valorNormalizado,
+dataFinal,
+pendente.ficheiro
+]
+)
+
+req.session.pendingUpload = null
+
+res.json({ok:true,redirect:"/dashboard"})
+
+})
+
+app.post("/api/cancelar-upload",auth,(req,res)=>{
+
+if(req.session.pendingUpload && req.session.pendingUpload.ficheiro){
+apagarUploadSilencioso(req.session.pendingUpload.ficheiro)
+}
+
+req.session.pendingUpload = null
+
+res.json({ok:true,redirect:"/dashboard"})
 
 })
 
@@ -413,10 +797,15 @@ res.json({ok:true})
 app.post("/api/update/:id",auth,async(req,res)=>{
 
 const {valor} = req.body
+const valorNormalizado = normalizarValor(valor)
+
+if(Number.isNaN(valorNormalizado)){
+return res.status(400).json({ok:false,erro:"Valor invalido"})
+}
 
 await pool.query(
 "UPDATE registos SET valor=$1 WHERE id=$2 AND user_id=$3",
-[valor,req.params.id,req.session.userId]
+[valorNormalizado,req.params.id,req.session.userId]
 )
 
 res.json({ok:true})

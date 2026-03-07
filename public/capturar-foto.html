@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8">
+<title>Capturar Foto</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{
+margin:0;
+font-family:Arial, sans-serif;
+background:#0f172a;
+color:#f8fafc;
+}
+.wrap{
+max-width:720px;
+margin:0 auto;
+padding:14px;
+}
+.video-wrap{
+position:relative;
+}
+video{
+width:100%;
+max-height:72vh;
+border-radius:12px;
+background:#000;
+}
+.scan-frame{
+position:absolute;
+left:12%;
+top:8%;
+width:76%;
+height:84%;
+border:2px solid #fbbf24;
+border-radius:10px;
+box-shadow:0 0 0 9999px rgba(0,0,0,0.22);
+pointer-events:none;
+}
+.actions{
+display:flex;
+gap:10px;
+margin-top:12px;
+flex-wrap:wrap;
+}
+button{
+border:none;
+border-radius:10px;
+padding:12px 16px;
+font-weight:700;
+cursor:pointer;
+}
+.btn-capture{background:#2563eb;color:#fff;}
+.btn-retry{background:#0f766e;color:#fff;}
+.btn-cancel{background:#ef4444;color:#fff;}
+.msg{
+margin-top:10px;
+font-size:14px;
+color:#cbd5e1;
+}
+canvas{display:none;}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+<h2>Camara</h2>
+<div class="video-wrap">
+<video id="video" autoplay playsinline muted></video>
+<div id="scanFrame" class="scan-frame"></div>
+</div>
+<canvas id="canvas"></canvas>
+<div class="actions">
+<button class="btn-capture" id="captureBtn" type="button">Capturar e enviar</button>
+<button class="btn-retry" id="retryBtn" type="button" style="display:none">Nova foto</button>
+<button class="btn-cancel" id="cancelBtn" type="button">Cancelar</button>
+</div>
+<form id="fallbackForm" action="/upload" method="POST" enctype="multipart/form-data" style="display:none;margin-top:10px;">
+  <input id="fallbackInput" type="file" name="file" accept="image/*" capture="environment" style="width:100%;">
+</form>
+<p class="msg" id="msg">Alinha o recibo na vertical e evita sombras.</p>
+</div>
+
+<script>
+const video = document.getElementById("video")
+const canvas = document.getElementById("canvas")
+const scanFrame = document.getElementById("scanFrame")
+const captureBtn = document.getElementById("captureBtn")
+const retryBtn = document.getElementById("retryBtn")
+const cancelBtn = document.getElementById("cancelBtn")
+const msg = document.getElementById("msg")
+const fallbackForm = document.getElementById("fallbackForm")
+const fallbackInput = document.getElementById("fallbackInput")
+
+let stream = null
+
+async function iniciarCamera(){
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:{ ideal:"environment" }, width:{ ideal:1920 }, height:{ ideal:1080 } },
+      audio:false
+    })
+    video.srcObject = stream
+  }catch(err){
+    msg.textContent = "Nao foi possivel abrir a camara de scan neste browser/rede. Usa a camera normal abaixo."
+    captureBtn.disabled = true
+    fallbackForm.style.display = "block"
+  }
+}
+
+function pararCamera(){
+  if(!stream) return
+  stream.getTracks().forEach((t)=>t.stop())
+  stream = null
+}
+
+async function enviarBlob(blob){
+  const fd = new FormData()
+  fd.append("file", blob, `captura-${Date.now()}.jpg`)
+
+  const res = await fetch("/upload", { method:"POST", body:fd })
+
+  if(res.redirected){
+    window.location.href = res.url
+    return
+  }
+
+  if(res.ok){
+    window.location.href = "/confirmar-upload"
+    return
+  }
+
+  msg.textContent = "Erro ao enviar a foto."
+}
+
+captureBtn.addEventListener("click", async ()=>{
+  if(!video.videoWidth || !video.videoHeight){
+    msg.textContent = "A camara ainda esta a iniciar."
+    return
+  }
+
+  const fw = video.videoWidth
+  const fh = video.videoHeight
+
+  const rx = scanFrame.offsetLeft / video.clientWidth
+  const ry = scanFrame.offsetTop / video.clientHeight
+  const rw = scanFrame.clientWidth / video.clientWidth
+  const rh = scanFrame.clientHeight / video.clientHeight
+
+  const sx = Math.max(0, Math.floor(fw * rx))
+  const sy = Math.max(0, Math.floor(fh * ry))
+  const sw = Math.max(1, Math.floor(fw * rw))
+  const sh = Math.max(1, Math.floor(fh * rh))
+
+  canvas.width = sw
+  canvas.height = sh
+  const ctx = canvas.getContext("2d")
+  ctx.drawImage(video,sx,sy,sw,sh,0,0,sw,sh)
+
+  canvas.toBlob(async (blob)=>{
+    if(!blob){
+      msg.textContent = "Falha ao capturar foto."
+      return
+    }
+
+    msg.textContent = "A enviar foto..."
+    captureBtn.disabled = true
+    try{
+      await enviarBlob(blob)
+    }catch(err){
+      msg.textContent = "Erro ao enviar. Tenta novamente."
+      retryBtn.style.display = "inline-block"
+      captureBtn.disabled = false
+    }
+  }, "image/jpeg", 0.92)
+})
+
+retryBtn.addEventListener("click", ()=>{
+  msg.textContent = "Alinha o recibo na vertical e evita sombras."
+  retryBtn.style.display = "none"
+  captureBtn.disabled = false
+})
+
+fallbackInput.addEventListener("change",(e)=>{
+  if(e.target.files && e.target.files.length){
+    fallbackForm.submit()
+  }
+})
+
+cancelBtn.addEventListener("click", ()=>{
+  pararCamera()
+  window.location.href = "/dashboard"
+})
+
+window.addEventListener("beforeunload", pararCamera)
+iniciarCamera()
+</script>
+</body>
+
+</html>

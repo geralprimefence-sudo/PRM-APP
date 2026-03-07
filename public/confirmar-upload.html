@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8">
+<title>Confirmar Registo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+<style>
+.page{
+width:95%;
+max-width:680px;
+margin:24px auto;
+}
+.panel{
+background:#1e293b;
+padding:20px;
+border-radius:12px;
+}
+.row{
+display:grid;
+grid-template-columns:1fr;
+gap:8px;
+margin-bottom:12px;
+}
+.row label{
+font-size:14px;
+font-weight:600;
+}
+.actions{
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+margin-top:12px;
+}
+.btn-cancelar{
+background:#ef4444;
+}
+.btn-sec{
+background:#334155;
+}
+.hint{
+font-size:13px;
+color:#cbd5e1;
+margin-bottom:10px;
+}
+</style>
+</head>
+
+<body>
+<div class="page">
+<div class="panel">
+<h2>Confirmar Registo</h2>
+<p class="hint">Confirma ou corrige os dados extraidos antes de guardar.</p>
+<div id="mensagem" class="form-message hidden"></div>
+
+<form id="confirmForm">
+<div class="row">
+<label for="fornecedor">Fornecedor</label>
+<input id="fornecedor" name="fornecedor" type="text" required>
+</div>
+
+<div class="row">
+<label for="valor">Valor</label>
+<input id="valor" name="valor" type="text" required>
+</div>
+
+<div class="row">
+<label for="data">Data</label>
+<input id="data" name="data" type="date" required>
+</div>
+
+<div class="row">
+<label for="tipo">Tipo</label>
+<select id="tipo" name="tipo" required>
+<option value="receita">Receita</option>
+<option value="despesa">Despesa</option>
+</select>
+</div>
+
+<div class="row">
+<label for="nif">NIF lido</label>
+<input id="nif" name="nif" type="text" readonly>
+</div>
+
+<div class="actions">
+<button type="submit">Guardar Registo</button>
+<button type="button" class="btn-cancelar" id="cancelarBtn">Cancelar</button>
+<button type="button" class="btn-sec" onclick="window.location.href='/dashboard'">Voltar</button>
+</div>
+</form>
+</div>
+</div>
+
+<script>
+const form = document.getElementById("confirmForm")
+const msg = document.getElementById("mensagem")
+const cancelarBtn = document.getElementById("cancelarBtn")
+
+function showMsg(text, tipo){
+  msg.textContent = text
+  msg.classList.remove("hidden", "error", "success")
+  msg.classList.add(tipo)
+}
+
+async function carregarPendente(){
+  const res = await fetch("/api/pending-upload")
+  const data = await res.json().catch(() => ({ ok:false }))
+
+  if(!res.ok || !data.ok){
+    showMsg("Sem upload pendente para confirmar.", "error")
+    form.style.display = "none"
+    return
+  }
+
+  const p = data.pending
+  document.getElementById("fornecedor").value = p.fornecedor || ""
+  document.getElementById("valor").value = Number(p.valor || 0).toLocaleString("pt-PT", { minimumFractionDigits: 2 })
+  document.getElementById("data").value = p.data || ""
+  document.getElementById("tipo").value = p.tipo === "receita" ? "receita" : "despesa"
+  document.getElementById("nif").value = p.nif || ""
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault()
+
+  const payload = {
+    fornecedor: document.getElementById("fornecedor").value,
+    valor: document.getElementById("valor").value,
+    data: document.getElementById("data").value,
+    tipo: document.getElementById("tipo").value
+  }
+
+  const res = await fetch("/api/confirmar-upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+
+  const data = await res.json().catch(() => ({ ok:false, erro:"Erro ao guardar" }))
+
+  if(!res.ok || !data.ok){
+    showMsg(data.erro || "Erro ao guardar", "error")
+    return
+  }
+
+  showMsg("Registo guardado com sucesso.", "success")
+  window.location.href = data.redirect || "/dashboard"
+})
+
+cancelarBtn.addEventListener("click", async () => {
+  const res = await fetch("/api/cancelar-upload", { method: "POST" })
+  const data = await res.json().catch(() => ({ ok:false }))
+  if(!res.ok || !data.ok){
+    showMsg("Erro ao cancelar upload.", "error")
+    return
+  }
+  window.location.href = data.redirect || "/dashboard"
+})
+
+carregarPendente()
+</script>
+</body>
+
+</html>

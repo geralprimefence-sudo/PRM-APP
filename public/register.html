@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8">
+<title>Registar</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="login-container">
+
+<img src="/logo.png" alt="Logo">
+
+<div id="mensagem" class="form-message hidden"></div>
+
+<form action="/register" method="POST">
+<input type="text" name="username" placeholder="Novo utilizador" required>
+<input type="password" name="password" placeholder="Nova password" required>
+
+<select name="tipoEntidade" id="tipoEntidade" required>
+<option value="" selected disabled>Escolhe: empresa ou pessoal</option>
+<option value="empresa">Empresa</option>
+<option value="pessoal">Pessoal</option>
+</select>
+
+<input type="text" name="nome" placeholder="Nome" required>
+
+<div id="campoContribuinte" class="hidden">
+<input type="text" name="contribuinte" id="contribuinte" placeholder="Contribuinte (NIF da empresa)">
+</div>
+
+<input type="text" name="endereco" placeholder="Endereco" required>
+<input type="email" name="email" placeholder="Email" required>
+<input type="text" name="telefone" placeholder="Telefone" required>
+
+<button type="submit">Criar Conta</button>
+</form>
+
+<p class="form-link">Ja tens conta? <a href="/login">Entrar</a></p>
+
+</div>
+
+<script>
+const tipoEntidade = document.getElementById("tipoEntidade")
+const campoContribuinte = document.getElementById("campoContribuinte")
+const contribuinte = document.getElementById("contribuinte")
+const mensagem = document.getElementById("mensagem")
+
+const params = new URLSearchParams(window.location.search)
+const erro = params.get("error")
+const sucesso = params.get("success")
+
+if(erro){
+mensagem.textContent = erro
+mensagem.classList.remove("hidden")
+mensagem.classList.add("error")
+}
+
+if(sucesso){
+mensagem.textContent = sucesso
+mensagem.classList.remove("hidden")
+mensagem.classList.add("success")
+}
+
+tipoEntidade.addEventListener("change",()=>{
+const isEmpresa = tipoEntidade.value === "empresa"
+campoContribuinte.classList.toggle("hidden", !isEmpresa)
+contribuinte.required = isEmpresa
+})
+</script>
+
+</body>
+
+</html>

@@ -1,0 +1,9 @@
+node_modules/
+.env
+uploads/
+temp/
+*.log
+.DS_Store
+*.traineddata
+49947.30
+{
