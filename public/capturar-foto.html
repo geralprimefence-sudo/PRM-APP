@@ -228,8 +228,8 @@ function pararCamera(){
 async function enviarBlob(blob){
   const fd = new FormData()
   fd.append("file", blob, `captura-${Date.now()}.jpg`)
-  // Ambos os modos fazem OCR para extrair fornecedor/data/valor.
-  fd.append("fast", "0")
+  // Captura responde rapido; OCR corre em background na confirmacao.
+  fd.append("fast", "1")
   fd.append("modo", modoScan ? "scan" : "normal")
 
   msg.textContent = "A enviar ficheiro..."

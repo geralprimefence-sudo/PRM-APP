@@ -1447,7 +1447,9 @@ valorIva:0,
 valorTotal:0,
 data:dataParaInput(hoje),
 nif:"",
-ficheiro:req.file.filename
+ficheiro:req.file.filename,
+ocrStatus:"pending",
+ocrFonte:"none"
 }
 
 return res.redirect("/confirmar-upload")
@@ -1476,7 +1478,9 @@ valorIva:dados.valorIva,
 valorTotal:dados.valorTotal,
 data:dataParaInput(dados.data),
 nif:dados.nif,
-ficheiro:req.file.filename
+ficheiro:req.file.filename,
+ocrStatus:"done",
+ocrFonte:"sync"
 }
 
 return res.redirect("/confirmar-upload")
@@ -1497,6 +1501,103 @@ return res.status(404).json({ok:false,erro:"Sem upload pendente"})
 }
 
 res.json({ok:true,pending:req.session.pendingUpload})
+
+})
+
+app.post("/api/pending-upload/ocr",auth,async(req,res)=>{
+
+if(!req.session.pendingUpload){
+return res.status(404).json({ok:false,erro:"Sem upload pendente"})
+}
+
+const pendenteAtual = req.session.pendingUpload
+if(!pendenteAtual.ficheiro){
+return res.status(400).json({ok:false,erro:"Upload pendente invalido"})
+}
+
+if(pendenteAtual.ocrStatus === "processing"){
+return res.json({ok:true,processing:true,pending:pendenteAtual})
+}
+
+if(pendenteAtual.ocrStatus === "done"){
+return res.json({ok:true,processing:false,pending:pendenteAtual})
+}
+
+req.session.pendingUpload = {
+...pendenteAtual,
+ocrStatus:"processing",
+ocrFonte:pendenteAtual.ocrFonte || "none"
+}
+
+try{
+
+const full = resolverCaminhoUploadSeguro(pendenteAtual.ficheiro)
+if(!full){
+req.session.pendingUpload = {
+...pendenteAtual,
+ocrStatus:"failed",
+ocrErro:"Documento nao encontrado"
+}
+return res.status(404).json({ok:false,erro:"Documento nao encontrado",pending:req.session.pendingUpload})
+}
+
+const texto = await extrairTexto(full)
+const dados = extrairDadosFatura(texto)
+
+const userResult = await pool.query(
+"SELECT nome,contribuinte FROM users WHERE id=$1",
+[req.session.userId]
+)
+const perfil = userResult.rows[0] || {}
+const tipoClassificado = classificarTipoPorEntidade(dados,perfil)
+
+const totalExtraido = Number(dados.valorTotal ?? dados.valor ?? 0)
+const ivaExtraido = Number(dados.valorIva ?? 0)
+let semIvaExtraido = Number(dados.valorSemIva)
+
+if(!Number.isFinite(semIvaExtraido)){
+semIvaExtraido = Math.max(0,totalExtraido - (Number.isFinite(ivaExtraido) ? ivaExtraido : 0))
+}
+
+const totalFinal = totalExtraido > 0 ? totalExtraido : Number(pendenteAtual.valorTotal ?? pendenteAtual.valor ?? 0)
+const ivaFinal = Number.isFinite(ivaExtraido) && ivaExtraido >= 0 ? ivaExtraido : Number(pendenteAtual.valorIva ?? 0)
+const semIvaFinal = Number.isFinite(semIvaExtraido) && semIvaExtraido >= 0
+? semIvaExtraido
+: Math.max(0,totalFinal - ivaFinal)
+
+const fornecedorFinal =
+(dados.empresa && dados.empresa !== "desconhecido")
+? dados.empresa
+: (pendenteAtual.fornecedor || "")
+
+const dataFinal = dataParaInput(dados.data) || pendenteAtual.data || dataParaInput(new Date())
+const nifFinal = dados.nif || pendenteAtual.nif || ""
+
+req.session.pendingUpload = {
+...pendenteAtual,
+tipo:tipoClassificado || pendenteAtual.tipo || "despesa",
+fornecedor:fornecedorFinal,
+valor:Math.round(Number(totalFinal || 0) * 100) / 100,
+valorTotal:Math.round(Number(totalFinal || 0) * 100) / 100,
+valorIva:Math.round(Number(ivaFinal || 0) * 100) / 100,
+valorSemIva:Math.round(Number(semIvaFinal || 0) * 100) / 100,
+data:dataFinal,
+nif:nifFinal,
+ocrStatus:"done",
+ocrFonte:"async"
+}
+
+return res.json({ok:true,processing:false,pending:req.session.pendingUpload})
+
+}catch(err){
+console.error("Erro no OCR assincrono pendente",err)
+req.session.pendingUpload = {
+...pendenteAtual,
+ocrStatus:"failed",
+ocrErro:"Falha a extrair dados"
+}
+return res.status(500).json({ok:false,erro:"Falha a extrair dados",pending:req.session.pendingUpload})
+}
 
 })
 

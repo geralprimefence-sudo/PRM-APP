@@ -218,6 +218,66 @@ async function carregarPendente(){
   inputData.value = p.data || ""
   inputTipo.value = p.tipo === "receita" ? "receita" : "despesa"
   inputNif.value = p.nif || ""
+
+  if(precisaOCRAssincrono(p)){
+    executarOCRAssincrono()
+  }
+}
+
+function precisaOCRAssincrono(p){
+  if(!p) return false
+
+  const total = Number(p.valorTotal ?? p.valor ?? 0)
+  const fornecedor = String(p.fornecedor || "").trim().toLowerCase()
+  const data = String(p.data || "").trim()
+  const estado = String(p.ocrStatus || "").toLowerCase()
+
+  if(estado === "done") return false
+  if(estado === "processing" || estado === "pending") return true
+
+  const fornecedorFraco = !fornecedor || fornecedor === "desconhecido"
+  const dataFraca = !data
+  const totalFraco = !(total > 0)
+
+  return fornecedorFraco || dataFraca || totalFraco
+}
+
+async function executarOCRAssincrono(){
+  showMsg("A extrair dados automaticamente (fornecedor, data e valor)...", "success")
+
+  const res = await fetch("/api/pending-upload/ocr", { method: "POST" })
+  const data = await res.json().catch(() => ({ ok:false }))
+
+  if(!res.ok || !data.ok || !data.pending){
+    showMsg("Nao foi possivel preencher automaticamente. Podes corrigir manualmente.", "error")
+    return
+  }
+
+  const p = data.pending
+  const total = Number(p.valorTotal ?? p.valor ?? 0)
+  const iva = Number(p.valorIva ?? 0)
+  const semIva = Number(p.valorSemIva ?? Math.max(0,total - iva))
+
+  if((!inputFornecedor.value || inputFornecedor.value.trim()==="" || inputFornecedor.value.toLowerCase()==="desconhecido") && p.fornecedor){
+    inputFornecedor.value = p.fornecedor
+  }
+  if((!inputData.value || inputData.value.trim()==="") && p.data){
+    inputData.value = p.data
+  }
+  if(!(parseNumeroPt(inputValorTotal.value) > 0) && total > 0){
+    inputValor.value = formatNumeroPt(total)
+    inputValorTotal.value = formatNumeroPt(total)
+    inputValorIva.value = formatNumeroPt(iva)
+    inputValorSemIva.value = formatNumeroPt(semIva)
+  }
+  if((!inputNif.value || inputNif.value.trim()==="") && p.nif){
+    inputNif.value = p.nif
+  }
+  if(p.tipo){
+    inputTipo.value = p.tipo === "receita" ? "receita" : "despesa"
+  }
+
+  showMsg("Dados lidos automaticamente. Confirma antes de guardar.", "success")
 }
 
 form.addEventListener("submit", async (e) => {
