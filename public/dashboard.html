@@ -253,15 +253,15 @@ button:hover{background:var(--primary-strong);}
 .logout:hover{background:#dc2626;}
 
 .acoes button{
-padding:6px 8px;
+padding:2px 6px;
 margin:1px;
 border:none;
-border-radius:8px;
+border-radius:6px;
 cursor:pointer;
-font-size:11px;
+font-size:10px;
 font-weight:700;
-min-width:28px;
-min-height:28px;
+min-width:22px;
+min-height:22px;
 }
 
 .btn-ver{background:#3498db;color:white;}
@@ -367,20 +367,21 @@ letter-spacing:0.2px;
 }
 
 td.acoes{
-display:grid;
-grid-template-columns:repeat(3,minmax(0,1fr));
-gap:6px;
+display:flex;
+align-items:center;
+flex-wrap:wrap;
+gap:4px;
 }
 
 td.acoes button{
-width:100%;
-min-width:0;
-min-height:26px;
-max-height:26px;
-font-size:11px;
+width:auto;
+min-width:22px;
+min-height:22px;
+max-height:none;
+font-size:10px;
 line-height:1;
-padding:2px 4px;
-border-radius:6px;
+padding:2px 6px;
+border-radius:5px;
 }
 
 .linha-vazia td{
@@ -669,11 +670,11 @@ row.innerHTML = `
 
 <td class="acoes" data-label="Acoes">
 
-<button title="Ver" aria-label="Ver" onclick="verFatura('${r.ficheiro}')" class="btn-ver">VER</button>
+<button title="Ver" aria-label="Ver" onclick="verFatura('${r.ficheiro}')" class="btn-ver">Ver</button>
 
-<button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar">EDITAR</button>
+<button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar">Edit.</button>
 
-<button title="Apagar" aria-label="Apagar" onclick="apagar(${r.id})" class="btn-apagar">APAGAR</button>
+<button title="Apagar" aria-label="Apagar" onclick="apagar(${r.id})" class="btn-apagar">Apag.</button>
 
 </td>
 `
