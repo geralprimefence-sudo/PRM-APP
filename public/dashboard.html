@@ -109,14 +109,17 @@ line-height:1.4;
 }
 
 .upload-actions{
-display:grid;
-grid-template-columns:repeat(2,minmax(0,1fr));
+display:flex;
+align-items:center;
+justify-content:flex-start;
+flex-wrap:wrap;
 gap:10px;
 margin-top:12px;
 }
 
 #formDoc{
 margin:0;
+display:inline-block;
 }
 
 .auto-upload-btn{
@@ -124,12 +127,12 @@ position:relative;
 display:flex;
 align-items:center;
 justify-content:center;
-width:100%;
-min-height:50px;
-padding:12px 16px;
+width:auto;
+min-height:40px;
+padding:8px 14px;
 border:none;
 border-radius:12px;
-font-size:15px;
+font-size:14px;
 font-weight:700;
 cursor:pointer;
 overflow:hidden;
@@ -155,6 +158,49 @@ display:flex;
 gap:8px;
 margin-bottom:14px;
 flex-wrap:wrap;
+}
+
+.ferramentas-lista{
+display:grid;
+grid-template-columns:1.3fr 1fr;
+gap:10px;
+margin:0 0 12px;
+}
+
+.ferramenta-campo{
+width:100%;
+height:42px;
+border:1px solid #d0d5dd;
+border-radius:10px;
+padding:0 12px;
+font-size:14px;
+font-weight:600;
+color:#0f172a;
+background:#fff;
+}
+
+.filtros-curtos{
+display:flex;
+gap:8px;
+margin:0 0 14px;
+flex-wrap:wrap;
+}
+
+.btn-curto{
+background:#f8fafc;
+color:#334155;
+border:1px solid #cbd5e1;
+padding:7px 12px;
+border-radius:999px;
+font-size:13px;
+font-weight:700;
+cursor:pointer;
+}
+
+.btn-curto.ativo{
+background:#0f172a;
+color:#fff;
+border-color:#0f172a;
 }
 
 .btn-periodo{
@@ -268,6 +314,17 @@ min-height:22px;
 .btn-editar{background:#f39c12;color:white;}
 .btn-apagar{background:#e74c3c;color:white;}
 
+.acoes select{
+width:100%;
+height:30px;
+border:1px solid #cbd5e1;
+border-radius:6px;
+font-size:11px;
+font-weight:700;
+padding:0 6px;
+background:#fff;
+}
+
 .linha-vazia td{
 font-style:italic;
 color:#667085;
@@ -311,6 +368,16 @@ padding:14px;
 }
 
 .upload-actions{
+justify-content:flex-start;
+}
+
+.auto-upload-btn{
+min-height:34px;
+padding:6px 12px;
+font-size:13px;
+}
+
+.ferramentas-lista{
 grid-template-columns:1fr;
 }
 
@@ -367,21 +434,12 @@ letter-spacing:0.2px;
 }
 
 td.acoes{
-display:flex;
-align-items:center;
-flex-wrap:wrap;
-gap:4px;
+display:block;
 }
 
-td.acoes button{
-width:auto;
-min-width:22px;
-min-height:22px;
-max-height:none;
+td.acoes select{
+height:28px;
 font-size:10px;
-line-height:1;
-padding:2px 6px;
-border-radius:5px;
 }
 
 .linha-vazia td{
@@ -470,6 +528,24 @@ Documento/PDF
 <button type="button" class="btn-periodo" onclick="selecionarPeriodo('ano', this)">Ano</button>
 </div>
 
+<div class="ferramentas-lista">
+<input id="pesquisaInput" class="ferramenta-campo" type="text" placeholder="Pesquisar fornecedor ou valor...">
+<select id="ordenacaoSelect" class="ferramenta-campo">
+<option value="data_desc">Mais recentes</option>
+<option value="data_asc">Mais antigos</option>
+<option value="valor_desc">Maior valor</option>
+<option value="valor_asc">Menor valor</option>
+<option value="fornecedor_asc">Fornecedor A-Z</option>
+</select>
+</div>
+
+<div class="filtros-curtos">
+<button type="button" class="btn-curto" onclick="selecionarJanelaDias(1, this)">Hoje</button>
+<button type="button" class="btn-curto" onclick="selecionarJanelaDias(7, this)">7 dias</button>
+<button type="button" class="btn-curto" onclick="selecionarJanelaDias(30, this)">30 dias</button>
+<button type="button" class="btn-curto ativo" onclick="selecionarJanelaDias(0, this)">Todos</button>
+</div>
+
 <div class="mobile-tipo-toggle">
 <button id="btnMobileReceitas" type="button" class="btn-tipo-mobile" onclick="selecionarTipoMobile('receitas', this)">Receitas</button>
 <button id="btnMobileDespesas" type="button" class="btn-tipo-mobile ativo" onclick="selecionarTipoMobile('despesas', this)">Despesas</button>
@@ -519,6 +595,9 @@ Documento/PDF
 let todosRegistos = []
 let periodoAtual = "mes"
 let tipoMobileAtual = "despesas"
+let janelaDiasAtual = 0
+let termoPesquisa = ""
+let ordenacaoAtual = "data_desc"
 
 function eMobile(){
 return window.matchMedia("(max-width: 820px)").matches
@@ -611,6 +690,56 @@ return true
 
 }
 
+function registoNaJanelaDias(registo,dias){
+
+if(!dias) return true
+
+const data = parseDataRegisto(registo.data)
+if(!data) return false
+
+const hoje = new Date()
+const inicioHoje = new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate())
+const inicioRegisto = new Date(data.getFullYear(),data.getMonth(),data.getDate())
+
+const diffMs = inicioHoje.getTime() - inicioRegisto.getTime()
+const diffDias = Math.floor(diffMs / 86400000)
+
+return diffDias >= 0 && diffDias < dias
+
+}
+
+function registoCorrespondePesquisa(registo,termo){
+
+if(!termo) return true
+
+const fornecedor = String(registo.fornecedor || "").toLowerCase()
+const valor = Number(registo.valor || 0).toLocaleString("pt-PT",{minimumFractionDigits:2}).toLowerCase()
+const data = formatarData(registo.data).toLowerCase()
+
+return fornecedor.includes(termo) || valor.includes(termo) || data.includes(termo)
+
+}
+
+function ordenarRegistos(lista){
+
+const copia = [...lista]
+
+switch(ordenacaoAtual){
+case "data_asc":
+return copia.sort((a,b)=> (parseDataRegisto(a.data)?.getTime() || 0) - (parseDataRegisto(b.data)?.getTime() || 0))
+case "valor_desc":
+return copia.sort((a,b)=> Number(b.valor || 0) - Number(a.valor || 0))
+case "valor_asc":
+return copia.sort((a,b)=> Number(a.valor || 0) - Number(b.valor || 0))
+case "fornecedor_asc":
+return copia.sort((a,b)=> String(a.fornecedor || "").localeCompare(String(b.fornecedor || ""),"pt"))
+case "data_desc":
+default:
+return copia.sort((a,b)=> (parseDataRegisto(b.data)?.getTime() || 0) - (parseDataRegisto(a.data)?.getTime() || 0))
+}
+
+}
+
 function atualizarCards(registos){
 
 const receitas = registos
@@ -647,7 +776,11 @@ renderPeriodoAtual()
 
 function renderPeriodoAtual(){
 
-const registos = todosRegistos.filter(r => registoNoPeriodo(r,periodoAtual))
+let registos = todosRegistos.filter((r)=> registoNoPeriodo(r,periodoAtual))
+
+registos = registos.filter((r)=> registoNaJanelaDias(r,janelaDiasAtual))
+registos = registos.filter((r)=> registoCorrespondePesquisa(r,termoPesquisa))
+registos = ordenarRegistos(registos)
 
 atualizarCards(registos)
 
@@ -707,6 +840,17 @@ periodoAtual = periodo
 
 document.querySelectorAll(".btn-periodo").forEach(b => b.classList.remove("ativo"))
 botao.classList.add("ativo")
+
+renderPeriodoAtual()
+
+}
+
+function selecionarJanelaDias(dias,botao){
+
+janelaDiasAtual = dias
+
+document.querySelectorAll(".btn-curto").forEach((b)=> b.classList.remove("ativo"))
+if(botao) botao.classList.add("ativo")
 
 renderPeriodoAtual()
 
@@ -779,6 +923,16 @@ body:JSON.stringify({valor:novoValor})
 
 
 carregarDados()
+
+document.getElementById("pesquisaInput").addEventListener("input",(e)=>{
+termoPesquisa = String(e.target.value || "").trim().toLowerCase()
+renderPeriodoAtual()
+})
+
+document.getElementById("ordenacaoSelect").addEventListener("change",(e)=>{
+ordenacaoAtual = e.target.value
+renderPeriodoAtual()
+})
 
 window.addEventListener("resize",aplicarVistaListas)
 
