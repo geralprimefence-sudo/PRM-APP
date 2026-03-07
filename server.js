@@ -470,26 +470,32 @@ return {valor,data,empresa,nif,tipo}
 
 
 app.get("/login",(req,res)=>{
+res.set("Cache-Control","no-store")
 res.sendFile(path.join(__dirname,"public/login.html"))
 })
 
 app.get("/register",(req,res)=>{
+res.set("Cache-Control","no-store")
 res.sendFile(path.join(__dirname,"public/register.html"))
 })
 
 app.get("/dashboard",auth,(req,res)=>{
+res.set("Cache-Control","no-store")
 res.sendFile(path.join(__dirname,"public/dashboard.html"))
 })
 
 app.get("/relatorio",auth,(req,res)=>{
+res.set("Cache-Control","no-store")
 res.sendFile(path.join(__dirname,"public/relatorio.html"))
 })
 
 app.get("/capturar-foto",auth,(req,res)=>{
+res.set("Cache-Control","no-store")
 res.sendFile(path.join(__dirname,"public/capturar-foto.html"))
 })
 
 app.get("/confirmar-upload",auth,(req,res)=>{
+res.set("Cache-Control","no-store")
 res.sendFile(path.join(__dirname,"public/confirmar-upload.html"))
 })
 
