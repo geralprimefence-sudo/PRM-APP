@@ -1417,19 +1417,58 @@ res.json({ok:true})
 
 app.post("/api/update/:id",auth,async(req,res)=>{
 
-const {valor} = req.body
-const valorNormalizado = normalizarValor(valor)
+const updates = []
+const params = []
 
-if(Number.isNaN(valorNormalizado)){
-return res.status(400).json({ok:false,erro:"Valor invalido"})
+if(req.body.fornecedor!==undefined){
+const fornecedor = String(req.body.fornecedor || "").trim()
+if(!fornecedor){
+return res.status(400).json({ok:false,erro:"Fornecedor invalido"})
+}
+params.push(fornecedor)
+updates.push(`fornecedor=$${params.length}`)
 }
 
-await pool.query(
-"UPDATE registos SET valor=$1, valor_total=$1 WHERE id=$2 AND user_id=$3",
-[valorNormalizado,req.params.id,req.session.userId]
-)
+if(req.body.data!==undefined){
+const dataNormalizada = dataParaInput(req.body.data)
+if(!dataNormalizada){
+return res.status(400).json({ok:false,erro:"Data invalida"})
+}
+params.push(dataNormalizada)
+updates.push(`data=$${params.length}`)
+}
 
-res.json({ok:true})
+if(req.body.valor!==undefined){
+const valorNormalizado = normalizarValor(req.body.valor)
+if(Number.isNaN(valorNormalizado) || valorNormalizado<=0){
+return res.status(400).json({ok:false,erro:"Valor invalido"})
+}
+params.push(valorNormalizado)
+updates.push(`valor=$${params.length}`)
+params.push(valorNormalizado)
+updates.push(`valor_total=$${params.length}`)
+}
+
+if(!updates.length){
+return res.status(400).json({ok:false,erro:"Sem campos para atualizar"})
+}
+
+params.push(req.params.id)
+params.push(req.session.userId)
+
+const query = `
+UPDATE registos
+SET ${updates.join(", ")}
+WHERE id=$${params.length - 1} AND user_id=$${params.length}
+RETURNING *
+`
+
+const result = await pool.query(query,params)
+if(!result.rows.length){
+return res.status(404).json({ok:false,erro:"Registo nao encontrado"})
+}
+
+res.json({ok:true,row:result.rows[0]})
 
 })
 

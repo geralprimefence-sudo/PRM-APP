@@ -897,6 +897,19 @@ return texto
 
 }
 
+function dataParaInputLocal(dataBruta){
+
+const d = parseDataRegisto(dataBruta)
+if(!d) return ""
+
+const yyyy = d.getFullYear()
+const mm = String(d.getMonth()+1).padStart(2,"0")
+const dd = String(d.getDate()).padStart(2,"0")
+
+return `${yyyy}-${mm}-${dd}`
+
+}
+
 
 
 function verFatura(id){
@@ -931,48 +944,50 @@ renderPeriodoAtual()
 
 
 
-function editar(id){
+async function editar(id){
 
-const novoValor = prompt("Novo valor")
+const registo = todosRegistos.find((r)=> Number(r.id)===Number(id))
+if(!registo){
+alert("Registo nao encontrado.")
+return
+}
 
-if(!novoValor) return
+const fornecedorAtual = String(registo.fornecedor || "")
+const dataAtual = dataParaInputLocal(registo.data)
+const valorAtual = Number(registo.valor_total ?? registo.valor ?? 0)
 
-fetch("/api/update/"+id,{
+const novoFornecedor = prompt("Fornecedor", fornecedorAtual)
+if(novoFornecedor===null) return
+
+const novaData = prompt("Data (AAAA-MM-DD)", dataAtual)
+if(novaData===null) return
+
+const novoValor = prompt(
+"Total",
+valorAtual.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})
+)
+if(novoValor===null) return
+
+const res = await fetch("/api/update/"+id,{
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
-body:JSON.stringify({valor:novoValor})
+body:JSON.stringify({
+fornecedor:novoFornecedor,
+data:novaData,
+valor:novoValor
 })
-.then(async (res)=>{
-if(!res.ok){
-alert("Erro ao atualizar valor.")
+})
+
+const data = await res.json().catch(()=>({ok:false}))
+if(!res.ok || !data.ok || !data.row){
+alert((data && data.erro) || "Erro ao atualizar registo.")
 return
 }
 
-const valorNormalizado = Number(
-String(novoValor)
-.replace(/\s+/g,"")
-.replace(/\./g,"")
-.replace(",",".")
-)
-
-if(Number.isNaN(valorNormalizado)){
+todosRegistos = todosRegistos.map((r)=> Number(r.id)===Number(id) ? data.row : r)
 renderPeriodoAtual()
-return
-}
-
-todosRegistos = todosRegistos.map((r)=>{
-if(Number(r.id)!==Number(id)) return r
-return {
-...r,
-valor:valorNormalizado,
-valor_total:valorNormalizado
-}
-})
-
-renderPeriodoAtual()
-})
 
 }
 
