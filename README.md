@@ -31,6 +31,21 @@ OCRSPACE_API_KEY=helloworld
 OCRSPACE_TIMEOUT_MS=15000
 ```
 
+Opcional para usar PaddleOCR (self-hosted gratis):
+
+```env
+PADDLEOCR_ENABLED=1
+PADDLEOCR_API_URL=http://127.0.0.1:8081/ocr
+PADDLEOCR_TIMEOUT_MS=12000
+```
+
+Microservico PaddleOCR (pasta `paddleocr-service/`):
+
+```bash
+pip install -r paddleocr-service/requirements.txt
+python paddleocr-service/app.py
+```
+
 Nota: a app tenta ler QR Code da fatura (quando presente) para melhorar data, total e NIF.
 
 3. Arrancar servidor:

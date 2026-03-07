@@ -27,6 +27,9 @@ jsQR = require("jsqr")
 const OCRSPACE_ENABLED = String(process.env.OCRSPACE_ENABLED || "1") !== "0"
 const OCRSPACE_API_KEY = process.env.OCRSPACE_API_KEY || "helloworld"
 const OCRSPACE_TIMEOUT_MS = Number(process.env.OCRSPACE_TIMEOUT_MS || 15000)
+const PADDLEOCR_ENABLED = String(process.env.PADDLEOCR_ENABLED || "0") === "1"
+const PADDLEOCR_API_URL = String(process.env.PADDLEOCR_API_URL || "").trim()
+const PADDLEOCR_TIMEOUT_MS = Number(process.env.PADDLEOCR_TIMEOUT_MS || 12000)
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -507,6 +510,55 @@ async function reconhecerTextoOCRApiGratis(file){
 
 }
 
+async function reconhecerTextoPaddleOCRApi(file){
+
+	if(!PADDLEOCR_ENABLED || !PADDLEOCR_API_URL) return {texto:"",score:-Infinity}
+
+	const ext = path.extname(file || "").toLowerCase()
+	const mimeByExt = {
+		".jpg":"image/jpeg",
+		".jpeg":"image/jpeg",
+		".png":"image/png",
+		".webp":"image/webp",
+		".pdf":"application/pdf"
+	}
+
+	const mime = mimeByExt[ext] || "application/octet-stream"
+	const controller = new AbortController()
+	const timer = setTimeout(()=> controller.abort(),PADDLEOCR_TIMEOUT_MS)
+
+	try{
+		const buffer = fs.readFileSync(file)
+		const form = new FormData()
+		const blob = new Blob([buffer],{type:mime})
+		form.append("file",blob,path.basename(file))
+
+		const res = await fetch(PADDLEOCR_API_URL,{method:"POST",body:form,signal:controller.signal})
+		if(!res.ok) return {texto:"",score:-Infinity}
+
+		const data = await res.json().catch(()=> null)
+		const texto = String(
+			data?.text ||
+			(Array.isArray(data?.lines) ? data.lines.join("\n") : "") ||
+			(Array.isArray(data?.result) ? data.result.join("\n") : "") ||
+			""
+		).trim()
+
+		if(!texto) return {texto:"",score:-Infinity}
+
+		return {
+			texto,
+			score:pontuarResultadoOCR(texto)
+		}
+	}catch(err){
+		console.error("Falha PaddleOCR API",err?.message || err)
+		return {texto:"",score:-Infinity}
+	}finally{
+		clearTimeout(timer)
+	}
+
+}
+
 async function extrairTexto(file){
 
 const ext = path.extname(file).toLowerCase()
@@ -566,6 +618,16 @@ try{
 
 	if(localBom){
 		return melhorLocal.texto
+	}
+
+	const paddle = await reconhecerTextoPaddleOCRApi(file)
+	if(paddle.texto){
+		validos.push(paddle)
+		validos.sort((a,b)=> b.score - a.score)
+		const melhorComPaddle = validos[0]
+		if(temCamposCriticosOCR(melhorComPaddle.texto)){
+			return melhorComPaddle.texto
+		}
 	}
 
 	const remoto = await reconhecerTextoOCRApiGratis(file)
