@@ -134,8 +134,8 @@ function atualizarModoBotoes(){
   modoNormalBtn.setAttribute("aria-pressed", String(!modoScan))
   scanFrame.style.display = modoScan ? "block" : "none"
   msg.textContent = modoScan
-    ? "Modo Scan ativo: usa moldura e melhora contraste para OCR."
-    : "Modo Normal ativo: capta imagem completa original."
+    ? "Modo Scan ativo: extrai fornecedor, data e valor automaticamente (OCR)."
+    : "Modo Normal ativo: envio rapido, sem leitura automatica completa."
 }
 
 function selecionarModo(scan){
@@ -228,7 +228,8 @@ function pararCamera(){
 async function enviarBlob(blob){
   const fd = new FormData()
   fd.append("file", blob, `captura-${Date.now()}.jpg`)
-  fd.append("fast","1")
+  // Modo Scan faz OCR completo; modo Normal privilegia rapidez.
+  fd.append("fast", modoScan ? "0" : "1")
   fd.append("modo", modoScan ? "scan" : "normal")
 
   msg.textContent = "A enviar ficheiro..."
