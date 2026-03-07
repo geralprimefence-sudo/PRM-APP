@@ -149,8 +149,22 @@ if(ext==".pdf"){
 
 const dataBuffer = fs.readFileSync(file)
 const data = await pdfParse(dataBuffer)
+const textoPdf = String(data.text || "").trim()
 
-return data.text
+// Some PDFs are image-based and return almost no text via pdf-parse.
+if(textoPdf.length >= 30){
+return textoPdf
+}
+
+try{
+const result = await Tesseract.recognize(file,"por")
+const textoOcr = String(result?.data?.text || "").trim()
+if(textoOcr.length >= 12) return textoOcr
+}catch(_){
+// Keep silent and fallback to parsed text below.
+}
+
+return textoPdf
 
 }
 
@@ -257,6 +271,35 @@ function resolverCaminhoUploadSeguro(refFicheiro){
 	if(!nomeBase) return null
 
 	return encontrarFicheiroPorBasename(uploadsRoot,nomeBase)
+
+}
+
+function enviarDocumentoSeguro(req,res,fullPath){
+
+if(!fullPath || !fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()){
+return res.status(404).send("Documento nao encontrado")
+}
+
+const ext = path.extname(fullPath).toLowerCase()
+if(ext === ".pdf"){
+res.setHeader("Content-Type","application/pdf")
+}else if([".jpg",".jpeg"].includes(ext)){
+res.setHeader("Content-Type","image/jpeg")
+}else if(ext === ".png"){
+res.setHeader("Content-Type","image/png")
+}
+
+const downloadNome = path.basename(fullPath)
+res.setHeader("Content-Disposition",`inline; filename="${downloadNome}"`)
+
+const stream = fs.createReadStream(fullPath)
+stream.on("error",(err)=>{
+console.error("Erro a ler documento",err)
+if(!res.headersSent){
+res.status(500).send("Erro ao abrir documento")
+}
+})
+stream.pipe(res)
 
 }
 
@@ -1089,6 +1132,8 @@ res.json({ok:true,redirect:"/dashboard"})
 
 app.get("/api/documento",auth,(req,res)=>{
 
+try{
+
 const ref = req.query.ficheiro
 const full = resolverCaminhoUploadSeguro(ref)
 
@@ -1096,11 +1141,18 @@ if(!full){
 return res.status(404).send("Documento nao encontrado")
 }
 
-res.sendFile(full)
+enviarDocumentoSeguro(req,res,full)
+
+}catch(err){
+console.error("Erro em /api/documento",err)
+res.status(500).send("Erro interno ao abrir documento")
+}
 
 })
 
 app.get("/api/registos/:id/documento",auth,async(req,res)=>{
+
+try{
 
 const id = Number(req.params.id)
 if(!Number.isInteger(id) || id<=0){
@@ -1122,7 +1174,12 @@ if(!full){
 return res.status(404).send("Documento nao encontrado")
 }
 
-res.sendFile(full)
+enviarDocumentoSeguro(req,res,full)
+
+}catch(err){
+console.error("Erro em /api/registos/:id/documento",err)
+res.status(500).send("Erro interno ao abrir documento")
+}
 
 })
 
