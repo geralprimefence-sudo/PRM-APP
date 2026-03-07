@@ -826,7 +826,7 @@ row.innerHTML = `
 
 <button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button>
 
-<button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar">Edit IVA</button>
+<button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar">Edit</button>
 
 <button title="Apagar" aria-label="Apagar" onclick="apagar(${r.id})" class="btn-apagar">Apag.</button>
 
@@ -958,12 +958,7 @@ return
 }
 
 const url = "/api/registos/" + registoId + "/documento"
-
-const novaAba = window.open(url,"_blank","noopener")
-if(!novaAba){
-// Fallback para browsers que bloqueiam popups.
 window.location.href = url
-}
 
 }
 
@@ -1004,20 +999,26 @@ const taxaIvaAtual = valorSemIvaAtual>0 ? ((valorIvaAtual / valorSemIvaAtual) * 
 const novoFornecedor = prompt("Fornecedor", fornecedorAtual)
 if(novoFornecedor===null) return
 
+const fornecedorLimpo = String(novoFornecedor || "").trim()
+if(!fornecedorLimpo){
+alert("Fornecedor invalido.")
+return
+}
+
 const novaData = prompt("Data (AAAA-MM-DD)", dataAtual)
 if(novaData===null) return
 
+const dataLimpa = String(novaData || "").trim()
+if(!/^\d{4}-\d{2}-\d{2}$/.test(dataLimpa)){
+alert("Data invalida. Usa o formato AAAA-MM-DD.")
+return
+}
+
 const novoValor = prompt(
-"Total",
+"Valor",
 valorAtual.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})
 )
 if(novoValor===null) return
-
-const novaTaxaIva = prompt(
-"IVA (%)",
-Number(taxaIvaAtual).toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})
-)
-if(novaTaxaIva===null) return
 
 const total = parseNumeroPtInput(novoValor)
 if(Number.isNaN(total) || total<=0){
@@ -1025,11 +1026,7 @@ alert("Total invalido.")
 return
 }
 
-const taxaIva = parseNumeroPtInput(novaTaxaIva)
-if(Number.isNaN(taxaIva) || taxaIva<0 || taxaIva>100){
-alert("IVA invalido. Usa uma percentagem entre 0 e 100.")
-return
-}
+const taxaIva = Number.isFinite(taxaIvaAtual) && taxaIvaAtual>=0 && taxaIvaAtual<=100 ? taxaIvaAtual : 23
 
 const valorSemIva = arredondar2(total / (1 + (taxaIva / 100)))
 const valorIva = arredondar2(total - valorSemIva)
@@ -1040,8 +1037,8 @@ headers:{
 "Content-Type":"application/json"
 },
 body:JSON.stringify({
-fornecedor:novoFornecedor,
-data:novaData,
+fornecedor:fornecedorLimpo,
+data:dataLimpa,
 valor:total,
 valorTotal:total,
 valorSemIva,
