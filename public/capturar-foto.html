@@ -119,10 +119,6 @@ let stream = null
 let modoScan = true
 const MAX_LADO_OCR = 1400
 const MAX_LADO_NORMAL = 1500
-const SCAN_CROP_X = 0.1
-const SCAN_CROP_Y = 0.05
-const SCAN_CROP_W = 0.8
-const SCAN_CROP_H = 0.9
 let aProcessar = false
 
 function definirEstadoProcessamento(ativo){
@@ -138,8 +134,8 @@ function atualizarModoBotoes(){
   modoNormalBtn.setAttribute("aria-pressed", String(!modoScan))
   scanFrame.style.display = modoScan ? "block" : "none"
   msg.textContent = modoScan
-    ? "Modo Scan ativo: leitura OCR com melhoria de imagem."
-    : "Modo Normal ativo: leitura OCR com imagem natural."
+    ? "Modo Scan ativo: envia imagem completa para OCR robusto no servidor."
+    : "Modo Normal ativo: imagem natural com OCR no servidor."
 }
 
 function selecionarModo(scan){
@@ -159,50 +155,6 @@ function ligarEventosModo(){
 
   bind(modoScanBtn,true)
   bind(modoNormalBtn,false)
-}
-
-function melhorarParaOCR(ctx,w,h){
-  const img = ctx.getImageData(0,0,w,h)
-  const p = img.data
-
-  // 1) grayscale + 2) high contrast (balanced)
-  const gray = new Uint8ClampedArray(w * h)
-  for(let i=0,px=0;i<p.length;i+=4,px++){
-    const g = ((p[i] * 38) + (p[i+1] * 75) + (p[i+2] * 15)) >> 7
-    let v = (g - 128) * 1.18 + 128
-    v = Math.max(0,Math.min(255,v))
-    gray[px] = v
-  }
-
-  // 3) sharpen (very mild, keeps readability without clipping)
-  const sharpened = new Uint8ClampedArray(gray.length)
-  for(let y=0;y<h;y++){
-    for(let x=0;x<w;x++){
-      const idx = y * w + x
-
-      if(x===0 || y===0 || x===w-1 || y===h-1){
-        sharpened[idx] = gray[idx]
-        continue
-      }
-
-      const c = gray[idx]
-      const l = gray[idx - 1]
-      const r = gray[idx + 1]
-      const t = gray[idx - w]
-      const b = gray[idx + w]
-
-      let v = (1.1 * c) - (0.025 * l) - (0.025 * r) - (0.025 * t) - (0.025 * b)
-      v = Math.max(0,Math.min(255,v))
-      sharpened[idx] = v
-    }
-  }
-
-  for(let i=0,px=0;i<p.length;i+=4,px++){
-    const v = sharpened[px]
-    p[i] = p[i+1] = p[i+2] = v
-  }
-
-  ctx.putImageData(img,0,0)
 }
 
 async function iniciarCamera(){
@@ -260,18 +212,11 @@ captureBtn.addEventListener("click", async ()=>{
   const fw = video.videoWidth
   const fh = video.videoHeight
 
-  // Modo Scan usa recorte central robusto (nao depende de offsets CSS do browser).
-  let sx = 0
-  let sy = 0
-  let sw = fw
-  let sh = fh
-
-  if(modoScan){
-    sx = Math.max(0,Math.floor(fw * SCAN_CROP_X))
-    sy = Math.max(0,Math.floor(fh * SCAN_CROP_Y))
-    sw = Math.max(1,Math.floor(fw * SCAN_CROP_W))
-    sh = Math.max(1,Math.floor(fh * SCAN_CROP_H))
-  }
+  // Evita perda de dados: enviar frame completo e deixar o preprocessamento para o servidor.
+  const sx = 0
+  const sy = 0
+  const sw = fw
+  const sh = fh
 
   const maxLado = modoScan ? MAX_LADO_OCR : MAX_LADO_NORMAL
   const escala = Math.min(1, maxLado / Math.max(sw, sh))
@@ -289,10 +234,6 @@ captureBtn.addEventListener("click", async ()=>{
   await new Promise((resolve)=> requestAnimationFrame(resolve))
 
   ctx.drawImage(video,sx,sy,sw,sh,0,0,tw,th)
-
-  if(modoScan){
-    melhorarParaOCR(ctx,tw,th)
-  }
 
   canvas.toBlob(async (blob)=>{
     if(!blob){
