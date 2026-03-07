@@ -70,11 +70,18 @@ user_id INTEGER,
 tipo TEXT,
 fornecedor TEXT,
 valor NUMERIC,
+valor_sem_iva NUMERIC,
+valor_iva NUMERIC,
+valor_total NUMERIC,
 data DATE,
 ficheiro TEXT,
 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 `)
+
+await pool.query("ALTER TABLE registos ADD COLUMN IF NOT EXISTS valor_sem_iva NUMERIC")
+await pool.query("ALTER TABLE registos ADD COLUMN IF NOT EXISTS valor_iva NUMERIC")
+await pool.query("ALTER TABLE registos ADD COLUMN IF NOT EXISTS valor_total NUMERIC")
 
 const admin = await pool.query(
 "SELECT * FROM users WHERE username=$1",
@@ -341,6 +348,71 @@ return 0
 
 }
 
+function extrairTotaisDoTexto(texto){
+
+const linhas = String(texto || "").split("\n").map((l)=> l.trim()).filter(Boolean)
+const numeroRegex = /\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d{2})|\d+[.,]\d{2}/g
+
+let total = null
+let iva = null
+let semIva = null
+
+for(const linha of linhas){
+
+const l = linha.toLowerCase()
+const tokens = linha.match(numeroRegex) || []
+if(!tokens.length) continue
+
+const valores = tokens
+	.map((t)=> normalizarValor(t))
+	.filter((v)=> !Number.isNaN(v) && v > 0 && v < 100000)
+
+if(!valores.length) continue
+
+const maior = Math.max(...valores)
+
+const eLinhaTotal =
+	/total|a pagar|valor total|total a pagar|liquido/.test(l) &&
+	!/subtotal|sem iva|base|incidencia|iva/.test(l)
+
+const eLinhaIva = /\biva\b|imposto/.test(l)
+const eLinhaSemIva = /sem iva|subtotal|base tributavel|incidencia|valor liquido/.test(l)
+
+if(eLinhaTotal && (total===null || maior > total)) total = maior
+if(eLinhaIva && (iva===null || maior > iva)) iva = maior
+if(eLinhaSemIva && (semIva===null || maior > semIva)) semIva = maior
+
+}
+
+if(total===null){
+	total = extrairValorDoTexto(texto)
+}
+
+if(total!==null && iva!==null && semIva===null){
+	semIva = Math.max(0,total - iva)
+}
+
+if(semIva!==null && iva!==null && total===null){
+	total = semIva + iva
+}
+
+if(total!==null && semIva!==null && iva===null){
+	iva = Math.max(0,total - semIva)
+}
+
+const f2 = (v)=>{
+	if(v===null || Number.isNaN(v)) return 0
+	return Math.round(Number(v) * 100) / 100
+}
+
+return {
+	total:f2(total),
+	iva:f2(iva),
+	semIva:f2(semIva)
+}
+
+}
+
 function linhaPareceEmpresa(linha){
 
 if(!linha) return false
@@ -474,6 +546,9 @@ return candidatos[0].data
 function extrairDadosFatura(texto){
 
 let valor = 0
+let valorSemIva = 0
+let valorIva = 0
+let valorTotal = 0
 let data = null
 let empresa = "desconhecido"
 let nif = ""
@@ -484,7 +559,11 @@ const textoLower = textoTratado.toLowerCase()
 
 
 
-valor = extrairValorDoTexto(textoTratado)
+const totais = extrairTotaisDoTexto(textoTratado)
+valorTotal = totais.total
+valorIva = totais.iva
+valorSemIva = totais.semIva
+valor = valorTotal
 
 if(Number.isNaN(valor)){
 valor = 0
@@ -533,7 +612,16 @@ textoLower.includes("recibo verde")
 tipo = "receita"
 }
 
-return {valor,data,empresa,nif,tipo}
+return {
+valor,
+valorSemIva,
+valorIva,
+valorTotal,
+data,
+empresa,
+nif,
+tipo
+}
 
 }
 
@@ -747,6 +835,9 @@ req.session.pendingUpload = {
 tipo:dados.tipo,
 fornecedor:dados.empresa,
 valor:dados.valor,
+valorSemIva:dados.valorSemIva,
+valorIva:dados.valorIva,
+valorTotal:dados.valorTotal,
 data:dataParaInput(dados.data),
 nif:dados.nif,
 ficheiro:req.file.filename
@@ -783,12 +874,23 @@ const pendente = req.session.pendingUpload
 
 const fornecedor = (req.body.fornecedor || pendente.fornecedor || "desconhecido").trim()
 const tipo = (req.body.tipo || pendente.tipo || "despesa").trim().toLowerCase()==="receita" ? "receita" : "despesa"
-const valorNormalizado = normalizarValor(req.body.valor ?? pendente.valor)
+const valorTotal = normalizarValor(req.body.valor ?? pendente.valorTotal ?? pendente.valor)
+const valorIva = normalizarValor(req.body.valorIva ?? pendente.valorIva ?? 0)
+let valorSemIva = normalizarValor(req.body.valorSemIva ?? pendente.valorSemIva)
 const dataFinal = dataParaInput(req.body.data || pendente.data)
 
-if(Number.isNaN(valorNormalizado) || valorNormalizado<=0){
+if(Number.isNaN(valorTotal) || valorTotal<=0){
 return res.status(400).json({ok:false,erro:"Valor invalido"})
 }
+
+const ivaSeguro = Number.isNaN(valorIva) ? 0 : Math.max(0,valorIva)
+if(Number.isNaN(valorSemIva)){
+valorSemIva = Math.max(0,valorTotal - ivaSeguro)
+}
+
+const totalSeguro = Math.round(Number(valorTotal) * 100) / 100
+const semIvaSeguro = Math.round(Number(valorSemIva) * 100) / 100
+const ivaFinal = Math.round(Number(ivaSeguro) * 100) / 100
 
 if(!dataFinal){
 return res.status(400).json({ok:false,erro:"Data invalida"})
@@ -796,13 +898,16 @@ return res.status(400).json({ok:false,erro:"Data invalida"})
 
 await pool.query(
 `INSERT INTO registos
-(user_id,tipo,fornecedor,valor,data,ficheiro)
-VALUES($1,$2,$3,$4,$5,$6)`,
+(user_id,tipo,fornecedor,valor,valor_sem_iva,valor_iva,valor_total,data,ficheiro)
+VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
 [
 req.session.userId,
 tipo,
 fornecedor,
-valorNormalizado,
+totalSeguro,
+semIvaSeguro,
+ivaFinal,
+totalSeguro,
 dataFinal,
 pendente.ficheiro
 ]
@@ -889,7 +994,7 @@ return res.status(400).json({ok:false,erro:"Valor invalido"})
 }
 
 await pool.query(
-"UPDATE registos SET valor=$1 WHERE id=$2 AND user_id=$3",
+"UPDATE registos SET valor=$1, valor_total=$1 WHERE id=$2 AND user_id=$3",
 [valorNormalizado,req.params.id,req.session.userId]
 )
 

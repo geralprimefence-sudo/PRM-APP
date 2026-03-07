@@ -560,7 +560,9 @@ Documento/PDF
 <tr>
 <th>Data</th>
 <th>Fornecedor</th>
-<th>Valor</th>
+<th>Sem IVA</th>
+<th>IVA</th>
+<th>Total</th>
 <th>Ações</th>
 </tr>
 </thead>
@@ -575,7 +577,9 @@ Documento/PDF
 <tr>
 <th>Data</th>
 <th>Fornecedor</th>
-<th>Valor</th>
+<th>Sem IVA</th>
+<th>IVA</th>
+<th>Total</th>
 <th>Ações</th>
 </tr>
 </thead>
@@ -713,10 +717,12 @@ function registoCorrespondePesquisa(registo,termo){
 if(!termo) return true
 
 const fornecedor = String(registo.fornecedor || "").toLowerCase()
-const valor = Number(registo.valor || 0).toLocaleString("pt-PT",{minimumFractionDigits:2}).toLowerCase()
+const valorTotal = Number(registo.valor_total ?? registo.valor ?? 0).toLocaleString("pt-PT",{minimumFractionDigits:2}).toLowerCase()
+const valorIva = Number(registo.valor_iva ?? 0).toLocaleString("pt-PT",{minimumFractionDigits:2}).toLowerCase()
+const valorSemIva = Number(registo.valor_sem_iva ?? 0).toLocaleString("pt-PT",{minimumFractionDigits:2}).toLowerCase()
 const data = formatarData(registo.data).toLowerCase()
 
-return fornecedor.includes(termo) || valor.includes(termo) || data.includes(termo)
+return fornecedor.includes(termo) || valorTotal.includes(termo) || valorIva.includes(termo) || valorSemIva.includes(termo) || data.includes(termo)
 
 }
 
@@ -728,9 +734,9 @@ switch(ordenacaoAtual){
 case "data_asc":
 return copia.sort((a,b)=> (parseDataRegisto(a.data)?.getTime() || 0) - (parseDataRegisto(b.data)?.getTime() || 0))
 case "valor_desc":
-return copia.sort((a,b)=> Number(b.valor || 0) - Number(a.valor || 0))
+return copia.sort((a,b)=> Number(b.valor_total ?? b.valor ?? 0) - Number(a.valor_total ?? a.valor ?? 0))
 case "valor_asc":
-return copia.sort((a,b)=> Number(a.valor || 0) - Number(b.valor || 0))
+return copia.sort((a,b)=> Number(a.valor_total ?? a.valor ?? 0) - Number(b.valor_total ?? b.valor ?? 0))
 case "fornecedor_asc":
 return copia.sort((a,b)=> String(a.fornecedor || "").localeCompare(String(b.fornecedor || ""),"pt"))
 case "data_desc":
@@ -744,11 +750,11 @@ function atualizarCards(registos){
 
 const receitas = registos
 .filter(r => (r.tipo || "").toLowerCase()==="receita")
-.reduce((acc,r)=>acc + Number(r.valor || 0),0)
+.reduce((acc,r)=>acc + Number(r.valor_total ?? r.valor ?? 0),0)
 
 const despesas = registos
 .filter(r => (r.tipo || "").toLowerCase()!=="receita")
-.reduce((acc,r)=>acc + Number(r.valor || 0),0)
+.reduce((acc,r)=>acc + Number(r.valor_total ?? r.valor ?? 0),0)
 
 const saldo = receitas - despesas
 
@@ -793,13 +799,18 @@ tabelaDespesas.innerHTML = ""
 registos.forEach(r=>{
 
 const dataCurta = formatarData(r.data)
+const valorSemIva = Number(r.valor_sem_iva ?? 0)
+const valorIva = Number(r.valor_iva ?? 0)
+const valorTotal = Number(r.valor_total ?? r.valor ?? 0)
 
 const row = document.createElement("tr")
 
 row.innerHTML = `
 <td data-label="Data">${dataCurta}</td>
 <td data-label="Fornecedor">${r.fornecedor}</td>
-<td data-label="Valor">${Number(r.valor).toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
+<td data-label="Sem IVA">${valorSemIva.toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
+<td data-label="IVA">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
+<td data-label="Total">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
 
 <td class="acoes" data-label="Acoes">
 
@@ -821,11 +832,11 @@ tabelaDespesas.appendChild(row)
 })
 
 if(!tabelaReceitas.children.length){
-tabelaReceitas.innerHTML = `<tr class="linha-vazia"><td data-label="">Sem receitas.</td></tr>`
+tabelaReceitas.innerHTML = `<tr class="linha-vazia"><td data-label="" colspan="6">Sem receitas.</td></tr>`
 }
 
 if(!tabelaDespesas.children.length){
-tabelaDespesas.innerHTML = `<tr class="linha-vazia"><td data-label="">Sem despesas.</td></tr>`
+tabelaDespesas.innerHTML = `<tr class="linha-vazia"><td data-label="" colspan="6">Sem despesas.</td></tr>`
 }
 
 aplicarVistaListas()
