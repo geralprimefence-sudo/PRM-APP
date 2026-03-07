@@ -31,6 +31,8 @@ OCRSPACE_API_KEY=helloworld
 OCRSPACE_TIMEOUT_MS=15000
 ```
 
+Nota: a app tenta ler QR Code da fatura (quando presente) para melhorar data, total e NIF.
+
 3. Arrancar servidor:
 
 ```bash

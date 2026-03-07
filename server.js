@@ -17,6 +17,13 @@ sharp = require("sharp")
 // Sharp is optional at runtime; OCR still works without it.
 }
 
+let jsQR = null
+try{
+jsQR = require("jsqr")
+}catch(_){
+// jsQR is optional; OCR still works without QR decode.
+}
+
 const OCRSPACE_ENABLED = String(process.env.OCRSPACE_ENABLED || "1") !== "0"
 const OCRSPACE_API_KEY = process.env.OCRSPACE_API_KEY || "helloworld"
 const OCRSPACE_TIMEOUT_MS = Number(process.env.OCRSPACE_TIMEOUT_MS || 15000)
@@ -265,6 +272,140 @@ async function preprocessarImagemParaOCR(file,modo = "balanced"){
 		console.error("Falha no preprocessamento OCR",err?.message || err)
 		return null
 	}
+
+}
+
+function parseNumeroSeguro(raw){
+	if(raw===null || raw===undefined) return NaN
+	let s = String(raw).trim().replace(/\s+/g,"")
+	s = s.replace(/[^\d,.-]/g,"")
+	if(s.includes(",") && s.includes(".")){
+		s = s.replace(/\./g,"").replace(",", ".")
+	}else if(s.includes(",")){
+		s = s.replace(",", ".")
+	}
+	return Number(s)
+}
+
+function normalizarNifQr(raw){
+	const n = String(raw || "").replace(/\D/g,"")
+	if(/^\d{9}$/.test(n)) return n
+	return ""
+}
+
+function extrairDadosDoTextoQr(textoQr){
+
+	const texto = String(textoQr || "")
+	if(!texto.trim()) return null
+
+	const mapa = {}
+	const kv = /\b([A-Z]{1,3})\s*[:=]\s*([^*\n;|]+)/g
+	for(const m of texto.matchAll(kv)){
+		const k = String(m[1] || "").trim()
+		const v = String(m[2] || "").trim()
+		if(k && v && !mapa[k]) mapa[k] = v
+	}
+
+	let data = null
+	const dataRaw = mapa.F || mapa.DATA || (texto.match(/\b\d{4}-\d{2}-\d{2}\b/) || [])[0] || ""
+	if(dataRaw){
+		const d = new Date(dataRaw)
+		if(!Number.isNaN(d.getTime())) data = d
+	}
+
+	const totalPreferencial = parseNumeroSeguro(mapa.O || mapa.TOTAL || "")
+	let total = Number.isFinite(totalPreferencial) && totalPreferencial>0 ? totalPreferencial : NaN
+	if(!Number.isFinite(total) || total<=0){
+		const nums = [...texto.matchAll(/\d{1,6}[.,]\d{2}/g)].map((m)=> parseNumeroSeguro(m[0])).filter((n)=> Number.isFinite(n) && n>0 && n<100000)
+		if(nums.length) total = Math.max(...nums)
+	}
+
+	const ivaPreferencial = parseNumeroSeguro(mapa.N || mapa.IVA || "")
+	let iva = Number.isFinite(ivaPreferencial) && ivaPreferencial>=0 ? ivaPreferencial : NaN
+	if((!Number.isFinite(iva) || iva<0) && Number.isFinite(total) && total>0){
+		iva = NaN
+	}
+
+	const nif = normalizarNifQr(mapa.B || mapa.NIF || "")
+
+	if(!data && !Number.isFinite(total) && !nif){
+		return null
+	}
+
+	return {
+		data,
+		total:Number.isFinite(total) ? Math.round(total * 100) / 100 : NaN,
+		iva:Number.isFinite(iva) ? Math.round(iva * 100) / 100 : NaN,
+		nif
+	}
+
+}
+
+async function lerQrCodeDaImagem(file,modo = "raw"){
+
+	if(!jsQR || !sharp) return null
+
+	try{
+		let img = sharp(file).rotate().resize({width:1900,height:1900,fit:"inside",withoutEnlargement:true})
+		if(modo === "enhanced"){
+			img = img.grayscale().normalize().sharpen({sigma:1.1,m1:0.9,m2:0.3,x1:2,y2:10,y3:20})
+		}
+
+		const out = await img.ensureAlpha().raw().toBuffer({resolveWithObject:true})
+		const raw = new Uint8ClampedArray(out.data.buffer,out.data.byteOffset,out.data.byteLength)
+		const qr = jsQR(raw,out.info.width,out.info.height,{inversionAttempts:"attemptBoth"})
+		if(!qr || !qr.data) return null
+		return String(qr.data || "")
+	}catch(_){
+		return null
+	}
+
+}
+
+async function extrairDadosQrDaImagem(file){
+
+	const textoRaw = await lerQrCodeDaImagem(file,"raw")
+	const dadosRaw = extrairDadosDoTextoQr(textoRaw)
+	if(dadosRaw) return dadosRaw
+
+	const textoEnhanced = await lerQrCodeDaImagem(file,"enhanced")
+	const dadosEnhanced = extrairDadosDoTextoQr(textoEnhanced)
+	if(dadosEnhanced) return dadosEnhanced
+
+	return null
+
+}
+
+function combinarDadosComQr(dados,qr){
+
+	if(!qr) return dados
+
+	const out = {...dados}
+
+	if(qr.data instanceof Date && !Number.isNaN(qr.data.getTime())){
+		out.data = qr.data
+	}
+
+	if(qr.nif){
+		out.nif = qr.nif
+	}
+
+	if(Number.isFinite(qr.total) && qr.total > 0){
+		out.valorTotal = Math.round(Number(qr.total) * 100) / 100
+		out.valor = out.valorTotal
+
+		if(Number.isFinite(qr.iva) && qr.iva >= 0 && qr.iva <= out.valorTotal){
+			out.valorIva = Math.round(Number(qr.iva) * 100) / 100
+			out.valorSemIva = Math.round(Math.max(0,out.valorTotal - out.valorIva) * 100) / 100
+		}else if(Number.isFinite(out.valorIva) && out.valorIva >= 0 && out.valorIva <= out.valorTotal){
+			out.valorSemIva = Math.round(Math.max(0,out.valorTotal - out.valorIva) * 100) / 100
+		}else{
+			out.valorSemIva = out.valorTotal
+			out.valorIva = 0
+		}
+	}
+
+	return out
 
 }
 
@@ -1459,7 +1600,9 @@ const file = req.file.path
 
 const texto = await extrairTexto(file)
 
-const dados = extrairDadosFatura(texto)
+let dados = extrairDadosFatura(texto)
+const dadosQr = await extrairDadosQrDaImagem(file)
+dados = combinarDadosComQr(dados,dadosQr)
 
 const userResult = await pool.query(
 "SELECT nome,contribuinte FROM users WHERE id=$1",
@@ -1542,7 +1685,9 @@ return res.status(404).json({ok:false,erro:"Documento nao encontrado",pending:re
 }
 
 const texto = await extrairTexto(full)
-const dados = extrairDadosFatura(texto)
+let dados = extrairDadosFatura(texto)
+const dadosQr = await extrairDadosQrDaImagem(full)
+dados = combinarDadosComQr(dados,dadosQr)
 
 const userResult = await pool.query(
 "SELECT nome,contribuinte FROM users WHERE id=$1",
