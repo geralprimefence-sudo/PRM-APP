@@ -1081,22 +1081,48 @@ if(req.session.pendingUpload && req.session.pendingUpload.ficheiro){
 apagarUploadSilencioso(req.session.pendingUpload.ficheiro)
 }
 
-
-app.get("/api/documento",auth,(req,res)=>{
-
-	const ref = req.query.ficheiro
-	const full = resolverCaminhoUploadSeguro(ref)
-
-	if(!full){
-		return res.status(404).send("Documento nao encontrado")
-	}
-
-	res.sendFile(full)
-
-})
 req.session.pendingUpload = null
 
 res.json({ok:true,redirect:"/dashboard"})
+
+})
+
+app.get("/api/documento",auth,(req,res)=>{
+
+const ref = req.query.ficheiro
+const full = resolverCaminhoUploadSeguro(ref)
+
+if(!full){
+return res.status(404).send("Documento nao encontrado")
+}
+
+res.sendFile(full)
+
+})
+
+app.get("/api/registos/:id/documento",auth,async(req,res)=>{
+
+const id = Number(req.params.id)
+if(!Number.isInteger(id) || id<=0){
+return res.status(400).send("Registo invalido")
+}
+
+const result = await pool.query(
+"SELECT ficheiro FROM registos WHERE id=$1 AND user_id=$2",
+[id,req.session.userId]
+)
+
+if(!result.rows.length){
+return res.status(404).send("Documento nao encontrado")
+}
+
+const ref = result.rows[0].ficheiro
+const full = resolverCaminhoUploadSeguro(ref)
+if(!full){
+return res.status(404).send("Documento nao encontrado")
+}
+
+res.sendFile(full)
 
 })
 
