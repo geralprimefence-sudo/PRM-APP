@@ -1218,6 +1218,29 @@ if(!req.file || !req.file.path){
 return res.status(400).send("Ficheiro invalido ou em falta")
 }
 
+const fastUpload = String(req.body.fast || req.query.fast || "") === "1"
+
+if(req.session.pendingUpload && req.session.pendingUpload.ficheiro){
+apagarUploadSilencioso(req.session.pendingUpload.ficheiro)
+}
+
+if(fastUpload){
+const hoje = new Date()
+req.session.pendingUpload = {
+tipo:"despesa",
+fornecedor:"",
+valor:0,
+valorSemIva:0,
+valorIva:0,
+valorTotal:0,
+data:dataParaInput(hoje),
+nif:"",
+ficheiro:req.file.filename
+}
+
+return res.redirect("/confirmar-upload")
+}
+
 const file = req.file.path
 
 const texto = await extrairTexto(file)
@@ -1231,10 +1254,6 @@ const userResult = await pool.query(
 
 const perfil = userResult.rows[0] || {}
 dados.tipo = classificarTipoPorEntidade(dados,perfil)
-
-if(req.session.pendingUpload && req.session.pendingUpload.ficheiro){
-apagarUploadSilencioso(req.session.pendingUpload.ficheiro)
-}
 
 req.session.pendingUpload = {
 tipo:dados.tipo,

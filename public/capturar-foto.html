@@ -196,6 +196,8 @@ function pararCamera(){
 async function enviarBlob(blob){
   const fd = new FormData()
   fd.append("file", blob, `captura-${Date.now()}.jpg`)
+  fd.append("fast","1")
+  fd.append("modo", modoScan ? "scan" : "normal")
 
   msg.textContent = "A enviar ficheiro..."
 
