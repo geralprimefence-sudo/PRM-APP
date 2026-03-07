@@ -316,16 +316,43 @@ function resolverCaminhoUploadSeguro(refFicheiro){
 	if(!refFicheiro) return null
 
 	const uploadsRoot = path.join(__dirname,"uploads")
-	const normalizado = String(refFicheiro).replace(/\\/g,"/").replace(/^\/+/,"").trim()
-	if(!normalizado) return null
+	const bruto = String(refFicheiro).trim()
+	if(!bruto) return null
 
-	const direto = path.join(uploadsRoot,normalizado)
-	if(fs.existsSync(direto) && fs.statSync(direto).isFile()) return direto
+	const candidatosRef = new Set()
+	const normalizado = bruto.replace(/\\/g,"/").replace(/^\/+/,"").trim()
+	if(normalizado) candidatosRef.add(normalizado)
 
-	const nomeBase = path.basename(normalizado)
-	if(!nomeBase) return null
+	try{
+		const decodificado = decodeURIComponent(normalizado)
+		if(decodificado) candidatosRef.add(decodificado)
+	}catch(_){
+		// Se vier mal codificado, mantemos apenas o valor original.
+	}
 
-	return encontrarFicheiroPorBasename(uploadsRoot,nomeBase)
+	const nomesCandidatos = new Set()
+
+	for(const ref of candidatosRef){
+		const direto = path.join(uploadsRoot,ref)
+		if(fs.existsSync(direto) && fs.statSync(direto).isFile()) return direto
+
+		const nomeBase = path.basename(ref)
+		if(!nomeBase) continue
+		nomesCandidatos.add(nomeBase)
+
+		// Compatibilidade com nomes antigos: "<timestamp>-nome-original.ext"
+		const semPrefixoTempo = nomeBase.match(/^\d{10,}-(.+)$/)
+		if(semPrefixoTempo && semPrefixoTempo[1]){
+			nomesCandidatos.add(semPrefixoTempo[1])
+		}
+	}
+
+	for(const nome of nomesCandidatos){
+		const encontrado = encontrarFicheiroPorBasename(uploadsRoot,nome,8)
+		if(encontrado) return encontrado
+	}
+
+	return null
 
 }
 
@@ -1371,7 +1398,15 @@ const result = await pool.query(
 [req.session.userId]
 )
 
-res.json(result.rows)
+const enriched = result.rows.map((row)=>{
+const full = resolverCaminhoUploadSeguro(row.ficheiro)
+return {
+...row,
+documentoDisponivel:Boolean(full)
+}
+})
+
+res.json(enriched)
 
 })
 
@@ -1438,15 +1473,51 @@ params.push(dataNormalizada)
 updates.push(`data=$${params.length}`)
 }
 
-if(req.body.valor!==undefined){
-const valorNormalizado = normalizarValor(req.body.valor)
-if(Number.isNaN(valorNormalizado) || valorNormalizado<=0){
+const incluiCamposValor =
+req.body.valor!==undefined ||
+req.body.valorTotal!==undefined ||
+req.body.valorSemIva!==undefined ||
+req.body.valorIva!==undefined ||
+req.body.taxaIva!==undefined
+
+if(incluiCamposValor){
+
+const valorTotal = normalizarValor(req.body.valorTotal ?? req.body.valor)
+if(Number.isNaN(valorTotal) || valorTotal<=0){
 return res.status(400).json({ok:false,erro:"Valor invalido"})
 }
-params.push(valorNormalizado)
+
+let valorSemIva = normalizarValor(req.body.valorSemIva)
+let valorIva = normalizarValor(req.body.valorIva)
+const taxaIva = normalizarValor(req.body.taxaIva)
+
+if(Number.isNaN(valorSemIva) && Number.isNaN(valorIva)){
+if(!Number.isNaN(taxaIva) && taxaIva>=0 && taxaIva<=100){
+valorSemIva = valorTotal / (1 + (taxaIva / 100))
+valorIva = valorTotal - valorSemIva
+}else{
+valorSemIva = valorTotal
+valorIva = 0
+}
+}else if(Number.isNaN(valorSemIva)){
+valorSemIva = Math.max(0,valorTotal - Math.max(0,valorIva))
+}else if(Number.isNaN(valorIva)){
+valorIva = Math.max(0,valorTotal - Math.max(0,valorSemIva))
+}
+
+const totalSeguro = Math.round(Number(valorTotal) * 100) / 100
+const semIvaSeguro = Math.round(Number(valorSemIva) * 100) / 100
+const ivaSeguro = Math.round(Math.max(0,totalSeguro - semIvaSeguro) * 100) / 100
+
+params.push(totalSeguro)
 updates.push(`valor=$${params.length}`)
-params.push(valorNormalizado)
+params.push(totalSeguro)
 updates.push(`valor_total=$${params.length}`)
+params.push(semIvaSeguro)
+updates.push(`valor_sem_iva=$${params.length}`)
+params.push(ivaSeguro)
+updates.push(`valor_iva=$${params.length}`)
+
 }
 
 if(!updates.length){

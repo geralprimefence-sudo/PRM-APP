@@ -29,6 +29,52 @@ PORT=3000
 npm start
 ```
 
+## Guardar o que ja funciona (anti-regressao)
+
+Para evitar voltar a quebrar a abertura de documentos, usa o smoke test com baseline versionada (`scripts/baselines/documentos-orfaos-baseline.json`):
+
+1. Criar ou atualizar baseline atual:
+
+```bash
+npm run smoke:docs:baseline
+```
+
+2. Validar se houve regressao apos alteracoes:
+
+```bash
+npm run smoke:docs
+```
+
+3. Validacao estrita (falha se baseline nao existir):
+
+```bash
+npm run smoke:docs:strict
+```
+
+Comportamento:
+
+- Se surgirem novos `id` com documento em falta (comparado com baseline), o comando falha.
+- Se nao houver novos partidos, o comando passa.
+
+## Reconciliacao de documentos orfaos
+
+Para tentar religar referencias antigas de ficheiro na BD:
+
+```bash
+npm run reconcile:docs
+```
+
+Modo simulacao (sem alterar BD):
+
+```bash
+node scripts/reconcile-docs.js --dry-run
+```
+
+Notas:
+
+- So atualiza quando encontra um unico candidato claro no `uploads/`.
+- Casos ambiguos ficam sem alteracao manual para evitar ligar documento errado.
+
 4. Abrir:
 
 ```text
@@ -43,6 +89,8 @@ Este projeto inclui `render.yaml` para facilitar a criacao do servico.
 2. No Render, criar `New +` -> `Blueprint` e selecionar o repositorio.
 3. Definir variavel `DATABASE_URL` no Render (PostgreSQL externo ou Render Postgres).
 4. Confirmar deploy.
+
+O build no Render valida regressoes de documentos com `npm run smoke:docs:strict`.
 
 Variaveis usadas em producao:
 

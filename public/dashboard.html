@@ -471,7 +471,7 @@ font-style:italic;
 
 <h1>PRM Dashboard</h1>
 
-<small style="color:#93c5fd;font-weight:700;">build: 2026-03-07-fix4</small>
+<small style="color:#93c5fd;font-weight:700;">build: 2026-03-07-edit-iva-fix5</small>
 
 <a href="/logout">
 <button class="logout">Logout</button>
@@ -807,6 +807,11 @@ const valorSemIva = Number(r.valor_sem_iva ?? 0)
 const valorIva = Number(r.valor_iva ?? 0)
 const valorTotal = Number(r.valor_total ?? r.valor ?? 0)
 const idRegisto = Number(r.id || 0)
+const documentoDisponivel = r.documentoDisponivel !== false
+const tituloVer = documentoDisponivel
+? "Abrir documento"
+: "Documento nao encontrado no servidor"
+const attrsVer = `onclick="verFatura(${idRegisto})"`
 
 const row = document.createElement("tr")
 
@@ -819,9 +824,9 @@ row.innerHTML = `
 
 <td class="acoes" data-label="Acoes">
 
-<button title="Ver" aria-label="Ver" onclick="verFatura(${idRegisto})" class="btn-ver">Ver</button>
+<button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button>
 
-<button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar">Edit.</button>
+<button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar">Edit IVA</button>
 
 <button title="Apagar" aria-label="Apagar" onclick="apagar(${r.id})" class="btn-apagar">Apag.</button>
 
@@ -910,6 +915,38 @@ return `${yyyy}-${mm}-${dd}`
 
 }
 
+function parseNumeroPtInput(raw){
+
+if(raw===null || raw===undefined) return NaN
+
+let s = String(raw).trim()
+if(!s) return NaN
+
+s = s.replace(/[^\d,.-\s]/g,"")
+s = s.replace(/\s+/g,"")
+
+const temVirgula = s.includes(",")
+const temPonto = s.includes(".")
+
+if(temVirgula && temPonto){
+if(s.lastIndexOf(",") > s.lastIndexOf(".")){
+s = s.replace(/\./g,"")
+s = s.replace(",",".")
+}else{
+s = s.replace(/,/g,"")
+}
+}else if(temVirgula){
+s = s.replace(",",".")
+}
+
+return Number(s)
+
+}
+
+function arredondar2(v){
+return Math.round(Number(v) * 100) / 100
+}
+
 
 
 function verFatura(id){
@@ -921,7 +958,12 @@ return
 }
 
 const url = "/api/registos/" + registoId + "/documento"
+
+const novaAba = window.open(url,"_blank","noopener")
+if(!novaAba){
+// Fallback para browsers que bloqueiam popups.
 window.location.href = url
+}
 
 }
 
@@ -955,6 +997,9 @@ return
 const fornecedorAtual = String(registo.fornecedor || "")
 const dataAtual = dataParaInputLocal(registo.data)
 const valorAtual = Number(registo.valor_total ?? registo.valor ?? 0)
+const valorIvaAtual = Number(registo.valor_iva ?? 0)
+const valorSemIvaAtual = Number(registo.valor_sem_iva ?? Math.max(0,valorAtual - valorIvaAtual))
+const taxaIvaAtual = valorSemIvaAtual>0 ? ((valorIvaAtual / valorSemIvaAtual) * 100) : 23
 
 const novoFornecedor = prompt("Fornecedor", fornecedorAtual)
 if(novoFornecedor===null) return
@@ -968,6 +1013,27 @@ valorAtual.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits
 )
 if(novoValor===null) return
 
+const novaTaxaIva = prompt(
+"IVA (%)",
+Number(taxaIvaAtual).toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})
+)
+if(novaTaxaIva===null) return
+
+const total = parseNumeroPtInput(novoValor)
+if(Number.isNaN(total) || total<=0){
+alert("Total invalido.")
+return
+}
+
+const taxaIva = parseNumeroPtInput(novaTaxaIva)
+if(Number.isNaN(taxaIva) || taxaIva<0 || taxaIva>100){
+alert("IVA invalido. Usa uma percentagem entre 0 e 100.")
+return
+}
+
+const valorSemIva = arredondar2(total / (1 + (taxaIva / 100)))
+const valorIva = arredondar2(total - valorSemIva)
+
 const res = await fetch("/api/update/"+id,{
 method:"POST",
 headers:{
@@ -976,7 +1042,11 @@ headers:{
 body:JSON.stringify({
 fornecedor:novoFornecedor,
 data:novaData,
-valor:novoValor
+valor:total,
+valorTotal:total,
+valorSemIva,
+valorIva,
+taxaIva
 })
 })
 

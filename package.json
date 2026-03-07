@@ -4,7 +4,11 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "smoke:docs": "node scripts/smoke-docs.js",
+    "smoke:docs:strict": "node scripts/smoke-docs.js --require-baseline",
+    "smoke:docs:baseline": "node scripts/smoke-docs.js --write-baseline",
+    "reconcile:docs": "node scripts/reconcile-docs.js"
   },
   "keywords": [],
   "author": "",

@@ -3,7 +3,7 @@ services:
     name: faturas-app
     runtime: node
     plan: starter
-    buildCommand: npm install
+    buildCommand: npm install && npm run smoke:docs:strict
     startCommand: npm start
     autoDeploy: true
     envVars:
