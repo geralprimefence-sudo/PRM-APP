@@ -43,6 +43,23 @@ gap:10px;
 margin-top:12px;
 flex-wrap:wrap;
 }
+.mode{
+display:flex;
+gap:8px;
+margin-top:10px;
+flex-wrap:wrap;
+}
+.mode button{
+padding:8px 12px;
+border-radius:999px;
+font-size:13px;
+background:#334155;
+color:#e2e8f0;
+}
+.mode button.ativo{
+background:#0ea5e9;
+color:#06283d;
+}
 button{
 border:none;
 border-radius:10px;
@@ -75,6 +92,10 @@ canvas{display:none;}
 <button class="btn-retry" id="retryBtn" type="button" style="display:none">Nova foto</button>
 <button class="btn-cancel" id="cancelBtn" type="button">Cancelar</button>
 </div>
+<div class="mode">
+<button type="button" id="modoScanBtn" class="ativo">Modo Scan OCR</button>
+<button type="button" id="modoNormalBtn">Modo Normal</button>
+</div>
 <form id="fallbackForm" action="/upload" method="POST" enctype="multipart/form-data" style="display:none;margin-top:10px;">
   <input id="fallbackInput" type="file" name="file" accept="image/*" capture="environment" style="width:100%;">
 </form>
@@ -91,8 +112,35 @@ const cancelBtn = document.getElementById("cancelBtn")
 const msg = document.getElementById("msg")
 const fallbackForm = document.getElementById("fallbackForm")
 const fallbackInput = document.getElementById("fallbackInput")
+const modoScanBtn = document.getElementById("modoScanBtn")
+const modoNormalBtn = document.getElementById("modoNormalBtn")
 
 let stream = null
+let modoScan = true
+
+function atualizarModoBotoes(){
+  modoScanBtn.classList.toggle("ativo", modoScan)
+  modoNormalBtn.classList.toggle("ativo", !modoScan)
+  msg.textContent = modoScan
+    ? "Modo Scan ativo: melhora contraste para OCR."
+    : "Modo Normal ativo: usa foto original."
+}
+
+function melhorarParaOCR(ctx,w,h){
+  const img = ctx.getImageData(0,0,w,h)
+  const p = img.data
+
+  // Grayscale + contrast boost + light threshold to highlight text.
+  for(let i=0;i<p.length;i+=4){
+    const g = (0.2126*p[i]) + (0.7152*p[i+1]) + (0.0722*p[i+2])
+    let v = (g - 128) * 1.55 + 128
+    v = Math.max(0,Math.min(255,v))
+    if(v > 205) v = 255
+    p[i] = p[i+1] = p[i+2] = v
+  }
+
+  ctx.putImageData(img,0,0)
+}
 
 async function iniciarCamera(){
   try{
@@ -157,6 +205,10 @@ captureBtn.addEventListener("click", async ()=>{
   const ctx = canvas.getContext("2d")
   ctx.drawImage(video,sx,sy,sw,sh,0,0,sw,sh)
 
+  if(modoScan){
+    melhorarParaOCR(ctx,sw,sh)
+  }
+
   canvas.toBlob(async (blob)=>{
     if(!blob){
       msg.textContent = "Falha ao capturar foto."
@@ -176,9 +228,19 @@ captureBtn.addEventListener("click", async ()=>{
 })
 
 retryBtn.addEventListener("click", ()=>{
-  msg.textContent = "Alinha o recibo na vertical e evita sombras."
+  atualizarModoBotoes()
   retryBtn.style.display = "none"
   captureBtn.disabled = false
+})
+
+modoScanBtn.addEventListener("click",()=>{
+  modoScan = true
+  atualizarModoBotoes()
+})
+
+modoNormalBtn.addEventListener("click",()=>{
+  modoScan = false
+  atualizarModoBotoes()
 })
 
 fallbackInput.addEventListener("change",(e)=>{
@@ -194,6 +256,7 @@ cancelBtn.addEventListener("click", ()=>{
 
 window.addEventListener("beforeunload", pararCamera)
 iniciarCamera()
+atualizarModoBotoes()
 </script>
 </body>
 

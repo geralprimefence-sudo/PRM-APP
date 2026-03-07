@@ -421,6 +421,7 @@ const candidatos = []
 
 const regexDMY = /(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/g
 const regexYMD = /(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/g
+const regexYYMD = /(\d{2})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/g
 
 for(let i=0;i<linhas.length;i++){
 
@@ -441,6 +442,18 @@ if(data) candidatos.push({data,peso:pesoBase})
 for(const match of linha.matchAll(regexYMD)){
 const data = construirDataValida(match[3],match[2],match[1])
 if(data) candidatos.push({data,peso:pesoBase + 1})
+}
+
+for(const match of linha.matchAll(regexYYMD)){
+const yy = Number(match[1])
+const mm = Number(match[2])
+const dd = Number(match[3])
+
+// Typical toll OCR: 26-03-05 means 2026-03-05.
+if(yy >= 18 && yy <= 60){
+const data = construirDataValida(dd,mm,yy)
+if(data) candidatos.push({data,peso:pesoBase + 2})
+}
 }
 
 }
