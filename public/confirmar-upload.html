@@ -303,7 +303,7 @@ async function executarOCRAssincrono(){
   let res
   let data
   try{
-    res = await fetchComTimeout("/api/pending-upload/ocr", { method: "POST" }, 25000)
+    res = await fetchComTimeout("/api/pending-upload/ocr", { method: "POST" }, 9000)
     data = await res.json().catch(() => ({ ok:false }))
   }catch(_){
     showMsg("A extracao esta a demorar. Vou continuar a verificar em segundo plano...", "success")
