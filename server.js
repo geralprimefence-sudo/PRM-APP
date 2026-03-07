@@ -14,6 +14,9 @@ const app = express()
 const PORT = process.env.PORT || 3000
 const SESSION_SECRET = process.env.SESSION_SECRET || "prm-secret"
 
+// Render/Reverse proxy needs trust proxy so secure cookies are accepted over HTTPS.
+app.set("trust proxy",1)
+
 // Ensure runtime folders exist on fresh hosts.
 fs.mkdirSync(path.join(__dirname,"uploads"),{recursive:true})
 fs.mkdirSync(path.join(__dirname,"temp"),{recursive:true})
@@ -539,12 +542,18 @@ return responderErro(401,"Username ou password errada")
 }
 
 req.session.userId = user.id
+req.session.save((err)=>{
+if(err){
+console.error(err)
+return responderErro(500,"Erro ao criar sessao")
+}
 
 if(ajaxLogin){
 return res.json({ok:true,redirect:"/dashboard"})
 }
 
 res.redirect("/dashboard")
+})
 
 })
 
