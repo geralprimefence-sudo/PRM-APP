@@ -1048,7 +1048,16 @@ return
 }
 
 const url = "/api/registos/" + registoId + "/documento"
-window.location.href = url
+const largura = 980
+const altura = 760
+const left = Math.max(0,Math.floor((window.screen.width - largura) / 2))
+const top = Math.max(0,Math.floor((window.screen.height - altura) / 2))
+const features = `popup=yes,width=${largura},height=${altura},left=${left},top=${top},resizable=yes,scrollbars=yes`
+
+const popup = window.open(url,"prm_documento_popup",features)
+if(!popup){
+window.open(url,"_blank")
+}
 
 }
 
