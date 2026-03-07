@@ -336,6 +336,71 @@ font-style:italic;
 color:#667085;
 }
 
+.edit-modal{
+position:fixed;
+inset:0;
+background:rgba(15,23,42,0.45);
+display:none;
+align-items:center;
+justify-content:center;
+z-index:40;
+padding:14px;
+}
+
+.edit-modal.ativo{
+display:flex;
+}
+
+.edit-modal-card{
+width:min(520px,100%);
+background:#fff;
+border-radius:14px;
+box-shadow:0 14px 34px rgba(0,0,0,0.24);
+padding:16px;
+}
+
+.edit-modal-card h3{
+margin:0 0 12px;
+font-size:19px;
+}
+
+.edit-campo{
+margin-bottom:10px;
+}
+
+.edit-campo label{
+display:block;
+font-size:13px;
+font-weight:700;
+color:#334155;
+margin-bottom:5px;
+}
+
+.edit-campo input{
+width:100%;
+height:40px;
+border:1px solid #cbd5e1;
+border-radius:10px;
+padding:0 10px;
+font-size:14px;
+}
+
+.edit-acoes{
+display:flex;
+justify-content:flex-end;
+gap:8px;
+margin-top:14px;
+}
+
+.btn-sec{
+background:#e2e8f0;
+color:#0f172a;
+}
+
+.btn-sec:hover{
+background:#cbd5e1;
+}
+
 @media(max-width:980px){
 .cards{grid-template-columns:repeat(3,minmax(0,1fr));}
 .tabelas-grid{grid-template-columns:1fr;}
@@ -596,6 +661,30 @@ Documento/PDF
 
 </div>
 
+<div id="editModal" class="edit-modal" aria-hidden="true">
+<div class="edit-modal-card" role="dialog" aria-modal="true" aria-labelledby="editTitulo">
+<h3 id="editTitulo">Editar registo</h3>
+<form id="editForm">
+<div class="edit-campo">
+<label for="editFornecedor">Fornecedor</label>
+<input id="editFornecedor" type="text" required>
+</div>
+<div class="edit-campo">
+<label for="editData">Data</label>
+<input id="editData" type="date" required>
+</div>
+<div class="edit-campo">
+<label for="editValor">Valor</label>
+<input id="editValor" type="text" inputmode="decimal" placeholder="0,00" required>
+</div>
+<div class="edit-acoes">
+<button id="editCancelar" type="button" class="btn-sec">Cancelar</button>
+<button type="submit">Guardar</button>
+</div>
+</form>
+</div>
+</div>
+
 
 
 <script>
@@ -606,6 +695,7 @@ let tipoMobileAtual = "despesas"
 let janelaDiasAtual = 0
 let termoPesquisa = ""
 let ordenacaoAtual = "data_desc"
+let idRegistoEmEdicao = null
 
 function eMobile(){
 return window.matchMedia("(max-width: 820px)").matches
@@ -989,53 +1079,75 @@ alert("Registo nao encontrado.")
 return
 }
 
-const fornecedorAtual = String(registo.fornecedor || "")
-const dataAtual = dataParaInputLocal(registo.data)
-const valorAtual = Number(registo.valor_total ?? registo.valor ?? 0)
-const valorIvaAtual = Number(registo.valor_iva ?? 0)
-const valorSemIvaAtual = Number(registo.valor_sem_iva ?? Math.max(0,valorAtual - valorIvaAtual))
-const taxaIvaAtual = valorSemIvaAtual>0 ? ((valorIvaAtual / valorSemIvaAtual) * 100) : 23
+idRegistoEmEdicao = Number(registo.id)
 
-const novoFornecedor = prompt("Fornecedor", fornecedorAtual)
-if(novoFornecedor===null) return
+document.getElementById("editFornecedor").value = String(registo.fornecedor || "")
+document.getElementById("editData").value = dataParaInputLocal(registo.data)
+document.getElementById("editValor").value = Number(registo.valor_total ?? registo.valor ?? 0)
+.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})
 
-const fornecedorLimpo = String(novoFornecedor || "").trim()
+const modal = document.getElementById("editModal")
+modal.classList.add("ativo")
+modal.setAttribute("aria-hidden","false")
+document.getElementById("editFornecedor").focus()
+
+}
+
+function fecharModalEdicao(){
+const modal = document.getElementById("editModal")
+modal.classList.remove("ativo")
+modal.setAttribute("aria-hidden","true")
+idRegistoEmEdicao = null
+}
+
+
+
+carregarDados()
+
+document.getElementById("editCancelar").addEventListener("click",fecharModalEdicao)
+
+document.getElementById("editModal").addEventListener("click",(e)=>{
+if(e.target.id==="editModal") fecharModalEdicao()
+})
+
+document.getElementById("editForm").addEventListener("submit",async(e)=>{
+e.preventDefault()
+
+if(!Number.isInteger(idRegistoEmEdicao) || idRegistoEmEdicao<=0){
+alert("Registo invalido para edicao.")
+return
+}
+
+const fornecedorLimpo = String(document.getElementById("editFornecedor").value || "").trim()
 if(!fornecedorLimpo){
 alert("Fornecedor invalido.")
 return
 }
 
-const novaData = prompt("Data (AAAA-MM-DD)", dataAtual)
-if(novaData===null) return
-
-const dataLimpa = String(novaData || "").trim()
+const dataLimpa = String(document.getElementById("editData").value || "").trim()
 if(!/^\d{4}-\d{2}-\d{2}$/.test(dataLimpa)){
 alert("Data invalida. Usa o formato AAAA-MM-DD.")
 return
 }
 
-const novoValor = prompt(
-"Valor",
-valorAtual.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})
-)
-if(novoValor===null) return
-
-const total = parseNumeroPtInput(novoValor)
+const total = parseNumeroPtInput(document.getElementById("editValor").value)
 if(Number.isNaN(total) || total<=0){
-alert("Total invalido.")
+alert("Valor invalido.")
 return
 }
 
+const registoAtual = todosRegistos.find((r)=> Number(r.id)===Number(idRegistoEmEdicao)) || {}
+const valorIvaAtual = Number(registoAtual.valor_iva ?? 0)
+const valorSemIvaAtual = Number(registoAtual.valor_sem_iva ?? Math.max(0,total - valorIvaAtual))
+const taxaIvaAtual = valorSemIvaAtual>0 ? ((valorIvaAtual / valorSemIvaAtual) * 100) : 23
 const taxaIva = Number.isFinite(taxaIvaAtual) && taxaIvaAtual>=0 && taxaIvaAtual<=100 ? taxaIvaAtual : 23
 
 const valorSemIva = arredondar2(total / (1 + (taxaIva / 100)))
 const valorIva = arredondar2(total - valorSemIva)
 
-const res = await fetch("/api/update/"+id,{
+const res = await fetch("/api/update/"+idRegistoEmEdicao,{
 method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
+headers:{"Content-Type":"application/json"},
 body:JSON.stringify({
 fornecedor:fornecedorLimpo,
 data:dataLimpa,
@@ -1053,14 +1165,10 @@ alert((data && data.erro) || "Erro ao atualizar registo.")
 return
 }
 
-todosRegistos = todosRegistos.map((r)=> Number(r.id)===Number(id) ? data.row : r)
+todosRegistos = todosRegistos.map((r)=> Number(r.id)===Number(idRegistoEmEdicao) ? data.row : r)
+fecharModalEdicao()
 renderPeriodoAtual()
-
-}
-
-
-
-carregarDados()
+})
 
 document.getElementById("pesquisaInput").addEventListener("input",(e)=>{
 termoPesquisa = String(e.target.value || "").trim().toLowerCase()
