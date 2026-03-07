@@ -119,6 +119,15 @@ let stream = null
 let modoScan = true
 const MAX_LADO_OCR = 1400
 const MAX_LADO_NORMAL = 1100
+let aProcessar = false
+
+function definirEstadoProcessamento(ativo){
+  aProcessar = ativo
+  captureBtn.disabled = ativo
+  retryBtn.disabled = ativo
+  modoScanBtn.disabled = ativo
+  modoNormalBtn.disabled = ativo
+}
 
 function atualizarModoBotoes(){
   modoScanBtn.classList.toggle("ativo", modoScan)
@@ -168,6 +177,8 @@ async function enviarBlob(blob){
   const fd = new FormData()
   fd.append("file", blob, `captura-${Date.now()}.jpg`)
 
+  msg.textContent = "A enviar ficheiro..."
+
   const res = await fetch("/upload", { method:"POST", body:fd })
 
   if(res.redirected){
@@ -184,6 +195,8 @@ async function enviarBlob(blob){
 }
 
 captureBtn.addEventListener("click", async ()=>{
+  if(aProcessar) return
+
   if(!video.videoWidth || !video.videoHeight){
     msg.textContent = "A camara ainda esta a iniciar."
     return
@@ -222,14 +235,14 @@ captureBtn.addEventListener("click", async ()=>{
       return
     }
 
-    msg.textContent = "A processar e enviar foto..."
-    captureBtn.disabled = true
+    msg.textContent = "A preparar imagem..."
+    definirEstadoProcessamento(true)
     try{
       await enviarBlob(blob)
     }catch(err){
       msg.textContent = "Erro ao enviar. Tenta novamente."
       retryBtn.style.display = "inline-block"
-      captureBtn.disabled = false
+      definirEstadoProcessamento(false)
     }
   }, "image/jpeg", modoScan ? 0.78 : 0.72)
 })
@@ -237,7 +250,7 @@ captureBtn.addEventListener("click", async ()=>{
 retryBtn.addEventListener("click", ()=>{
   atualizarModoBotoes()
   retryBtn.style.display = "none"
-  captureBtn.disabled = false
+  definirEstadoProcessamento(false)
 })
 
 modoScanBtn.addEventListener("click",()=>{

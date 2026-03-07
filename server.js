@@ -351,7 +351,7 @@ return 0
 function extrairTotaisDoTexto(texto){
 
 const linhas = String(texto || "").split("\n").map((l)=> l.trim()).filter(Boolean)
-const numeroRegex = /\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d{2})|\d+[.,]\d{2}/g
+const numeroRegex = /\d{1,3}(?:[.\s]\d{3})*(?:[.,]\d{2})|\d+[.,]\d{2}|\d{3,6}/g
 
 let total = null
 let iva = null
@@ -359,12 +359,22 @@ let semIva = null
 
 for(const linha of linhas){
 
-const l = linha.toLowerCase()
+const l = linha
+  .toLowerCase()
+  .replace(/\b[1l]va\b/g,"iva")
+  .replace(/\bs\/\s*iva\b/g,"sem iva")
+
 const tokens = linha.match(numeroRegex) || []
 if(!tokens.length) continue
 
 const valores = tokens
-	.map((t)=> normalizarValor(t))
+	.map((t)=>{
+		if(/[.,]/.test(t)) return normalizarValor(t)
+		const n = Number(t)
+		if(Number.isNaN(n)) return NaN
+		// OCR termico costuma perder separador decimal: 2650 => 26.50
+		return n >= 100 ? (n / 100) : n
+	})
 	.filter((v)=> !Number.isNaN(v) && v > 0 && v < 100000)
 
 if(!valores.length) continue
@@ -553,6 +563,37 @@ return data
 
 }
 
+function extrairNifDoTexto(texto){
+
+const validarNif = (nif)=>{
+	if(!/^\d{9}$/.test(nif)) return false
+	if(/^0+$/.test(nif)) return false
+	const digitos = nif.split("").map(Number)
+	const soma = digitos
+		.slice(0,8)
+		.reduce((acc,d,i)=> acc + d * (9 - i),0)
+	const resto = soma % 11
+	const controlo = resto < 2 ? 0 : 11 - resto
+	return digitos[8] === controlo
+}
+
+const t = String(texto || "")
+const rotulado = [...t.matchAll(/(?:nif|contribuinte|n\.?f\.?i\.?|vat)\D*(\d{9})/gi)]
+for(const m of rotulado){
+	const candidato = m[1]
+	if(validarNif(candidato)) return candidato
+}
+
+const soltos = [...t.matchAll(/\b\d{9}\b/g)]
+for(const m of soltos){
+	const candidato = m[0]
+	if(validarNif(candidato)) return candidato
+}
+
+return ""
+
+}
+
 function extrairDataDoTexto(texto){
 
 const linhas = String(texto || "").split("\n").map((l)=> l.trim()).filter(Boolean)
@@ -561,6 +602,22 @@ const candidatos = []
 const regexDMY = /(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/g
 const regexYMD = /(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/g
 const regexYYMD = /(\d{2})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/g
+const regexMesTexto = /(\d{1,2})\s*(?:de\s+)?(jan(?:eiro)?|fev(?:ereiro)?|mar(?:co|ço)?|abr(?:il)?|mai(?:o)?|jun(?:ho)?|jul(?:ho)?|ago(?:sto)?|set(?:embro)?|out(?:ubro)?|nov(?:embro)?|dez(?:embro)?)\s*(?:de\s+)?(\d{2,4})/gi
+
+const meses = {
+jan:1,janeiro:1,
+fev:2,fevereiro:2,
+mar:3,marco:3,"março":3,
+abr:4,abril:4,
+mai:5,maio:5,
+jun:6,junho:6,
+jul:7,julho:7,
+ago:8,agosto:8,
+set:9,setembro:9,
+out:10,outubro:10,
+nov:11,novembro:11,
+dez:12,dezembro:12
+}
 
 for(let i=0;i<linhas.length;i++){
 
@@ -592,6 +649,17 @@ const dd = Number(match[3])
 if(yy >= 18 && yy <= 60){
 const data = construirDataValida(dd,mm,yy)
 if(data) candidatos.push({data,peso:pesoBase + 2})
+}
+}
+
+for(const match of linha.matchAll(regexMesTexto)){
+const dia = Number(match[1])
+const chaveMes = String(match[2] || "").toLowerCase()
+const mes = meses[chaveMes]
+const ano = Number(match[3])
+if(mes){
+const data = construirDataValida(dia,mes,ano)
+if(data) candidatos.push({data,peso:pesoBase + 3})
 }
 }
 
@@ -639,13 +707,7 @@ valor = 0
 data = extrairDataDoTexto(textoTratado)
 
 
-
-const nifRegex = /nif[:\s]*([0-9]{9})/i
-const nifMatch = textoTratado.match(nifRegex)
-
-if(nifMatch){
-nif = nifMatch[1]
-}
+nif = extrairNifDoTexto(textoTratado)
 
 empresa = extrairFornecedorDoTexto(textoTratado,nif)
 

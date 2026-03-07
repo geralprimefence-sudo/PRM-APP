@@ -23,15 +23,29 @@ grid-template-columns:1fr;
 gap:8px;
 margin-bottom:12px;
 }
+.row-valores{
+display:grid;
+grid-template-columns:repeat(3,minmax(0,1fr));
+gap:10px;
+margin-bottom:12px;
+}
 .row label{
 font-size:14px;
 font-weight:600;
+}
+.valor-box{
+display:grid;
+gap:8px;
 }
 .actions{
 display:flex;
 gap:10px;
 flex-wrap:wrap;
 margin-top:12px;
+}
+.actions button{
+flex:1;
+min-height:42px;
 }
 .btn-cancelar{
 background:#ef4444;
@@ -43,6 +57,22 @@ background:#334155;
 font-size:13px;
 color:#cbd5e1;
 margin-bottom:10px;
+}
+
+@media(max-width:760px){
+.page{
+width:96%;
+margin:12px auto;
+}
+.panel{
+padding:14px;
+}
+.row-valores{
+grid-template-columns:1fr;
+}
+.actions{
+flex-direction:column;
+}
 }
 </style>
 </head>
@@ -60,9 +90,21 @@ margin-bottom:10px;
 <input id="fornecedor" name="fornecedor" type="text" required>
 </div>
 
-<div class="row">
-<label for="valor">Valor</label>
-<input id="valor" name="valor" type="text" required>
+<input id="valor" name="valor" type="hidden">
+
+<div class="row-valores">
+<div class="valor-box">
+<label for="valorSemIva">Sem IVA</label>
+<input id="valorSemIva" name="valorSemIva" type="text" inputmode="decimal" required>
+</div>
+<div class="valor-box">
+<label for="valorIva">IVA</label>
+<input id="valorIva" name="valorIva" type="text" inputmode="decimal" required>
+</div>
+<div class="valor-box">
+<label for="valorTotal">Total (calc.)</label>
+<input id="valorTotal" name="valorTotal" type="text" inputmode="decimal" required>
+</div>
 </div>
 
 <div class="row">
@@ -96,6 +138,56 @@ margin-bottom:10px;
 const form = document.getElementById("confirmForm")
 const msg = document.getElementById("mensagem")
 const cancelarBtn = document.getElementById("cancelarBtn")
+const inputFornecedor = document.getElementById("fornecedor")
+const inputValor = document.getElementById("valor")
+const inputValorSemIva = document.getElementById("valorSemIva")
+const inputValorIva = document.getElementById("valorIva")
+const inputValorTotal = document.getElementById("valorTotal")
+const inputData = document.getElementById("data")
+const inputTipo = document.getElementById("tipo")
+const inputNif = document.getElementById("nif")
+
+function parseNumeroPt(raw){
+  if(raw===null || raw===undefined) return NaN
+  let s = String(raw).trim().replace(/\s+/g,"")
+  s = s.replace(/[^\d,.-]/g,"")
+  if(s.includes(",") && s.includes(".")){
+    s = s.replace(/\./g,"").replace(",",".")
+  }else if(s.includes(",")){
+    s = s.replace(",",".")
+  }
+  return Number(s)
+}
+
+function formatNumeroPt(v){
+  const n = Number(v)
+  if(Number.isNaN(n)) return "0,00"
+  return n.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})
+}
+
+function sincronizarTotais(origem){
+  const semIva = parseNumeroPt(inputValorSemIva.value)
+  const iva = parseNumeroPt(inputValorIva.value)
+  const total = parseNumeroPt(inputValorTotal.value)
+
+  if(origem === "sem_iva" || origem === "iva"){
+    const t = (Number.isNaN(semIva)?0:semIva) + (Number.isNaN(iva)?0:iva)
+    inputValorTotal.value = formatNumeroPt(t)
+    inputValor.value = formatNumeroPt(t)
+    return
+  }
+
+  if(origem === "total"){
+    const t = Number.isNaN(total) ? 0 : total
+    const i = Number.isNaN(iva) ? 0 : iva
+    inputValorSemIva.value = formatNumeroPt(Math.max(0,t - i))
+    inputValor.value = formatNumeroPt(t)
+    return
+  }
+
+  const t = Number.isNaN(total) ? 0 : total
+  inputValor.value = formatNumeroPt(t)
+}
 
 function showMsg(text, tipo){
   msg.textContent = text
@@ -114,21 +206,30 @@ async function carregarPendente(){
   }
 
   const p = data.pending
-  document.getElementById("fornecedor").value = p.fornecedor || ""
-  document.getElementById("valor").value = Number(p.valor || 0).toLocaleString("pt-PT", { minimumFractionDigits: 2 })
-  document.getElementById("data").value = p.data || ""
-  document.getElementById("tipo").value = p.tipo === "receita" ? "receita" : "despesa"
-  document.getElementById("nif").value = p.nif || ""
+  const total = Number(p.valorTotal ?? p.valor ?? 0)
+  const iva = Number(p.valorIva ?? 0)
+  const semIva = Number(p.valorSemIva ?? Math.max(0,total - iva))
+
+  inputFornecedor.value = p.fornecedor || ""
+  inputValor.value = formatNumeroPt(total)
+  inputValorSemIva.value = formatNumeroPt(semIva)
+  inputValorIva.value = formatNumeroPt(iva)
+  inputValorTotal.value = formatNumeroPt(total)
+  inputData.value = p.data || ""
+  inputTipo.value = p.tipo === "receita" ? "receita" : "despesa"
+  inputNif.value = p.nif || ""
 }
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault()
 
   const payload = {
-    fornecedor: document.getElementById("fornecedor").value,
-    valor: document.getElementById("valor").value,
-    data: document.getElementById("data").value,
-    tipo: document.getElementById("tipo").value
+    fornecedor: inputFornecedor.value,
+    valor: inputValorTotal.value,
+    valorSemIva: inputValorSemIva.value,
+    valorIva: inputValorIva.value,
+    data: inputData.value,
+    tipo: inputTipo.value
   }
 
   const res = await fetch("/api/confirmar-upload", {
@@ -159,6 +260,13 @@ cancelarBtn.addEventListener("click", async () => {
 })
 
 carregarPendente()
+
+inputValorSemIva.addEventListener("input",()=> sincronizarTotais("sem_iva"))
+inputValorIva.addEventListener("input",()=> sincronizarTotais("iva"))
+inputValorTotal.addEventListener("input",()=> sincronizarTotais("total"))
+inputValorSemIva.addEventListener("blur",()=> inputValorSemIva.value = formatNumeroPt(parseNumeroPt(inputValorSemIva.value)))
+inputValorIva.addEventListener("blur",()=> inputValorIva.value = formatNumeroPt(parseNumeroPt(inputValorIva.value)))
+inputValorTotal.addEventListener("blur",()=> inputValorTotal.value = formatNumeroPt(parseNumeroPt(inputValorTotal.value)))
 </script>
 </body>
 
