@@ -177,16 +177,39 @@ return score
 
 }
 
+function pontuarCamposExtraidos(texto){
+
+const totais = extrairTotaisDoTexto(texto)
+const data = extrairDataDoTexto(texto)
+const nif = extrairNifDoTexto(texto)
+const fornecedor = extrairFornecedorDoTexto(texto,nif)
+
+let score = 0
+
+if(Number(totais.total || 0) > 0) score += 40
+if(Number(totais.iva || 0) > 0) score += 12
+if(Number(totais.semIva || 0) > 0) score += 8
+
+if(data) score += 28
+if(nif && /^\d{9}$/.test(nif)) score += 14
+if(fornecedor && fornecedor !== "desconhecido") score += 22
+
+if(fornecedor && fornecedor.length > 50) score -= 6
+
+return score
+
+}
+
 function textoOCRSuficientementeBom(texto,score){
 	const t = String(texto || "").toLowerCase()
 	if(!t.trim()) return false
 	const temTotal = /\btotal\b|a pagar|valor total/.test(t)
 	const temData = /\bdata\b|\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}/.test(t)
 	const temNumero = (t.match(/\d/g) || []).length >= 8
-	return score >= 70 && temNumero && (temTotal || temData)
+	return score >= 120 && temNumero && (temTotal || temData)
 }
 
-async function preprocessarImagemParaOCR(file){
+async function preprocessarImagemParaOCR(file,modo = "balanced"){
 
 	if(!sharp) return null
 
@@ -197,14 +220,25 @@ async function preprocessarImagemParaOCR(file){
 	const out = path.join(__dirname,"temp",tmpName)
 
 	try{
-		await sharp(file)
+		let img = sharp(file)
 			.rotate()
-			.resize({width:1700,height:1700,fit:"inside",withoutEnlargement:true})
-			.grayscale()
-			.normalize()
-			.sharpen({sigma:1.15,m1:0.9,m2:0.35,x1:2,y2:10,y3:20})
-			.png({compressionLevel:9})
-			.toFile(out)
+			.resize({width:1750,height:1750,fit:"inside",withoutEnlargement:true})
+
+		if(modo === "threshold"){
+			img = img
+				.grayscale()
+				.normalize()
+				.linear(1.35,-25)
+				.threshold(178)
+				.sharpen({sigma:1.05,m1:0.8,m2:0.25,x1:2,y2:10,y3:20})
+		}else{
+			img = img
+				.grayscale()
+				.normalize()
+				.sharpen({sigma:1.15,m1:0.9,m2:0.35,x1:2,y2:10,y3:20})
+		}
+
+		await img.png({compressionLevel:9}).toFile(out)
 		return out
 	}catch(err){
 		console.error("Falha no preprocessamento OCR",err?.message || err)
@@ -223,15 +257,18 @@ const tentativas = [
 ]
 
 let melhorTexto = ""
-let melhorScore = -Infinity
+let melhorScoreGeral = -Infinity
 
 for(const tentativa of tentativas){
 try{
 const result = await Tesseract.recognize(file,"por+eng",tentativa.options)
 const texto = String(result?.data?.text || "").trim()
-const score = pontuarTextoOCR(texto)
-if(score > melhorScore){
-melhorScore = score
+const scoreTexto = pontuarTextoOCR(texto)
+const scoreCampos = pontuarCamposExtraidos(texto)
+const score = scoreTexto + (scoreCampos * 1.8)
+
+if(score > melhorScoreGeral){
+melhorScoreGeral = score
 melhorTexto = texto
 }
 if(textoOCRSuficientementeBom(texto,score)){
@@ -242,7 +279,10 @@ console.error(`Falha OCR (${tentativa.name})`,err?.message || err)
 }
 }
 
-return melhorTexto
+return {
+texto:melhorTexto,
+score:melhorScoreGeral
+}
 
 }
 
@@ -262,7 +302,8 @@ return textoPdf
 }
 
 try{
-const textoOcr = await reconhecerTextoOCRImagem(file)
+const resultadoOcr = await reconhecerTextoOCRImagem(file)
+const textoOcr = String(resultadoOcr?.texto || "")
 if(textoOcr.length >= 12) return textoOcr
 }catch(_){
 // Keep silent and fallback to parsed text below.
@@ -272,23 +313,34 @@ return textoPdf
 
 }
 
-const texto = await reconhecerTextoOCRImagem(file)
-
-let tmpPre = null
+const candidatos = []
+let tmpPreA = null
+let tmpPreB = null
 try{
-	tmpPre = await preprocessarImagemParaOCR(file)
-	if(tmpPre){
-		const textoPre = await reconhecerTextoOCRImagem(tmpPre)
-		if(pontuarTextoOCR(textoPre) >= pontuarTextoOCR(texto)){
-			return textoPre
-		}
+	const base = await reconhecerTextoOCRImagem(file)
+	candidatos.push(base)
+
+	tmpPreA = await preprocessarImagemParaOCR(file,"balanced")
+	if(tmpPreA){
+		candidatos.push(await reconhecerTextoOCRImagem(tmpPreA))
 	}
 
-	return texto
-}finally{
-	if(tmpPre){
-		try{ fs.unlinkSync(tmpPre) }catch(_){ }
+	tmpPreB = await preprocessarImagemParaOCR(file,"threshold")
+	if(tmpPreB){
+		candidatos.push(await reconhecerTextoOCRImagem(tmpPreB))
 	}
+
+	const validos = candidatos
+		.map((c)=> ({texto:String(c?.texto || ""),score:Number(c?.score || -Infinity)}))
+		.filter((c)=> c.texto.trim())
+
+	if(!validos.length) return ""
+
+	validos.sort((a,b)=> b.score - a.score)
+	return validos[0].texto
+}finally{
+	if(tmpPreA){ try{ fs.unlinkSync(tmpPreA) }catch(_){ } }
+	if(tmpPreB){ try{ fs.unlinkSync(tmpPreB) }catch(_){ } }
 }
 
 }
