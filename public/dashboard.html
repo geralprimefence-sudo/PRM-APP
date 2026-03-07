@@ -564,9 +564,9 @@ Documento/PDF
 <tr>
 <th>Data</th>
 <th>Fornecedor</th>
-<th>Sem IVA</th>
-<th>IVA</th>
 <th>Total</th>
+<th>IVA</th>
+<th>Sem IVA</th>
 <th>Ações</th>
 </tr>
 </thead>
@@ -581,9 +581,9 @@ Documento/PDF
 <tr>
 <th>Data</th>
 <th>Fornecedor</th>
-<th>Sem IVA</th>
-<th>IVA</th>
 <th>Total</th>
+<th>IVA</th>
+<th>Sem IVA</th>
 <th>Ações</th>
 </tr>
 </thead>
@@ -813,9 +813,9 @@ const row = document.createElement("tr")
 row.innerHTML = `
 <td data-label="Data">${dataCurta}</td>
 <td data-label="Fornecedor">${r.fornecedor}</td>
-<td data-label="Sem IVA">${valorSemIva.toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
-<td data-label="IVA">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
 <td data-label="Total">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
+<td data-label="IVA">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
+<td data-label="Sem IVA">${valorSemIva.toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
 
 <td class="acoes" data-label="Acoes">
 
