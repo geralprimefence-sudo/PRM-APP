@@ -137,9 +137,65 @@ cb(null,Date.now()+"-"+file.originalname)
 
 })
 
-const upload = multer({storage})
+const upload = multer({
+storage,
+limits:{fileSize:12 * 1024 * 1024},
+fileFilter:(req,file,cb)=>{
+const ext = path.extname(file.originalname || "").toLowerCase()
+const mime = String(file.mimetype || "").toLowerCase()
+const permitidoExt = [".pdf",".jpg",".jpeg",".png",".webp"].includes(ext)
+const permitidoMime = mime.startsWith("image/") || mime === "application/pdf"
+if(!permitidoExt && !permitidoMime){
+return cb(new Error("Formato invalido. Usa PDF ou imagem."))
+}
+cb(null,true)
+}
+})
 
 
+
+function pontuarTextoOCR(texto){
+
+const t = String(texto || "")
+if(!t.trim()) return 0
+
+let score = 0
+score += Math.min(120,t.length / 8)
+score += (t.match(/\d/g) || []).length * 0.7
+score += (t.match(/(?:total|iva|nif|fatura|data|eur|€)/gi) || []).length * 6
+score -= (t.match(/[\uFFFD]/g) || []).length * 4
+
+return score
+
+}
+
+async function reconhecerTextoOCRImagem(file){
+
+const tentativas = [
+{name:"psm6",options:{tessedit_pageseg_mode:"6",preserve_interword_spaces:"1"}},
+{name:"psm11",options:{tessedit_pageseg_mode:"11",preserve_interword_spaces:"1"}}
+]
+
+let melhorTexto = ""
+let melhorScore = -Infinity
+
+for(const tentativa of tentativas){
+try{
+const result = await Tesseract.recognize(file,"por",tentativa.options)
+const texto = String(result?.data?.text || "").trim()
+const score = pontuarTextoOCR(texto)
+if(score > melhorScore){
+melhorScore = score
+melhorTexto = texto
+}
+}catch(err){
+console.error(`Falha OCR (${tentativa.name})`,err?.message || err)
+}
+}
+
+return melhorTexto
+
+}
 
 async function extrairTexto(file){
 
@@ -157,8 +213,7 @@ return textoPdf
 }
 
 try{
-const result = await Tesseract.recognize(file,"por")
-const textoOcr = String(result?.data?.text || "").trim()
+const textoOcr = await reconhecerTextoOCRImagem(file)
 if(textoOcr.length >= 12) return textoOcr
 }catch(_){
 // Keep silent and fallback to parsed text below.
@@ -168,9 +223,9 @@ return textoPdf
 
 }
 
-const result = await Tesseract.recognize(file,"por")
+const texto = await reconhecerTextoOCRImagem(file)
 
-return result.data.text
+return texto
 
 }
 
@@ -333,6 +388,9 @@ let t = String(texto)
 t = t.replace(/(?<=\d)[oO](?=\d)/g,"0")
 t = t.replace(/(?<=\d)[iIl](?=\d)/g,"1")
 t = t.replace(/(?<=\d)[sS](?=\d)/g,"5")
+t = t.replace(/\b[1l]va\b/gi,"IVA")
+t = t.replace(/\bto[a4]l\b/gi,"TOTAL")
+t = t.replace(/\beur\b/gi,"EUR")
 
 // Uniformiza separadores e remove duplicacoes de espaco
 t = t.replace(/\u00A0/g," ").replace(/[^\S\r\n]+/g," ")
@@ -500,6 +558,19 @@ if(total!==null && semIva!==null && iva===null){
 	iva = Math.max(0,total - semIva)
 }
 
+if(total!==null && semIva!==null && iva!==null){
+	const soma = semIva + iva
+	if(Math.abs(soma - total) > 0.06){
+		if(semIva > total){
+			semIva = Math.max(0,total - iva)
+		}else if(iva > total){
+			iva = Math.max(0,total - semIva)
+		}else{
+			semIva = Math.max(0,total - iva)
+		}
+	}
+}
+
 const f2 = (v)=>{
 	if(v===null || Number.isNaN(v)) return 0
 	return Math.round(Number(v) * 100) / 100
@@ -597,6 +668,8 @@ for(let i=0;i<linhasPrioritarias.length;i++){
 const original = linhasPrioritarias[i]
 let linha = limparLinhaEmpresa(original)
 if(!linhaPareceEmpresa(linha)) continue
+const anterior = String(linhasPrioritarias[i-1] || "").toLowerCase()
+const atual = String(original || "").toLowerCase()
 
 let score = 1
 
@@ -608,6 +681,8 @@ if(linha.split(" ").length >= 2) score += 1
 if(linha === linha.toUpperCase()) score += 1
 if(linhaTemRuidoMoradaOuContacto(original)) score -= 3
 if(linha.length > 45) score -= 1
+if(/emitente|fornecedor|merchant|seller|empresa/.test(atual)) score += 5
+if(/emitente|fornecedor|merchant|seller|empresa/.test(anterior)) score += 4
 
 if(nif){
 const idxNif = linhasPrioritarias.findIndex((l)=> l.includes(nif))
@@ -759,6 +834,10 @@ if(!candidatos.length) return null
 
 candidatos.sort((a,b)=>{
 if(b.peso!==a.peso) return b.peso - a.peso
+const agora = Date.now()
+const aFuturo = a.data.getTime() > (agora + 3 * 86400000)
+const bFuturo = b.data.getTime() > (agora + 3 * 86400000)
+if(aFuturo!==bFuturo) return aFuturo ? 1 : -1
 return b.data.getTime() - a.data.getTime()
 })
 
@@ -1012,6 +1091,10 @@ app.post("/upload",auth,upload.single("file"),async(req,res)=>{
 
 try{
 
+if(!req.file || !req.file.path){
+return res.status(400).send("Ficheiro invalido ou em falta")
+}
+
 const file = req.file.path
 
 const texto = await extrairTexto(file)
@@ -1047,7 +1130,7 @@ return res.redirect("/confirmar-upload")
 }catch(err){
 
 console.error(err)
-res.send("Erro ao processar documento")
+res.status(500).send("Erro ao processar documento")
 
 }
 
@@ -1251,6 +1334,24 @@ await pool.query(
 )
 
 res.json({ok:true})
+
+})
+
+app.use((err,req,res,next)=>{
+
+if(!err) return next()
+
+console.error("Erro de request",err)
+
+if(err.code === "LIMIT_FILE_SIZE"){
+return res.status(400).send("Ficheiro demasiado grande (max 12MB)")
+}
+
+if(err.message && /Formato invalido/.test(err.message)){
+return res.status(400).send(err.message)
+}
+
+return res.status(500).send("Erro interno")
 
 })
 

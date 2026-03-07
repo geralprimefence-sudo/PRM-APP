@@ -117,8 +117,8 @@ const modoNormalBtn = document.getElementById("modoNormalBtn")
 
 let stream = null
 let modoScan = true
-const MAX_LADO_OCR = 1400
-const MAX_LADO_NORMAL = 1100
+const MAX_LADO_OCR = 1600
+const MAX_LADO_NORMAL = 1800
 let aProcessar = false
 
 function definirEstadoProcessamento(ativo){
@@ -132,9 +132,10 @@ function definirEstadoProcessamento(ativo){
 function atualizarModoBotoes(){
   modoScanBtn.classList.toggle("ativo", modoScan)
   modoNormalBtn.classList.toggle("ativo", !modoScan)
+  scanFrame.style.display = modoScan ? "block" : "none"
   msg.textContent = modoScan
-    ? "Modo Scan ativo: melhora contraste para OCR."
-    : "Modo Normal ativo: usa foto original."
+    ? "Modo Scan ativo: usa moldura e melhora contraste para OCR."
+    : "Modo Normal ativo: capta imagem completa original."
 }
 
 function melhorarParaOCR(ctx,w,h){
@@ -205,15 +206,22 @@ captureBtn.addEventListener("click", async ()=>{
   const fw = video.videoWidth
   const fh = video.videoHeight
 
-  const rx = scanFrame.offsetLeft / video.clientWidth
-  const ry = scanFrame.offsetTop / video.clientHeight
-  const rw = scanFrame.clientWidth / video.clientWidth
-  const rh = scanFrame.clientHeight / video.clientHeight
+  let sx = 0
+  let sy = 0
+  let sw = fw
+  let sh = fh
 
-  const sx = Math.max(0, Math.floor(fw * rx))
-  const sy = Math.max(0, Math.floor(fh * ry))
-  const sw = Math.max(1, Math.floor(fw * rw))
-  const sh = Math.max(1, Math.floor(fh * rh))
+  if(modoScan){
+    const rx = scanFrame.offsetLeft / video.clientWidth
+    const ry = scanFrame.offsetTop / video.clientHeight
+    const rw = scanFrame.clientWidth / video.clientWidth
+    const rh = scanFrame.clientHeight / video.clientHeight
+
+    sx = Math.max(0, Math.floor(fw * rx))
+    sy = Math.max(0, Math.floor(fh * ry))
+    sw = Math.max(1, Math.floor(fw * rw))
+    sh = Math.max(1, Math.floor(fh * rh))
+  }
 
   const maxLado = modoScan ? MAX_LADO_OCR : MAX_LADO_NORMAL
   const escala = Math.min(1, maxLado / Math.max(sw, sh))
@@ -244,7 +252,7 @@ captureBtn.addEventListener("click", async ()=>{
       retryBtn.style.display = "inline-block"
       definirEstadoProcessamento(false)
     }
-  }, "image/jpeg", modoScan ? 0.78 : 0.72)
+  }, "image/jpeg", modoScan ? 0.86 : 0.9)
 })
 
 retryBtn.addEventListener("click", ()=>{
