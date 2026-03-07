@@ -147,6 +147,15 @@ const inputData = document.getElementById("data")
 const inputTipo = document.getElementById("tipo")
 const inputNif = document.getElementById("nif")
 let ocrEmCurso = false
+const camposEditados = {
+  fornecedor:false,
+  data:false,
+  valorTotal:false,
+  valorIva:false,
+  valorSemIva:false,
+  nif:false,
+  tipo:false
+}
 
 function parseNumeroPt(raw){
   if(raw===null || raw===undefined) return NaN
@@ -227,21 +236,44 @@ async function carregarPendente(){
   }
 
   const p = data.pending
+  aplicarPendingNosCampos(p,false)
+
+  if(precisaOCRAssincrono(p)){
+    executarOCRAssincrono()
+  }
+}
+
+function aplicarPendingNosCampos(p,sobreporCampos = true){
+  if(!p) return
+
   const total = Number(p.valorTotal ?? p.valor ?? 0)
   const iva = Number(p.valorIva ?? 0)
   const semIva = Number(p.valorSemIva ?? Math.max(0,total - iva))
 
-  inputFornecedor.value = p.fornecedor || ""
-  inputValor.value = formatNumeroPt(total)
-  inputValorSemIva.value = formatNumeroPt(semIva)
-  inputValorIva.value = formatNumeroPt(iva)
-  inputValorTotal.value = formatNumeroPt(total)
-  inputData.value = p.data || ""
-  inputTipo.value = p.tipo === "receita" ? "receita" : "despesa"
-  inputNif.value = p.nif || ""
+  if(!camposEditados.fornecedor && (sobreporCampos || !inputFornecedor.value || inputFornecedor.value.trim()==="" || inputFornecedor.value.toLowerCase()==="desconhecido")){
+    if(p.fornecedor) inputFornecedor.value = p.fornecedor
+  }
 
-  if(precisaOCRAssincrono(p)){
-    executarOCRAssincrono()
+  if(!camposEditados.data && (sobreporCampos || !inputData.value || inputData.value.trim()==="")){
+    if(p.data) inputData.value = p.data
+  }
+
+  const valoresBloqueados = camposEditados.valorTotal || camposEditados.valorIva || camposEditados.valorSemIva
+  if(!valoresBloqueados && (sobreporCampos || !(parseNumeroPt(inputValorTotal.value) > 0))){
+    if(total > 0){
+      inputValor.value = formatNumeroPt(total)
+      inputValorTotal.value = formatNumeroPt(total)
+      inputValorIva.value = formatNumeroPt(iva)
+      inputValorSemIva.value = formatNumeroPt(semIva)
+    }
+  }
+
+  if(!camposEditados.nif && (sobreporCampos || !inputNif.value || inputNif.value.trim()==="")){
+    if(p.nif) inputNif.value = p.nif
+  }
+
+  if(!camposEditados.tipo && p.tipo){
+    inputTipo.value = p.tipo === "receita" ? "receita" : "despesa"
   }
 }
 
@@ -274,9 +306,8 @@ async function executarOCRAssincrono(){
     res = await fetchComTimeout("/api/pending-upload/ocr", { method: "POST" }, 25000)
     data = await res.json().catch(() => ({ ok:false }))
   }catch(_){
-    showMsg("A extracao demorou demasiado. Podes preencher manualmente.", "error")
-    hideMsg(3000)
-    ocrEmCurso = false
+    showMsg("A extracao esta a demorar. Vou continuar a verificar em segundo plano...", "success")
+    await acompanharOCRPendente()
     return
   }
 
@@ -288,31 +319,52 @@ async function executarOCRAssincrono(){
   }
 
   const p = data.pending
-  const total = Number(p.valorTotal ?? p.valor ?? 0)
-  const iva = Number(p.valorIva ?? 0)
-  const semIva = Number(p.valorSemIva ?? Math.max(0,total - iva))
+  const estado = String(p.ocrStatus || "").toLowerCase()
 
-  if((!inputFornecedor.value || inputFornecedor.value.trim()==="" || inputFornecedor.value.toLowerCase()==="desconhecido") && p.fornecedor){
-    inputFornecedor.value = p.fornecedor
+  if(data.processing || estado === "processing" || estado === "pending"){
+    showMsg("A extracao ainda esta a decorrer...", "success")
+    await acompanharOCRPendente()
+    return
   }
-  if((!inputData.value || inputData.value.trim()==="") && p.data){
-    inputData.value = p.data
-  }
-  if(!(parseNumeroPt(inputValorTotal.value) > 0) && total > 0){
-    inputValor.value = formatNumeroPt(total)
-    inputValorTotal.value = formatNumeroPt(total)
-    inputValorIva.value = formatNumeroPt(iva)
-    inputValorSemIva.value = formatNumeroPt(semIva)
-  }
-  if((!inputNif.value || inputNif.value.trim()==="") && p.nif){
-    inputNif.value = p.nif
-  }
-  if(p.tipo){
-    inputTipo.value = p.tipo === "receita" ? "receita" : "despesa"
-  }
+
+  aplicarPendingNosCampos(p,true)
 
   showMsg("Dados lidos automaticamente. Confirma antes de guardar.", "success")
   hideMsg(1800)
+  ocrEmCurso = false
+}
+
+async function acompanharOCRPendente(){
+  const maxTentativas = 12
+
+  for(let i=0;i<maxTentativas;i++){
+    await new Promise((r)=> setTimeout(r,2500))
+
+    const res = await fetch("/api/pending-upload")
+    const data = await res.json().catch(()=>({ok:false}))
+    if(!res.ok || !data.ok || !data.pending) continue
+
+    const p = data.pending
+    const estado = String(p.ocrStatus || "").toLowerCase()
+
+    if(estado === "done"){
+      aplicarPendingNosCampos(p,true)
+      showMsg("Dados lidos automaticamente. Confirma antes de guardar.", "success")
+      hideMsg(1800)
+      ocrEmCurso = false
+      return
+    }
+
+    if(estado === "failed"){
+      showMsg("Nao foi possivel preencher automaticamente. Podes corrigir manualmente.", "error")
+      hideMsg(2600)
+      ocrEmCurso = false
+      return
+    }
+  }
+
+  showMsg("A extracao demorou demasiado. Podes preencher manualmente.", "error")
+  hideMsg(3000)
   ocrEmCurso = false
 }
 
@@ -356,6 +408,14 @@ cancelarBtn.addEventListener("click", async () => {
 })
 
 carregarPendente()
+
+inputFornecedor.addEventListener("input",()=> camposEditados.fornecedor = true)
+inputData.addEventListener("input",()=> camposEditados.data = true)
+inputValorTotal.addEventListener("input",()=> camposEditados.valorTotal = true)
+inputValorIva.addEventListener("input",()=> camposEditados.valorIva = true)
+inputValorSemIva.addEventListener("input",()=> camposEditados.valorSemIva = true)
+inputNif.addEventListener("input",()=> camposEditados.nif = true)
+inputTipo.addEventListener("change",()=> camposEditados.tipo = true)
 
 inputValorSemIva.addEventListener("input",()=> sincronizarTotais("sem_iva"))
 inputValorIva.addEventListener("input",()=> sincronizarTotais("iva"))
