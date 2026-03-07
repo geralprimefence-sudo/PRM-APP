@@ -163,6 +163,7 @@ let score = 0
 score += Math.min(120,t.length / 8)
 score += (t.match(/\d/g) || []).length * 0.7
 score += (t.match(/(?:total|iva|nif|fatura|data|eur|€)/gi) || []).length * 6
+score += (t.match(/(?:fornecedor|emitente|cliente|mercado|supermercado|loja|tal[aã]o|recibo)/gi) || []).length * 2
 score -= (t.match(/[\uFFFD]/g) || []).length * 4
 
 return score
@@ -173,7 +174,9 @@ async function reconhecerTextoOCRImagem(file){
 
 const tentativas = [
 {name:"psm6",options:{tessedit_pageseg_mode:"6",preserve_interword_spaces:"1"}},
-{name:"psm11",options:{tessedit_pageseg_mode:"11",preserve_interword_spaces:"1"}}
+{name:"psm4",options:{tessedit_pageseg_mode:"4",preserve_interword_spaces:"1"}},
+{name:"psm11",options:{tessedit_pageseg_mode:"11",preserve_interword_spaces:"1"}},
+{name:"psm12",options:{tessedit_pageseg_mode:"12",preserve_interword_spaces:"1"}}
 ]
 
 let melhorTexto = ""
@@ -181,7 +184,7 @@ let melhorScore = -Infinity
 
 for(const tentativa of tentativas){
 try{
-const result = await Tesseract.recognize(file,"por",tentativa.options)
+const result = await Tesseract.recognize(file,"por+eng",tentativa.options)
 const texto = String(result?.data?.text || "").trim()
 const score = pontuarTextoOCR(texto)
 if(score > melhorScore){

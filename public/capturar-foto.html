@@ -119,6 +119,10 @@ let stream = null
 let modoScan = true
 const MAX_LADO_OCR = 1400
 const MAX_LADO_NORMAL = 1500
+const SCAN_CROP_X = 0.1
+const SCAN_CROP_Y = 0.05
+const SCAN_CROP_W = 0.8
+const SCAN_CROP_H = 0.9
 let aProcessar = false
 
 function definirEstadoProcessamento(ativo){
@@ -165,12 +169,12 @@ function melhorarParaOCR(ctx,w,h){
   const gray = new Uint8ClampedArray(w * h)
   for(let i=0,px=0;i<p.length;i+=4,px++){
     const g = ((p[i] * 38) + (p[i+1] * 75) + (p[i+2] * 15)) >> 7
-    let v = (g - 128) * 1.35 + 128
+    let v = (g - 128) * 1.18 + 128
     v = Math.max(0,Math.min(255,v))
     gray[px] = v
   }
 
-  // 3) sharpen (mild unsharp-style kernel)
+  // 3) sharpen (very mild, keeps readability without clipping)
   const sharpened = new Uint8ClampedArray(gray.length)
   for(let y=0;y<h;y++){
     for(let x=0;x<w;x++){
@@ -187,7 +191,7 @@ function melhorarParaOCR(ctx,w,h){
       const t = gray[idx - w]
       const b = gray[idx + w]
 
-      let v = (1.4 * c) - (0.1 * l) - (0.1 * r) - (0.1 * t) - (0.1 * b)
+      let v = (1.1 * c) - (0.025 * l) - (0.025 * r) - (0.025 * t) - (0.025 * b)
       v = Math.max(0,Math.min(255,v))
       sharpened[idx] = v
     }
@@ -256,11 +260,18 @@ captureBtn.addEventListener("click", async ()=>{
   const fw = video.videoWidth
   const fh = video.videoHeight
 
-  // Evita desalinhamentos no mobile: usar frame completo da camara.
-  const sx = 0
-  const sy = 0
-  const sw = fw
-  const sh = fh
+  // Modo Scan usa recorte central robusto (nao depende de offsets CSS do browser).
+  let sx = 0
+  let sy = 0
+  let sw = fw
+  let sh = fh
+
+  if(modoScan){
+    sx = Math.max(0,Math.floor(fw * SCAN_CROP_X))
+    sy = Math.max(0,Math.floor(fh * SCAN_CROP_Y))
+    sw = Math.max(1,Math.floor(fw * SCAN_CROP_W))
+    sh = Math.max(1,Math.floor(fh * SCAN_CROP_H))
+  }
 
   const maxLado = modoScan ? MAX_LADO_OCR : MAX_LADO_NORMAL
   const escala = Math.min(1, maxLado / Math.max(sw, sh))
@@ -298,7 +309,7 @@ captureBtn.addEventListener("click", async ()=>{
       retryBtn.style.display = "inline-block"
       definirEstadoProcessamento(false)
     }
-  }, "image/jpeg", modoScan ? 0.78 : 0.84)
+  }, "image/jpeg", modoScan ? 0.9 : 0.9)
 })
 
 retryBtn.addEventListener("click", ()=>{
