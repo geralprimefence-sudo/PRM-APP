@@ -1,102 +1,124 @@
 <!DOCTYPE html>
 <html>
 
-<header>
-	<header style="display: flex; align-items: center; justify-content: space-between; background: #111827; color: #fff; padding: 16px 18px; position: sticky; top: 0; z-index: 10;">
-		<img src="/logo.png" alt="Contabill" class="header-logo" style="height: 54px; width: auto; max-width: min(44vw, 340px); background: #fff; border-radius: 8px; padding: 5px 14px 5px 0; object-fit: contain; margin-left: 0; margin-right: auto;">
-		<a href="/logout"><button class="logout logout-small" style="margin-left: 18px;">Logout</button></a>
-	</header>
-</header>
-
-<!DOCTYPE html>
-<html>
 <head>
+
 <meta charset="UTF-8">
 <title>PRM Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="/style.css">
-<style>
-@media (max-width: 820px) {
-  .col-iva, .col-semiva,
-  td:nth-child(4), td:nth-child(5) {
-    display: none !important;
-  }
-  .acoes-linha {
-    flex-wrap: wrap !important;
-    gap: 2px !important;
-  }
-  .acoes button {
-    font-size: 10px !important;
-    padding: 3px 6px !important;
-    min-width: 0 !important;
-    margin: 1px !important;
-  }
-}
-.logout-small {
-  font-size: 13px;
-  padding: 7px 18px;
-  border-radius: 8px;
-  margin-left: 12px;
-  background: var(--danger);
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  font-weight: 700;
-  transition: background 0.2s;
-}
-.logout-small:hover {
-  background: #dc2626;
-}
-</style>
-</head>
 
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>PRM Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="/style.css">
 <style>
-@media (max-width: 820px) {
-  .col-iva, .col-semiva,
-  td:nth-child(4), td:nth-child(5) {
-    display: none !important;
-  }
-  .acoes-linha {
-    flex-wrap: wrap !important;
-    gap: 2px !important;
-  }
-  .acoes button {
-    font-size: 10px !important;
-    padding: 3px 6px !important;
-    min-width: 0 !important;
-    margin: 1px !important;
-  }
-}
-.logout-small {
-  font-size: 13px;
-  padding: 7px 18px;
-  border-radius: 8px;
-  margin-left: 12px;
-  background: var(--danger);
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  font-weight: 700;
-  transition: background 0.2s;
-}
-.logout-small:hover {
-  background: #dc2626;
-}
-</style>
-</head>
-<body>
-<header>
-  <img src="/logo.png" alt="Contabill" class="header-logo">
-  <a href="/logout"><button class="logout logout-small">Logout</button></a>
-</header>
 
+:root{
+--bg:#f3f5f9;
+--surface:#ffffff;
+--surface-soft:#eef2f7;
+--text:#101828;
+--muted:#475467;
+--line:#e4e7ec;
+--primary:#2563eb;
+--primary-strong:#1d4ed8;
+--danger:#ef4444;
+--shadow:0 6px 16px rgba(16,24,40,0.08);
+}
+
+*{
+box-sizing:border-box;
+}
+
+body{
+font-family:Arial,Helvetica,sans-serif;
+background:linear-gradient(180deg,#f8fafc 0%,var(--bg) 100%);
+margin:0;
+color:var(--text);
+overflow-x:hidden;
+}
+
+header{
+background:#111827;
+color:#fff;
+padding:16px 18px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:12px;
+position:sticky;
+top:0;
+z-index:10;
+}
+
+header h1{
+font-size:22px;
+margin:0;
+line-height:1.2;
+}
+
+.header-logo{
+display:block;
+height:42px;
+width:auto;
+max-width:min(56vw,320px);
+background:#fff;
+border-radius:8px;
+padding:5px 10px;
+}
+
+.container{
+padding:22px 18px 30px;
+max-width:1200px;
+margin:auto;
+}
+
+.cards{
+display:grid;
+grid-template-columns:repeat(4,minmax(0,1fr));
+gap:14px;
+margin-bottom:20px;
+}
+
+.card{
+background:var(--surface);
+padding:16px;
+border-radius:14px;
+box-shadow:var(--shadow);
+min-height:108px;
+}
+
+.card h3{
+margin:0;
+font-size:14px;
+color:var(--muted);
+font-weight:700;
+}
+
+.card h2{
+margin:12px 0 0;
+font-size:31px;
+line-height:1;
+letter-spacing:-0.5px;
+}
+
+.upload{
+background:var(--surface);
+padding:16px;
+border-radius:14px;
+margin-bottom:20px;
+box-shadow:var(--shadow);
+}
+
+.upload h3{
+margin:0;
+font-size:18px;
+}
+
+.upload-hint{
+margin:10px 0 0;
+font-size:13px;
+color:var(--muted);
+line-height:1.4;
+}
+
+.upload-actions{
 display:flex;
 align-items:center;
 justify-content:flex-start;
@@ -320,36 +342,6 @@ button:hover{background:var(--primary-strong);}
 
 .logout{background:var(--danger);}
 .logout:hover{background:#dc2626;}
-
-.logout-small {
-	font-size: 12px;
-	padding: 3px 12px;
-	border-radius: 7px;
-	margin-top: 2px;
-	width: auto;
-	min-width: 0;
-	align-self: flex-start;
-	box-shadow: none;
-}
-@media (max-width: 820px) {
-	.acoes-linha {
-		flex-wrap: wrap !important;
-		gap: 2px !important;
-	}
-	.acoes button {
-		font-size: 10px !important;
-		padding: 3px 6px !important;
-		min-width: 0 !important;
-		margin: 1px !important;
-	}
-	.logout-small {
-		font-size: 11px !important;
-		padding: 2px 10px !important;
-		width: auto !important;
-		min-width: 0 !important;
-		margin-top: 2px !important;
-	}
-}
 
 .acoes button{
 padding:2px 6px;
@@ -697,6 +689,7 @@ Documento/PDF
 
 <div class="filtros-curtos">
 <button type="button" class="btn-curto" onclick="selecionarJanelaDias(1, this)">Hoje</button>
+<button type="button" class="btn-curto" onclick="selecionarJanelaDias(7, this)">7 dias</button>
 <button type="button" class="btn-curto" onclick="selecionarJanelaDias(15, this)">15 dias</button>
 <button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
 <button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
@@ -711,7 +704,6 @@ Documento/PDF
 
 <div class="tabelas-grid">
 
-
 <div class="bloco-tabela" id="blocoReceitas">
 <h3>Receitas</h3>
 <table>
@@ -720,15 +712,14 @@ Documento/PDF
 <th>Data</th>
 <th>Cliente</th>
 <th>Total</th>
-<th class="col-iva">IVA</th>
-<th class="col-semiva">Sem IVA</th>
+<th>IVA</th>
+<th>Sem IVA</th>
 <th>Ações</th>
 </tr>
 </thead>
 <tbody id="tabelaReceitas"></tbody>
 </table>
 </div>
-
 
 <div class="bloco-tabela" id="blocoDespesas">
 <h3>Despesas</h3>
@@ -738,44 +729,14 @@ Documento/PDF
 <th>Data</th>
 <th>Fornecedor</th>
 <th>Total</th>
-<th class="col-iva">IVA</th>
-<th class="col-semiva">Sem IVA</th>
+<th>IVA</th>
+<th>Sem IVA</th>
 <th>Ações</th>
 </tr>
 </thead>
 <tbody id="tabelaDespesas"></tbody>
 </table>
 </div>
-@media (max-width: 820px) {
-	.col-iva, .col-semiva,
-	td:nth-child(4), td:nth-child(5) {
-		display: none !important;
-	}
-	th, td {
-		font-size: 11px !important;
-		padding: 6px 3px !important;
-		max-width: 70px !important;
-		word-break: break-word !important;
-		white-space: normal !important;
-	}
-	th:nth-child(1), td:nth-child(1) {
-		min-width: 60px !important;
-		max-width: 70px !important;
-	}
-	th:nth-child(2), td:nth-child(2) {
-		min-width: 80px !important;
-		max-width: 90px !important;
-	}
-	th:nth-child(3), td:nth-child(3) {
-		min-width: 60px !important;
-		max-width: 70px !important;
-	}
-	th:last-child, td:last-child {
-		min-width: 50px !important;
-		max-width: 60px !important;
-		text-align: center !important;
-	}
-}
 
 </div>
 
