@@ -857,7 +857,9 @@ res.setHeader("Content-Type","image/png")
 }
 
 const downloadNome = path.basename(fullPath)
-res.setHeader("Content-Disposition",`inline; filename="${downloadNome}"`)
+const forcarDownload = String(req.query.download || "") === "1"
+const disposition = forcarDownload ? "attachment" : "inline"
+res.setHeader("Content-Disposition",`${disposition}; filename="${downloadNome}"`)
 
 const stream = fs.createReadStream(fullPath)
 stream.on("error",(err)=>{
