@@ -291,9 +291,20 @@ overflow:hidden;
 }
 
 th,td{
-padding:12px;
+padding:10px 8px;
 border-bottom:1px solid var(--line);
 text-align:left;
+}
+
+th:nth-child(1),
+td:nth-child(1){
+width:110px;
+}
+
+th:nth-child(2),
+td:nth-child(2){
+width:170px;
+padding-left:6px;
 }
 
 th{
@@ -347,8 +358,14 @@ min-height:22px;
 .acoes-linha{
 display:flex;
 align-items:center;
-gap:4px;
+gap:3px;
 flex-wrap:nowrap;
+}
+
+th:nth-child(6),
+td:nth-child(6){
+width:150px;
+min-width:150px;
 }
 
 .btn-ver{background:#3498db;color:white;}
@@ -553,7 +570,7 @@ td{
 display:table-cell;
 white-space:normal;
 word-break:break-word;
-padding:8px 6px;
+padding:7px 5px;
 font-size:11px;
 border-bottom:1px solid var(--line);
 }
@@ -578,7 +595,8 @@ justify-content:flex-start;
 
 th:nth-child(6),
 td:nth-child(6){
-width:108px;
+width:132px;
+min-width:132px;
 }
 
 .linha-vazia td{
