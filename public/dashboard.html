@@ -10,6 +10,17 @@
 		text-align: left !important;
 		writing-mode: initial !important;
 		text-orientation: initial !important;
+		overflow-x: auto !important;
+	}
+	th, td {
+		/* Corrige o cabeçalho TOTAL para nunca quebrar vertical */
+		hyphens: none !important;
+	}
+	th:nth-child(3), td:nth-child(3) {
+		min-width: 80px !important;
+		max-width: 140px !important;
+		text-align: right !important;
+		padding-right: 10px !important;
 	}
 	th:nth-child(4), th:nth-child(5), td:nth-child(4), td:nth-child(5) {
 		display: none !important;
