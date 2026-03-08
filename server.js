@@ -25,12 +25,12 @@ jsQR = require("jsqr")
 // jsQR is optional; OCR still works without QR decode.
 }
 
-const OCRSPACE_ENABLED = String(process.env.OCRSPACE_ENABLED || "0") !== "0"
+const OCRSPACE_ENABLED = String(process.env.OCRSPACE_ENABLED || "1") !== "0"
 const OCRSPACE_API_KEY = process.env.OCRSPACE_API_KEY || "helloworld"
-const OCRSPACE_TIMEOUT_MS = Number(process.env.OCRSPACE_TIMEOUT_MS || 7000)
+const OCRSPACE_TIMEOUT_MS = Number(process.env.OCRSPACE_TIMEOUT_MS || 12000)
 const PADDLEOCR_ENABLED = String(process.env.PADDLEOCR_ENABLED || "0") === "1"
 const PADDLEOCR_API_URL = String(process.env.PADDLEOCR_API_URL || "").trim()
-const PADDLEOCR_TIMEOUT_MS = Number(process.env.PADDLEOCR_TIMEOUT_MS || 7000)
+const PADDLEOCR_TIMEOUT_MS = Number(process.env.PADDLEOCR_TIMEOUT_MS || 12000)
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -638,9 +638,7 @@ try{
 		return melhorLocal.texto
 	}
 
-	const precisaReforcoExterno =
-		!temCamposCriticosOCR(melhorLocal.texto) &&
-		melhorLocal.score < 170
+	const precisaReforcoExterno = !temCamposCriticosOCR(melhorLocal.texto)
 
 	if(!precisaReforcoExterno){
 		return melhorLocal.texto
@@ -1806,8 +1804,8 @@ return res.status(404).json({ok:false,erro:"Documento nao encontrado",pending:re
 	if(!dadosCriticosOk(dados)){
 		try{
 			const textoCompleto = await Promise.race([
-				extrairTexto(full,{fast:false,allowExternal:false}),
-				new Promise((resolve)=> setTimeout(()=> resolve(""),8000))
+				extrairTexto(full,{fast:false,allowExternal:true}),
+				new Promise((resolve)=> setTimeout(()=> resolve(""),16000))
 			])
 
 			if(String(textoCompleto || "").trim()){
