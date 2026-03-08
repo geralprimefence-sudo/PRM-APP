@@ -30,6 +30,9 @@ height:auto;
 margin-bottom:12px;
 margin-left:auto;
 margin-right:auto;
+padding:10%;
+background:#ffffff;
+border-radius:8px;
 }
 
 input{
@@ -88,6 +91,10 @@ border-radius:8px;
 font-size:16px;
 font-weight:bold;
 cursor:pointer;
+}
+
+#loginForm > button[type="submit"]{
+margin-top:14px;
 }
 
 .form-link{
