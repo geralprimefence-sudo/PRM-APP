@@ -718,6 +718,46 @@ try{
 if(fs.existsSync(full)){
 fs.unlinkSync(full)
 }
+
+function moverUploadParaPastaPermanente(refFicheiro,dataRef){
+
+const origem = resolverCaminhoUploadSeguro(refFicheiro)
+if(!origem) return ""
+
+const dataBase = dataRef ? new Date(dataRef) : new Date()
+const d = Number.isNaN(dataBase.getTime()) ? new Date() : dataBase
+
+const yyyy = String(d.getFullYear())
+const mm = String(d.getMonth() + 1).padStart(2,"0")
+const dd = String(d.getDate()).padStart(2,"0")
+
+const pastaDestino = path.join(__dirname,"uploads",yyyy,mm,dd)
+fs.mkdirSync(pastaDestino,{recursive:true})
+
+const nomeOrigem = path.basename(origem)
+let nomeDestino = nomeOrigem
+let destino = path.join(pastaDestino,nomeDestino)
+
+if(path.resolve(origem) === path.resolve(destino)){
+return path.relative(path.join(__dirname,"uploads"),destino).replace(/\\/g,"/")
+}
+
+if(fs.existsSync(destino)){
+const parsed = path.parse(nomeOrigem)
+nomeDestino = `${parsed.name}-${Date.now()}${parsed.ext}`
+destino = path.join(pastaDestino,nomeDestino)
+}
+
+try{
+fs.renameSync(origem,destino)
+}catch(err){
+console.error("Falha ao mover upload para pasta permanente",err?.message || err)
+return ""
+}
+
+return path.relative(path.join(__dirname,"uploads"),destino).replace(/\\/g,"/")
+
+}
 }catch(err){
 console.error("Falha a apagar upload pendente",err)
 }
@@ -1686,9 +1726,8 @@ return res.status(400).send("Ficheiro invalido ou em falta")
 
 const fastUpload = String(req.body.fast || req.query.fast || "") === "1"
 
-if(req.session.pendingUpload && req.session.pendingUpload.ficheiro){
-apagarUploadSilencioso(req.session.pendingUpload.ficheiro)
-}
+// Nao apagamos automaticamente o upload pendente anterior.
+// Isto evita perder ficheiros quando ha uploads seguidos em dispositivos lentos.
 
 if(fastUpload){
 const hoje = new Date()
@@ -1911,6 +1950,11 @@ if(!dataFinal){
 return res.status(400).json({ok:false,erro:"Data invalida"})
 }
 
+const ficheiroConfirmado = moverUploadParaPastaPermanente(pendente.ficheiro,dataFinal)
+if(!ficheiroConfirmado){
+return res.status(400).json({ok:false,erro:"Documento original nao encontrado. Faz novo upload."})
+}
+
 await pool.query(
 `INSERT INTO registos
 (user_id,tipo,fornecedor,valor,valor_sem_iva,valor_iva,valor_total,data,ficheiro)
@@ -1924,7 +1968,7 @@ semIvaSeguro,
 ivaFinal,
 totalSeguro,
 dataFinal,
-pendente.ficheiro
+ficheiroConfirmado
 ]
 )
 
