@@ -25,8 +25,9 @@ jsQR = require("jsqr")
 // jsQR is optional; OCR still works without QR decode.
 }
 
-const OCRSPACE_ENABLED = String(process.env.OCRSPACE_ENABLED || "1") !== "0"
 const OCRSPACE_API_KEY = process.env.OCRSPACE_API_KEY || "helloworld"
+const OCRSPACE_HAS_REAL_KEY = Boolean(OCRSPACE_API_KEY) && OCRSPACE_API_KEY !== "helloworld"
+const OCRSPACE_ENABLED = String(process.env.OCRSPACE_ENABLED || (OCRSPACE_HAS_REAL_KEY ? "1" : "0")) !== "0"
 const OCRSPACE_TIMEOUT_MS = Number(process.env.OCRSPACE_TIMEOUT_MS || 12000)
 const PADDLEOCR_ENABLED = String(process.env.PADDLEOCR_ENABLED || "0") === "1"
 const PADDLEOCR_API_URL = String(process.env.PADDLEOCR_API_URL || "").trim()
