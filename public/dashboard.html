@@ -541,14 +541,7 @@ font-style:italic;
 
 .fornecedor-nome{
 max-width:130px;
-cursor:pointer;
-}
-
-.fornecedor-nome.expandido{
-max-width:320px;
-white-space:normal;
-overflow:visible;
-word-break:break-word;
+cursor:default;
 }
 
 }
@@ -1096,7 +1089,9 @@ return String(texto || "")
 function obterPrimeiroNomeFornecedor(nome){
 const limpo = String(nome || "").trim().replace(/\s+/g," ")
 if(!limpo) return "-"
-return limpo.split(" ")[0]
+const partes = limpo.split(/[\s,.;:/\\|\-]+/).filter(Boolean)
+if(!partes.length) return limpo
+return partes[0]
 }
 
 function construirFornecedorCelula(nome){
@@ -1105,7 +1100,7 @@ const curto = obterPrimeiroNomeFornecedor(completo)
 const completoSeguro = escaparHtml(completo)
 const curtoSeguro = escaparHtml(curto)
 
-return `<span class="fornecedor-nome" title="${completoSeguro}" data-curto="${curtoSeguro}" data-completo="${completoSeguro}">${curtoSeguro}</span>`
+return `<span class="fornecedor-nome" title="${completoSeguro}">${curtoSeguro}</span>`
 }
 
 
@@ -1254,17 +1249,6 @@ renderPeriodoAtual()
 document.getElementById("ordenacaoSelect").addEventListener("change",(e)=>{
 ordenacaoAtual = e.target.value
 renderPeriodoAtual()
-})
-
-document.addEventListener("click",(e)=>{
-const alvo = e.target.closest(".fornecedor-nome")
-if(!alvo) return
-if(!eMobile()) return
-
-const expandido = alvo.classList.toggle("expandido")
-const textoExpandido = alvo.getAttribute("data-completo") || alvo.textContent
-const textoCurto = alvo.getAttribute("data-curto") || alvo.textContent
-alvo.textContent = expandido ? textoExpandido : textoCurto
 })
 
 window.addEventListener("resize",aplicarVistaListas)
