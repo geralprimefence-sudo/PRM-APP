@@ -635,13 +635,14 @@ cursor:default;
 <body>
 
 <header>
-
-<img src="/logo.png" alt="Contabill" class="header-logo">
-
-<a href="/logout">
-<button class="logout">Logout</button>
-</a>
-
+	<div class="header-left">
+		<img src="/logo.png" alt="Contabill" class="header-logo">
+	</div>
+	<div class="header-right">
+		<a href="/logout">
+			<button class="logout">Logout</button>
+		</a>
+	</div>
 </header>
 
 
@@ -1053,6 +1054,55 @@ row.innerHTML = `
 	.btn-text { display: none; }
 	.btn-icon { display: inline !important; }
 }
+	.header-left {
+		display: flex;
+		align-items: center;
+		flex: 1;
+		justify-content: flex-start;
+	}
+	.header-right {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		flex: 0 0 auto;
+	}
+	.logout {
+		padding: 7px 16px;
+		font-size: 14px;
+		border-radius: 7px;
+		min-width: unset;
+		height: 36px;
+		margin-left: 8px;
+		background: var(--danger);
+		color: #fff;
+		font-weight: 600;
+		box-shadow: none;
+		transition: background 0.2s;
+	}
+	.logout:hover {
+		background: #dc2626;
+	}
+	@media (max-width: 700px) {
+		.header-logo {
+			margin-left: 0 !important;
+			margin-right: 0 !important;
+			max-width: 44vw;
+			max-height: 38px;
+		}
+		.logout {
+			padding: 6px 12px;
+			font-size: 13px;
+			height: 32px;
+			border-radius: 7px;
+			margin-left: 4px;
+		}
+		.header-left, .header-right {
+			flex: unset;
+		}
+		header {
+			gap: 6px;
+		}
+	}
 </style>
 </div>
 </td>
