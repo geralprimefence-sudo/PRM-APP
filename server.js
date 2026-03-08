@@ -1953,10 +1953,12 @@ if(!dataFinal){
 return res.status(400).json({ok:false,erro:"Data invalida"})
 }
 
-const ficheiroConfirmado = moverUploadParaPastaPermanente(pendente.ficheiro,dataFinal)
-if(!ficheiroConfirmado){
+const fullConfirmado = resolverCaminhoUploadSeguro(pendente.ficheiro)
+if(!fullConfirmado){
 return res.status(400).json({ok:false,erro:"Documento original nao encontrado. Faz novo upload."})
 }
+
+const ficheiroConfirmado = path.relative(UPLOADS_DIR,fullConfirmado).replace(/\\/g,"/") || path.basename(fullConfirmado)
 
 await pool.query(
 `INSERT INTO registos
