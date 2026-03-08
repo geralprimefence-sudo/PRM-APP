@@ -1146,26 +1146,22 @@ renderPeriodoAtual()
 
 
 function formatarData(dataBruta){
-
-if(!dataBruta) return "-"
-
-const texto = String(dataBruta)
-
-if(texto.includes("T")){
-const dataISO = texto.split("T")[0]
-const partes = dataISO.split("-")
-if(partes.length===3){
-return `${partes[2]}/${partes[1]}/${partes[0]}`
-}
-}
-
-const partes = texto.split("-")
-if(partes.length===3){
-return `${partes[2]}/${partes[1]}/${partes[0]}`
-}
-
-return texto
-
+  if(!dataBruta) return "-"
+  const texto = String(dataBruta)
+  if(texto.includes("T")){
+    const dataISO = texto.split("T")[0]
+    const partes = dataISO.split("-")
+    if(partes.length===3){
+      // Só os dois últimos dígitos do ano
+      return `${partes[2]}/${partes[1]}/${partes[0].slice(-2)}`
+    }
+  }
+  const partes = texto.split("-")
+  if(partes.length===3){
+    // Só os dois últimos dígitos do ano
+    return `${partes[2]}/${partes[1]}/${partes[0].slice(-2)}`
+  }
+  return texto
 }
 
 function dataParaInputLocal(dataBruta){
