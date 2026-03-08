@@ -336,6 +336,16 @@ font-style:italic;
 color:#667085;
 }
 
+.fornecedor-nome{
+display:inline-block;
+max-width:170px;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap;
+vertical-align:bottom;
+cursor:default;
+}
+
 .edit-modal{
 position:fixed;
 inset:0;
@@ -478,7 +488,8 @@ letter-spacing:0;
 
 table{
 display:table;
-min-width:760px;
+min-width:0;
+table-layout:fixed;
 }
 
 thead{
@@ -496,9 +507,10 @@ display:table-row;
 th,
 td{
 display:table-cell;
-white-space:nowrap;
+white-space:normal;
+word-break:break-word;
 padding:8px 6px;
-font-size:12px;
+font-size:11px;
 border-bottom:1px solid var(--line);
 }
 
@@ -516,10 +528,27 @@ padding:2px 5px;
 font-size:10px;
 }
 
+th:nth-child(6),
+td:nth-child(6){
+width:108px;
+}
+
 .linha-vazia td{
 display:table-cell;
 padding:10px 8px;
 font-style:italic;
+}
+
+.fornecedor-nome{
+max-width:130px;
+cursor:pointer;
+}
+
+.fornecedor-nome.expandido{
+max-width:320px;
+white-space:normal;
+overflow:visible;
+word-break:break-word;
 }
 
 }
@@ -919,12 +948,13 @@ const tituloVer = documentoDisponivel
 ? "Abrir documento"
 : "Documento nao encontrado no servidor"
 const attrsVer = `onclick="verFatura(${idRegisto})"`
+const fornecedorCelula = construirFornecedorCelula(r.fornecedor)
 
 const row = document.createElement("tr")
 
 row.innerHTML = `
 <td data-label="Data">${dataCurta}</td>
-<td data-label="Fornecedor">${r.fornecedor}</td>
+<td data-label="Fornecedor">${fornecedorCelula}</td>
 <td data-label="Total">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
 <td data-label="IVA">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
 <td data-label="Sem IVA">${valorSemIva.toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
@@ -1052,6 +1082,30 @@ return Number(s)
 
 function arredondar2(v){
 return Math.round(Number(v) * 100) / 100
+}
+
+function escaparHtml(texto){
+return String(texto || "")
+.replace(/&/g,"&amp;")
+.replace(/</g,"&lt;")
+.replace(/>/g,"&gt;")
+.replace(/\"/g,"&quot;")
+.replace(/'/g,"&#39;")
+}
+
+function obterPrimeiroNomeFornecedor(nome){
+const limpo = String(nome || "").trim().replace(/\s+/g," ")
+if(!limpo) return "-"
+return limpo.split(" ")[0]
+}
+
+function construirFornecedorCelula(nome){
+const completo = String(nome || "").trim().replace(/\s+/g," ") || "-"
+const curto = obterPrimeiroNomeFornecedor(completo)
+const completoSeguro = escaparHtml(completo)
+const curtoSeguro = escaparHtml(curto)
+
+return `<span class="fornecedor-nome" title="${completoSeguro}" data-curto="${curtoSeguro}" data-completo="${completoSeguro}">${curtoSeguro}</span>`
 }
 
 
@@ -1200,6 +1254,17 @@ renderPeriodoAtual()
 document.getElementById("ordenacaoSelect").addEventListener("change",(e)=>{
 ordenacaoAtual = e.target.value
 renderPeriodoAtual()
+})
+
+document.addEventListener("click",(e)=>{
+const alvo = e.target.closest(".fornecedor-nome")
+if(!alvo) return
+if(!eMobile()) return
+
+const expandido = alvo.classList.toggle("expandido")
+const textoExpandido = alvo.getAttribute("data-completo") || alvo.textContent
+const textoCurto = alvo.getAttribute("data-curto") || alvo.textContent
+alvo.textContent = expandido ? textoExpandido : textoCurto
 })
 
 window.addEventListener("resize",aplicarVistaListas)
