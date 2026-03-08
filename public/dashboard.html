@@ -657,8 +657,6 @@ max-width:130px;
 cursor:default;
 }
 
-}
-
 </style>
 <style>
 @media (max-width: 820px) {
@@ -730,14 +728,14 @@ cursor:default;
 <h3>Carregar Fatura</h3>
 
 <div class="upload-actions">
-<button type="button" class="auto-upload-btn btn-camera" onclick="abrirScannerFoto()">Foto (Scan)</button>
-
-<form id="formDoc" action="/upload" method="POST" enctype="multipart/form-data">
-<button type="button" class="auto-upload-btn btn-documento">
-Documento/PDF
-<input id="docInput" class="auto-upload-input" type="file" name="file" accept="application/pdf" required>
-</button>
-</form>
+  <button type="button" class="auto-upload-btn btn-camera" onclick="abrirScannerFoto()">Foto (Scan)</button>
+  <form id="formDoc" action="/upload" method="POST" enctype="multipart/form-data" style="display:inline-block;">
+    <button type="button" class="auto-upload-btn btn-documento">
+      Documento/PDF
+      <input id="docInput" class="auto-upload-input" type="file" name="file" accept="application/pdf" required>
+    </button>
+  </form>
+  <button type="button" class="auto-upload-btn btn-docs" style="margin-left:auto; background:#64748b; color:#fff;" onclick="abrirDocs()">Docs</button>
 </div>
 
 <p class="upload-hint">Foto (Scan) abre a camara com moldura para focar o documento. Documento/PDF abre apenas ficheiros PDF.</p>
@@ -878,6 +876,10 @@ aplicarVistaListas()
 
 function abrirScannerFoto(){
 window.location.href = "/capturar-foto"
+}
+
+function abrirDocs() {
+  alert('Funcionalidade de gestão de documentos importantes (Docs) em desenvolvimento.');
 }
 
 document.getElementById("docInput").addEventListener("change",(e)=>{
