@@ -163,10 +163,18 @@ height:100%;
 cursor:pointer;
 }
 
+.filtros-topo{
+display:flex;
+align-items:center;
+gap:12px;
+flex-wrap:wrap;
+margin:0 0 12px;
+}
+
 .filtros-periodo{
 display:flex;
 gap:8px;
-margin-bottom:14px;
+margin:0;
 flex-wrap:wrap;
 }
 
@@ -174,7 +182,8 @@ flex-wrap:wrap;
 display:grid;
 grid-template-columns:1fr;
 gap:10px;
-margin:0 0 12px;
+width:min(360px,100%);
+margin:0;
 }
 
 .ferramenta-campo{
@@ -488,6 +497,15 @@ font-size:13px;
 grid-template-columns:1fr;
 }
 
+.filtros-topo{
+flex-direction:column;
+align-items:stretch;
+}
+
+.ferramentas-lista{
+width:100%;
+}
+
 .mobile-tipo-toggle{
 display:flex;
 }
@@ -646,6 +664,7 @@ Documento/PDF
 
 <h3>Registos</h3>
 
+<div class="filtros-topo">
 <div class="ferramentas-lista">
 <input id="pesquisaInput" class="ferramenta-campo" type="text" placeholder="Pesquisar fornecedor ou valor...">
 </div>
@@ -654,6 +673,7 @@ Documento/PDF
 <button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
 <button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
 <button type="button" class="btn-periodo" onclick="selecionarPeriodo('ano', this)">Ano</button>
+</div>
 </div>
 
 <div class="filtros-curtos">
@@ -676,7 +696,7 @@ Documento/PDF
 <thead>
 <tr>
 <th>Data</th>
-<th>Fornecedor</th>
+<th>Cliente</th>
 <th>Total</th>
 <th>IVA</th>
 <th>Sem IVA</th>
@@ -970,7 +990,7 @@ const row = document.createElement("tr")
 
 row.innerHTML = `
 <td data-label="Data">${dataCurta}</td>
-<td data-label="Fornecedor">${fornecedorCelula}</td>
+<td data-label="${(r.tipo || "").toLowerCase()==="receita" ? "Cliente" : "Fornecedor"}">${fornecedorCelula}</td>
 <td data-label="Total">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</td>
 <td data-label="IVA">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</td>
 <td data-label="Sem IVA">${valorSemIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</td>
