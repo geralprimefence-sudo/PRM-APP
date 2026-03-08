@@ -3,9 +3,11 @@
 
 <head>
 
-<meta charset="UTF-8">
-<title>PRM Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+	<div style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px;">
+		<a href="/logout" style="margin-left: 0;">
+			<button class="logout logout-small">Logout</button>
+		</a>
+	</div>
 
 <style>
 
@@ -345,6 +347,16 @@ button:hover{background:var(--primary-strong);}
 
 .logout{background:var(--danger);}
 .logout:hover{background:#dc2626;}
+
+.logout-small {
+	font-size: 12px;
+	padding: 4px 14px;
+	border-radius: 7px;
+	margin-top: 2px;
+	width: auto;
+	min-width: 0;
+	align-self: flex-start;
+}
 
 .acoes button{
 padding:2px 6px;
@@ -692,7 +704,7 @@ Documento/PDF
 
 <div class="filtros-curtos">
 <button type="button" class="btn-curto" onclick="selecionarJanelaDias(1, this)">Hoje</button>
-<button type="button" class="btn-curto" onclick="selecionarJanelaDias(7, this)">7 dias</button>
+
 <button type="button" class="btn-curto" onclick="selecionarJanelaDias(15, this)">15 dias</button>
 <button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
 <button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
@@ -707,6 +719,7 @@ Documento/PDF
 
 <div class="tabelas-grid">
 
+
 <div class="bloco-tabela" id="blocoReceitas">
 <h3>Receitas</h3>
 <table>
@@ -715,14 +728,15 @@ Documento/PDF
 <th>Data</th>
 <th>Cliente</th>
 <th>Total</th>
-<th>IVA</th>
-<th>Sem IVA</th>
+<th class="col-iva">IVA</th>
+<th class="col-semiva">Sem IVA</th>
 <th>Ações</th>
 </tr>
 </thead>
 <tbody id="tabelaReceitas"></tbody>
 </table>
 </div>
+
 
 <div class="bloco-tabela" id="blocoDespesas">
 <h3>Despesas</h3>
@@ -732,14 +746,44 @@ Documento/PDF
 <th>Data</th>
 <th>Fornecedor</th>
 <th>Total</th>
-<th>IVA</th>
-<th>Sem IVA</th>
+<th class="col-iva">IVA</th>
+<th class="col-semiva">Sem IVA</th>
 <th>Ações</th>
 </tr>
 </thead>
 <tbody id="tabelaDespesas"></tbody>
 </table>
 </div>
+@media (max-width: 820px) {
+	.col-iva, .col-semiva,
+	td:nth-child(4), td:nth-child(5) {
+		display: none !important;
+	}
+	th, td {
+		font-size: 11px !important;
+		padding: 6px 3px !important;
+		max-width: 70px !important;
+		word-break: break-word !important;
+		white-space: normal !important;
+	}
+	th:nth-child(1), td:nth-child(1) {
+		min-width: 60px !important;
+		max-width: 70px !important;
+	}
+	th:nth-child(2), td:nth-child(2) {
+		min-width: 80px !important;
+		max-width: 90px !important;
+	}
+	th:nth-child(3), td:nth-child(3) {
+		min-width: 60px !important;
+		max-width: 70px !important;
+	}
+	th:last-child, td:last-child {
+		min-width: 50px !important;
+		max-width: 60px !important;
+		text-align: center !important;
+	}
+}
 
 </div>
 
