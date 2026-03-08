@@ -285,6 +285,15 @@ letter-spacing:0.3px;
 color:#667085;
 }
 
+th:nth-child(3),
+th:nth-child(4),
+th:nth-child(5),
+td:nth-child(3),
+td:nth-child(4),
+td:nth-child(5){
+white-space:nowrap;
+}
+
 tbody tr:last-child td{
 border-bottom:none;
 }
@@ -314,6 +323,13 @@ font-size:10px;
 font-weight:700;
 min-width:22px;
 min-height:22px;
+}
+
+.acoes-linha{
+display:flex;
+align-items:center;
+gap:4px;
+flex-wrap:nowrap;
 }
 
 .btn-ver{background:#3498db;color:white;}
@@ -526,6 +542,10 @@ display:table-cell;
 .acoes button{
 padding:2px 5px;
 font-size:10px;
+}
+
+.acoes-linha{
+justify-content:flex-start;
 }
 
 th:nth-child(6),
@@ -948,18 +968,18 @@ const row = document.createElement("tr")
 row.innerHTML = `
 <td data-label="Data">${dataCurta}</td>
 <td data-label="Fornecedor">${fornecedorCelula}</td>
-<td data-label="Total">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
-<td data-label="IVA">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
-<td data-label="Sem IVA">${valorSemIva.toLocaleString('pt-PT',{minimumFractionDigits:2})} €</td>
+<td data-label="Total">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</td>
+<td data-label="IVA">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</td>
+<td data-label="Sem IVA">${valorSemIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</td>
 
 <td class="acoes" data-label="Acoes">
-
+<div class="acoes-linha">
 <button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button>
 
 <button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar">Edit</button>
 
 <button title="Apagar" aria-label="Apagar" onclick="apagar(${r.id})" class="btn-apagar">Apag.</button>
-
+</div>
 </td>
 `
 
