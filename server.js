@@ -721,6 +721,12 @@ if(fs.existsSync(full)){
 fs.unlinkSync(full)
 }
 
+}catch(err){
+console.error("Falha a apagar upload pendente",err)
+}
+
+}
+
 function moverUploadParaPastaPermanente(refFicheiro,dataRef){
 
 const origem = resolverCaminhoUploadSeguro(refFicheiro)
@@ -758,11 +764,6 @@ return ""
 }
 
 return path.relative(UPLOADS_DIR,destino).replace(/\\/g,"/")
-
-}
-}catch(err){
-console.error("Falha a apagar upload pendente",err)
-}
 
 }
 
