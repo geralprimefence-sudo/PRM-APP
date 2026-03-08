@@ -5,6 +5,10 @@ margin:0;
 color:#f1f5f9;
 }
 
+*,*::before,*::after{
+box-sizing:border-box;
+}
+
 /* LOGIN */
 
 .login-container{
@@ -19,10 +23,13 @@ margin-top:10vh;
 }
 
 .login-container img{
-width:min(86vw,360px);
+display:block;
+width:min(92vw,420px);
 max-width:100%;
 height:auto;
 margin-bottom:12px;
+margin-left:auto;
+margin-right:auto;
 }
 
 input{
@@ -37,6 +44,7 @@ color:#e2e8f0;
 
 .password-wrap{
 position:relative;
+width:100%;
 }
 
 .password-wrap input{
