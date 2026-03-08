@@ -1001,32 +1001,30 @@ const tabelaDespesas = document.getElementById("tabelaDespesas")
 tabelaReceitas.innerHTML = ""
 tabelaDespesas.innerHTML = ""
 
-registos.forEach(r=>{
-
-const dataCurta = formatarData(r.data)
-const valorSemIva = Number(r.valor_sem_iva ?? 0)
-const valorIva = Number(r.valor_iva ?? 0)
-const valorTotal = Number(r.valor_total ?? r.valor ?? 0)
-const idRegisto = Number(r.id || 0)
-const documentoDisponivel = r.documentoDisponivel !== false
-const tituloVer = documentoDisponivel
-? "Abrir documento"
-: "Documento nao encontrado no servidor"
-const attrsVer = `onclick="verFatura(${idRegisto})"`
-const fornecedorCelula = construirFornecedorCelula(r.fornecedor)
-
-const row = document.createElement("tr")
-
-row.innerHTML = `
-<td data-label="Data">${dataCurta}</td>
-<td data-label="${(r.tipo || "").toLowerCase()==="receita" ? "Cliente" : "Fornecedor"}">${fornecedorCelula}</td>
-<td data-label="Total">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</td>
-<td data-label="IVA">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</td>
-<td data-label="Sem IVA">${valorSemIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</td>
-
-<td class="acoes" data-label="Acoes">
-<div class="acoes-linha">
-<button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button>
+			const dataCurta = formatarData(r.data)
+			const valorTotal = Number(r.valor_total ?? r.valor ?? 0)
+			const idRegisto = Number(r.id || 0)
+			const documentoDisponivel = r.documentoDisponivel !== false
+			const tituloVer = documentoDisponivel
+				? "Abrir documento"
+				: "Documento nao encontrado no servidor"
+			const attrsVer = `onclick="verFatura(${idRegisto})"`
+			const fornecedorCelula = construirFornecedorCelula(r.fornecedor)
+			const row = document.createElement("tr")
+			row.innerHTML = `
+			<td data-label="Data">${dataCurta}</td>
+			<td data-label="${(r.tipo || "").toLowerCase()==="receita" ? "Cliente" : "Fornecedor"}">${fornecedorCelula}</td>
+			<td data-label="Total">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</td>
+			<td data-label="IVA" class="hide-mobile">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</td>
+			<td data-label="Sem IVA" class="hide-mobile">${valorSemIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</td>
+			<td class="acoes hide-mobile" data-label="Acoes">
+				<div class="acoes-linha">
+					<button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button>
+					<button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar"><span class="btn-text">Edit</span><span class="btn-icon" style="display:none;">✏️</span></button>
+					<button title="Apagar" aria-label="Apagar" onclick="apagar(${r.id})" class="btn-apagar"><span class="btn-text">Apag.</span><span class="btn-icon" style="display:none;">🗑️</span></button>
+				</div>
+			</td>
+			`
 
 <button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar"><span class="btn-text">Edit</span><span class="btn-icon" style="display:none;">✏️</span></button>
 
@@ -1271,62 +1269,21 @@ row.innerHTML = `
 `
 </style>
 @media (max-width: 700px) {
-	table, thead, tbody, tr {
-		display: block;
-		width: 100%;
+	.hide-mobile {
+		display: none !important;
 	}
-	tr {
-		margin-bottom: 12px;
-		border-bottom: 2px solid #e4e7ec;
-		background: #fff;
-		border-radius: 10px;
-		box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-		padding: 6px 0;
-	}
-	th {
-		display: none;
+	th:nth-child(4),
+	th:nth-child(5),
+	th:nth-child(6) {
+		display: none !important;
 	}
 	td {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		justify-content: flex-start;
-		padding: 7px 8px !important;
-		font-size: 13px !important;
-		border: none;
+		font-size: 14px !important;
+		padding: 8px 6px !important;
 		min-width: 0 !important;
 		max-width: 100% !important;
 		word-break: break-word !important;
-		background: none;
-		box-shadow: none;
 	}
-	.cel-label-mobile {
-		font-size: 11px;
-		color: #667085;
-		font-weight: 700;
-		margin-bottom: 2px;
-		text-transform: uppercase;
-		letter-spacing: 0.2px;
-	}
-	.cel-valor-mobile {
-		font-size: 14px;
-		color: #101828;
-		font-weight: 600;
-		word-break: break-word;
-	}
-	.acoes-linha {
-		flex-direction: row;
-		gap: 4px;
-		align-items: center;
-		margin-top: 2px;
-	}
-	.acoes button {
-		min-width: 32px;
-		font-size: 13px;
-		padding: 4px 6px;
-	}
-	.btn-text { display: none; }
-	.btn-icon { display: inline !important; }
 }
 </style>
 
