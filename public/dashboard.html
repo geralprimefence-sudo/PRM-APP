@@ -83,6 +83,7 @@ background:#111827;
 color:#fff;
 padding:16px 18px;
 display:flex;
+flex-direction:row;
 justify-content:space-between;
 align-items:center;
 gap:12px;
@@ -685,13 +686,10 @@ cursor:default;
 <body>
 
 <header>
-
-<img src="/logo.png" alt="Contabill" class="header-logo">
-
-<a href="/logout">
-<button class="logout">Logout</button>
-</a>
-
+	<img src="/logo.png" alt="Contabill" class="header-logo">
+	<a href="/logout" style="margin-left:auto;">
+		<button class="logout" style="font-size:13px;padding:7px 18px;border-radius:8px;min-width:70px;">Logout</button>
+	</a>
 </header>
 
 
