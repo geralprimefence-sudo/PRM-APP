@@ -1314,6 +1314,43 @@ return melhor || tituloFornecedor || "desconhecido"
 
 }
 
+function extrairClienteDoTexto(texto){
+
+const linhas = String(texto || "").split("\n").map((l)=> String(l || "").trim()).filter(Boolean)
+if(!linhas.length) return ""
+
+const labelRegex = /\b(cliente|adquirente|destinatario|destinat[aá]rio|comprador|bill\s*to)\b/i
+const bloqueadas = /fatura|factura|recibo|nif|contribuinte|total|iva|data|pagamento|artigo|descricao|quantidade|preco|valor|terminal|cartao|mbway|multibanco|iban|www|http|email|telefone/i
+
+for(let i=0;i<linhas.length;i++){
+const linhaOriginal = linhas[i]
+const linhaLower = linhaOriginal.toLowerCase()
+if(!labelRegex.test(linhaLower)) continue
+
+let candidato = ""
+
+if(/[:\-]/.test(linhaOriginal)){
+const partes = linhaOriginal.split(/[:\-]/)
+candidato = String(partes.slice(1).join(" ") || "").trim()
+}
+
+if(!candidato && i + 1 < linhas.length){
+candidato = String(linhas[i + 1] || "").trim()
+}
+
+candidato = limparLinhaEmpresa(candidato)
+if(!candidato) continue
+if(candidato.length < 2 || candidato.length > 80) continue
+if(/[0-9]/.test(candidato)) continue
+if(bloqueadas.test(candidato.toLowerCase())) continue
+
+return candidato
+}
+
+return ""
+
+}
+
 function construirDataValida(dia,mes,ano){
 
 const d = Number(dia)
@@ -1465,6 +1502,7 @@ let valorIva = 0
 let valorTotal = 0
 let data = null
 let empresa = "desconhecido"
+let cliente = ""
 let nif = ""
 let tipo = "despesa"
 
@@ -1486,7 +1524,10 @@ valor = 0
 function qualidadeDadosExtraidos(dados){
 	const total = Number(dados?.valorTotal ?? dados?.valor ?? 0)
 	const dataValida = Boolean(dataParaInput(dados?.data))
-	const fornecedorValido = Boolean(dados?.empresa && dados.empresa !== "desconhecido")
+	const fornecedorValido = Boolean(
+		(dados?.empresa && dados.empresa !== "desconhecido") ||
+		String(dados?.cliente || "").trim()
+	)
 	const nifValido = Boolean(dados?.nif && /^\d{9}$/.test(String(dados.nif)))
 	const ivaValido = Number(dados?.valorIva ?? 0) >= 0
 
@@ -1503,7 +1544,10 @@ function qualidadeDadosExtraidos(dados){
 function dadosCriticosOk(dados){
 	const total = Number(dados?.valorTotal ?? dados?.valor ?? 0)
 	const dataValida = Boolean(dataParaInput(dados?.data))
-	const fornecedorValido = Boolean(dados?.empresa && dados.empresa !== "desconhecido")
+	const fornecedorValido = Boolean(
+		(dados?.empresa && dados.empresa !== "desconhecido") ||
+		String(dados?.cliente || "").trim()
+	)
 	return total > 0 && dataValida && fornecedorValido
 }
 
@@ -1513,6 +1557,7 @@ data = extrairDataDoTexto(textoTratado)
 nif = extrairNifDoTexto(textoTratado)
 
 empresa = extrairFornecedorDoTexto(textoTratado,nif)
+cliente = extrairClienteDoTexto(textoTratado)
 
 
 
@@ -1532,6 +1577,7 @@ valorIva,
 valorTotal,
 data,
 empresa,
+cliente,
 nif,
 tipo
 }
@@ -1769,9 +1815,13 @@ const userResult = await pool.query(
 const perfil = userResult.rows[0] || {}
 dados.tipo = classificarTipoPorEntidade(dados,perfil)
 
+const nomeParaRegisto = dados.tipo === "receita"
+? (String(dados.cliente || "").trim() || dados.empresa)
+: dados.empresa
+
 req.session.pendingUpload = {
 tipo:dados.tipo,
-fornecedor:dados.empresa,
+fornecedor:nomeParaRegisto,
 valor:dados.valor,
 valorSemIva:dados.valorSemIva,
 valorIva:dados.valorIva,
@@ -1888,9 +1938,16 @@ const semIvaFinal = Number.isFinite(semIvaExtraido) && semIvaExtraido >= 0
 : Math.max(0,totalFinal - ivaFinal)
 
 const fornecedorFinal =
-(dados.empresa && dados.empresa !== "desconhecido")
-? dados.empresa
-: (pendenteAtual.fornecedor || "")
+tipoClassificado === "receita"
+? (
+	String(dados.cliente || "").trim() ||
+	((dados.empresa && dados.empresa !== "desconhecido") ? dados.empresa : (pendenteAtual.fornecedor || ""))
+)
+: (
+	(dados.empresa && dados.empresa !== "desconhecido")
+	? dados.empresa
+	: (pendenteAtual.fornecedor || "")
+)
 
 const dataFinal = dataParaInput(dados.data) || pendenteAtual.data || dataParaInput(new Date())
 const nifFinal = dados.nif || pendenteAtual.nif || ""
