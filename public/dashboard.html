@@ -1027,9 +1027,33 @@ row.innerHTML = `
 <div class="acoes-linha">
 <button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button>
 
-<button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar">Edit</button>
+<button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar"><span class="btn-text">Edit</span><span class="btn-icon" style="display:none;">✏️</span></button>
 
-<button title="Apagar" aria-label="Apagar" onclick="apagar(${r.id})" class="btn-apagar">Apag.</button>
+<button title="Apagar" aria-label="Apagar" onclick="apagar(${r.id})" class="btn-apagar"><span class="btn-text">Apag.</span><span class="btn-icon" style="display:none;">🗑️</span></button>
+<style>
+@media (max-width: 700px) {
+	td, th {
+		white-space: normal !important;
+		word-break: break-word !important;
+		padding: 8px 4px !important;
+		font-size: 11px !important;
+		min-width: 0 !important;
+		max-width: 90px !important;
+	}
+	.acoes-linha {
+		flex-direction: column;
+		gap: 2px;
+		align-items: flex-start;
+	}
+	.acoes button {
+		min-width: 32px;
+		font-size: 13px;
+		padding: 4px 6px;
+	}
+	.btn-text { display: none; }
+	.btn-icon { display: inline !important; }
+}
+</style>
 </div>
 </td>
 `
