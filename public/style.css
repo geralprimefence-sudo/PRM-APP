@@ -19,7 +19,9 @@ margin-top:10vh;
 }
 
 .login-container img{
-width:200px;
+width:280px;
+max-width:100%;
+height:auto;
 margin-bottom:20px;
 }
 
