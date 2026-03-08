@@ -53,6 +53,16 @@ margin:0;
 line-height:1.2;
 }
 
+.header-logo{
+display:block;
+height:42px;
+width:auto;
+max-width:min(56vw,320px);
+background:#fff;
+border-radius:8px;
+padding:5px 10px;
+}
+
 .container{
 padding:22px 18px 30px;
 max-width:1200px;
@@ -162,7 +172,7 @@ flex-wrap:wrap;
 
 .ferramentas-lista{
 display:grid;
-grid-template-columns:1.3fr 1fr;
+grid-template-columns:1fr;
 gap:10px;
 margin:0 0 12px;
 }
@@ -576,7 +586,7 @@ cursor:default;
 
 <header>
 
-<h1>PRM Dashboard</h1>
+<img src="/logo.png" alt="Contabill" class="header-logo">
 
 <a href="/logout">
 <button class="logout">Logout</button>
@@ -636,21 +646,14 @@ Documento/PDF
 
 <h3>Registos</h3>
 
+<div class="ferramentas-lista">
+<input id="pesquisaInput" class="ferramenta-campo" type="text" placeholder="Pesquisar fornecedor ou valor...">
+</div>
+
 <div class="filtros-periodo">
 <button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
 <button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
 <button type="button" class="btn-periodo" onclick="selecionarPeriodo('ano', this)">Ano</button>
-</div>
-
-<div class="ferramentas-lista">
-<input id="pesquisaInput" class="ferramenta-campo" type="text" placeholder="Pesquisar fornecedor ou valor...">
-<select id="ordenacaoSelect" class="ferramenta-campo">
-<option value="data_desc">Mais recentes</option>
-<option value="data_asc">Mais antigos</option>
-<option value="valor_desc">Maior valor</option>
-<option value="valor_asc">Menor valor</option>
-<option value="fornecedor_asc">Fornecedor A-Z</option>
-</select>
 </div>
 
 <div class="filtros-curtos">
@@ -1263,11 +1266,6 @@ renderPeriodoAtual()
 
 document.getElementById("pesquisaInput").addEventListener("input",(e)=>{
 termoPesquisa = String(e.target.value || "").trim().toLowerCase()
-renderPeriodoAtual()
-})
-
-document.getElementById("ordenacaoSelect").addEventListener("change",(e)=>{
-ordenacaoAtual = e.target.value
 renderPeriodoAtual()
 })
 
