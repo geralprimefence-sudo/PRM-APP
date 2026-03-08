@@ -219,11 +219,29 @@ color:white;
 /* RESPONSIVO */
 
 @media(max-width:700px){
+	th:nth-child(6),
+	td:nth-child(6){
+	width:80px;
+	min-width:70px;
+	word-break:break-word;
+	white-space:normal;
+	padding-right:2px;
+	font-size:10px;
+	text-align:center;
+	}
 
-.cards{
-flex-direction:column;
-}
+	th:nth-child(3),
+	td:nth-child(3){
+	word-break:break-word;
+	white-space:normal;
+	font-size:10px;
+	}
 
+	th,
+	td{
+	max-width:90px;
+	overflow-wrap:break-word;
+	}
 table{
 font-size:14px;
 }
