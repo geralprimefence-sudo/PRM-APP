@@ -1209,48 +1209,76 @@ return
 }
 
 const url = "/api/registos/" + registoId + "/documento?download=1"
-const link = document.createElement("a")
-link.href = url
-link.rel = "noopener"
-document.body.appendChild(link)
-link.click()
-link.remove()
 
+const row = document.createElement("tr")
+row.innerHTML = `
+<td data-label="Data"><span class="cel-label-mobile">Data</span><span class="cel-valor-mobile">${dataCurta}</span></td>
+<td data-label="${(r.tipo || "").toLowerCase()==="receita" ? "Cliente" : "Fornecedor"}"><span class="cel-label-mobile">${(r.tipo || "").toLowerCase()==="receita" ? "Cliente" : "Fornecedor"}</span><span class="cel-valor-mobile">${fornecedorCelula}</span></td>
+<td data-label="Total"><span class="cel-label-mobile">Total</span><span class="cel-valor-mobile">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
+<td data-label="IVA"><span class="cel-label-mobile">IVA</span><span class="cel-valor-mobile">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
+<td data-label="Sem IVA"><span class="cel-label-mobile">Sem IVA</span><span class="cel-valor-mobile">${valorSemIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
+<td class="acoes" data-label="Acoes"><span class="cel-label-mobile">Ações</span><div class="acoes-linha"><button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button><button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar"><span class="btn-text">Edit</span><span class="btn-icon" style="display:none;">✏️</span></button><button title="Apagar" aria-label="Apagar" onclick="apagar(${r.id})" class="btn-apagar"><span class="btn-text">Apag.</span><span class="btn-icon" style="display:none;">🗑️</span></button></div></td>
+`
+</style>
+@media (max-width: 700px) {
+	table, thead, tbody, tr {
+		display: block;
+		width: 100%;
+	}
+	tr {
+		margin-bottom: 12px;
+		border-bottom: 2px solid #e4e7ec;
+		background: #fff;
+		border-radius: 10px;
+		box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+		padding: 6px 0;
+	}
+	th {
+		display: none;
+	}
+	td {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		justify-content: flex-start;
+		padding: 7px 8px !important;
+		font-size: 13px !important;
+		border: none;
+		min-width: 0 !important;
+		max-width: 100% !important;
+		word-break: break-word !important;
+		background: none;
+		box-shadow: none;
+	}
+	.cel-label-mobile {
+		font-size: 11px;
+		color: #667085;
+		font-weight: 700;
+		margin-bottom: 2px;
+		text-transform: uppercase;
+		letter-spacing: 0.2px;
+	}
+	.cel-valor-mobile {
+		font-size: 14px;
+		color: #101828;
+		font-weight: 600;
+		word-break: break-word;
+	}
+	.acoes-linha {
+		flex-direction: row;
+		gap: 4px;
+		align-items: center;
+		margin-top: 2px;
+	}
+	.acoes button {
+		min-width: 32px;
+		font-size: 13px;
+		padding: 4px 6px;
+	}
+	.btn-text { display: none; }
+	.btn-icon { display: inline !important; }
 }
-
-
-
-async function apagar(id){
-
-if(!confirm("Apagar este registo?")) return
-
-const res = await fetch("/api/delete/"+id,{method:"DELETE"})
-if(!res.ok){
-alert("Erro ao apagar registo.")
-return
-}
-
-todosRegistos = todosRegistos.filter((r)=> Number(r.id)!==Number(id))
-renderPeriodoAtual()
-
-}
-
-
-
-async function editar(id){
-
-const registo = todosRegistos.find((r)=> Number(r.id)===Number(id))
-if(!registo){
-alert("Registo nao encontrado.")
-return
-}
-
-idRegistoEmEdicao = Number(registo.id)
-
-document.getElementById("editFornecedor").value = String(registo.fornecedor || "")
-document.getElementById("editData").value = dataParaInputLocal(registo.data)
-document.getElementById("editValor").value = Number(registo.valor_total ?? registo.valor ?? 0)
-.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})
+</style>
 
 const modal = document.getElementById("editModal")
 modal.classList.add("ativo")
