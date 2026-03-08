@@ -36,19 +36,21 @@ const PADDLEOCR_TIMEOUT_MS = Number(process.env.PADDLEOCR_TIMEOUT_MS || 12000)
 const app = express()
 const PORT = process.env.PORT || 3000
 const SESSION_SECRET = process.env.SESSION_SECRET || "prm-secret"
+const UPLOADS_DIR = process.env.UPLOADS_DIR || (process.env.RENDER_DISK_PATH ? path.join(process.env.RENDER_DISK_PATH,"uploads") : path.join(__dirname,"uploads"))
+const TEMP_DIR = process.env.TEMP_DIR || path.join(__dirname,"temp")
 
 // Render/Reverse proxy needs trust proxy so secure cookies are accepted over HTTPS.
 app.set("trust proxy",1)
 
 // Ensure runtime folders exist on fresh hosts.
-fs.mkdirSync(path.join(__dirname,"uploads"),{recursive:true})
-fs.mkdirSync(path.join(__dirname,"temp"),{recursive:true})
+fs.mkdirSync(UPLOADS_DIR,{recursive:true})
+fs.mkdirSync(TEMP_DIR,{recursive:true})
 
 
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 app.use(express.static("public"))
-app.use("/uploads",express.static("uploads"))
+app.use("/uploads",express.static(UPLOADS_DIR))
 
 
 const pool = new Pool({
@@ -157,7 +159,7 @@ next()
 
 const storage = multer.diskStorage({
 
-destination:"uploads",
+destination:UPLOADS_DIR,
 
 filename:(req,file,cb)=>{
 cb(null,Date.now()+"-"+file.originalname)
@@ -255,7 +257,7 @@ async function preprocessarImagemParaOCR(file,modo = "balanced"){
 	if(![".jpg",".jpeg",".png",".webp"].includes(ext)) return null
 
 	const tmpName = `ocr-${Date.now()}-${Math.random().toString(16).slice(2)}.png`
-	const out = path.join(__dirname,"temp",tmpName)
+	const out = path.join(TEMP_DIR,tmpName)
 
 	try{
 		let img = sharp(file)
@@ -712,7 +714,7 @@ function apagarUploadSilencioso(nomeFicheiro){
 if(!nomeFicheiro) return
 
 const seguro = path.basename(nomeFicheiro)
-const full = path.join(__dirname,"uploads",seguro)
+const full = path.join(UPLOADS_DIR,seguro)
 
 try{
 if(fs.existsSync(full)){
@@ -731,7 +733,7 @@ const yyyy = String(d.getFullYear())
 const mm = String(d.getMonth() + 1).padStart(2,"0")
 const dd = String(d.getDate()).padStart(2,"0")
 
-const pastaDestino = path.join(__dirname,"uploads",yyyy,mm,dd)
+const pastaDestino = path.join(UPLOADS_DIR,yyyy,mm,dd)
 fs.mkdirSync(pastaDestino,{recursive:true})
 
 const nomeOrigem = path.basename(origem)
@@ -739,7 +741,7 @@ let nomeDestino = nomeOrigem
 let destino = path.join(pastaDestino,nomeDestino)
 
 if(path.resolve(origem) === path.resolve(destino)){
-return path.relative(path.join(__dirname,"uploads"),destino).replace(/\\/g,"/")
+return path.relative(UPLOADS_DIR,destino).replace(/\\/g,"/")
 }
 
 if(fs.existsSync(destino)){
@@ -755,7 +757,7 @@ console.error("Falha ao mover upload para pasta permanente",err?.message || err)
 return ""
 }
 
-return path.relative(path.join(__dirname,"uploads"),destino).replace(/\\/g,"/")
+return path.relative(UPLOADS_DIR,destino).replace(/\\/g,"/")
 
 }
 }catch(err){
@@ -797,7 +799,7 @@ function resolverCaminhoUploadSeguro(refFicheiro){
 
 	if(!refFicheiro) return null
 
-	const uploadsRoot = path.join(__dirname,"uploads")
+	const uploadsRoot = UPLOADS_DIR
 	const bruto = String(refFicheiro).trim()
 	if(!bruto) return null
 

@@ -3,6 +3,10 @@ services:
     name: faturas-app
     runtime: node
     plan: starter
+    disk:
+      name: uploads-disk
+      mountPath: /var/data
+      sizeGB: 5
     buildCommand: npm install && (npm run smoke:docs:baseline && npm run smoke:docs:strict || echo "Smoke check falhou no build, deploy continua")
     startCommand: npm start
     autoDeploy: true
@@ -13,3 +17,5 @@ services:
         generateValue: true
       - key: DATABASE_URL
         sync: false
+      - key: UPLOADS_DIR
+        value: /var/data/uploads
