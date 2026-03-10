@@ -149,31 +149,77 @@ def preprocess_receipt(image_path):
 
 
 def extract_lines_from_tesseract(img_path):
-    # Use pytesseract to get text by line
+    # Try multiple PSM modes and pick the best by a simple heuristic
     pil = Image.open(img_path)
-    try:
-        data = pytesseract.image_to_data(pil, output_type=pytesseract.Output.DICT, lang='por')
-    except Exception:
-        data = pytesseract.image_to_data(pil, output_type=pytesseract.Output.DICT)
-    lines = []
-    current_line_num = -1
-    current_text = []
-    for i, line_num in enumerate(data.get('line_num', [])):
-        text = data.get('text', [])[i] or ''
-        if line_num != current_line_num:
-            if current_text:
-                joined = ' '.join([t for t in current_text if t.strip()])
-                if joined:
-                    lines.append(joined)
-            current_text = [text]
-            current_line_num = line_num
-        else:
-            current_text.append(text)
-    if current_text:
-        joined = ' '.join([t for t in current_text if t.strip()])
-        if joined:
-            lines.append(joined)
-    return lines
+
+    def _lines_from_data(data_dict):
+        lines_local = []
+        current_line_num = -1
+        current_text = []
+        for i, line_num in enumerate(data_dict.get('line_num', [])):
+            text = data_dict.get('text', [])[i] or ''
+            if line_num != current_line_num:
+                if current_text:
+                    joined = ' '.join([t for t in current_text if t.strip()])
+                    if joined:
+                        lines_local.append(joined)
+                current_text = [text]
+                current_line_num = line_num
+            else:
+                current_text.append(text)
+        if current_text:
+            joined = ' '.join([t for t in current_text if t.strip()])
+            if joined:
+                lines_local.append(joined)
+        return lines_local
+
+    psm_candidates = [6, 11, 3, 1]
+    best = None
+    best_score = -1
+    best_psm = None
+    best_lines = []
+
+    def score_lines(lines_list):
+        # heuristic: count numeric-looking tokens and date-like patterns
+        import re
+        score = 0
+        text_all = '\n'.join(lines_list)
+        nums = re.findall(r"\d+[\.,]?\d*", text_all)
+        score += len(nums)
+        # bonus for date-like occurrences
+        score += len(re.findall(r"\b\d{1,2}[\-/\.\s]\d{1,2}[\-/\.\s]\d{2,4}\b", text_all)) * 3
+        # bonus for TOTAL-like keywords
+        score += sum(2 for l in lines_list if any(k in l.upper() for k in ("TOTAL", "IVA", "VALOR", "MONTANTE")))
+        return score
+
+    for psm in psm_candidates:
+        try:
+            config = f'--psm {psm}'
+            try:
+                data = pytesseract.image_to_data(pil, output_type=pytesseract.Output.DICT, config=config, lang='por')
+            except Exception:
+                data = pytesseract.image_to_data(pil, output_type=pytesseract.Output.DICT, config=config)
+            lines_try = _lines_from_data(data)
+            sc = score_lines(lines_try)
+            if sc > best_score:
+                best_score = sc
+                best = data
+                best_psm = psm
+                best_lines = lines_try
+        except Exception:
+            continue
+
+    # fallback to a single run if nothing selected
+    if best is None:
+        try:
+            data = pytesseract.image_to_data(pil, output_type=pytesseract.Output.DICT, lang='por')
+        except Exception:
+            data = pytesseract.image_to_data(pil, output_type=pytesseract.Output.DICT)
+        best_lines = _lines_from_data(data)
+        best_psm = None
+
+    # return lines and psm used for debugging
+    return {'lines': best_lines, 'psm': best_psm}
 
 
 def parse_amount(text):
@@ -191,13 +237,16 @@ def parse_amount(text):
     text = fix_ocr_digits(text)
     # find numbers like 12.34 or 1,234.56 or 12,34
     # accept optional currency symbol and numbers with 1-3 groupings
-    candidates = re.findall(r"[€$£]?\s*\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})|\d+[.,]\d{2}", text)
+    candidates = re.findall(r"[€$£]?\s*\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})|\d+[.,]\d{2}|\d+[.,]\d{3}|\d+", text)
     if not candidates:
         return None
     # prefer the last candidate (often total at bottom)
     s = candidates[-1]
     # normalize number formats to a dot-decimal float string
-    if '.' in s and ',' in s:
+    # Heuristic: if there's a dot with three digits after it and no comma, treat dot as thousands separator
+    if '.' in s and ',' not in s and re.search(r"\.\d{3}$", s):
+        s_norm = s.replace('.', '')
+    elif '.' in s and ',' in s:
         # determine which is decimal separator by position (decimal usually last)
         if s.rfind('.') < s.rfind(','):
             # format like 1.234,56 -> remove dots, convert comma to dot
@@ -277,28 +326,129 @@ def parse_date(text):
     m = re.search(r"(19|20)\d{2}", text)
     if m:
         return m.group(0)
+    # try dateutil.parser if available for fuzzy parsing
+    try:
+        from dateutil import parser as _p
+        dt = _p.parse(text, fuzzy=True, dayfirst=True)
+        return f"{dt.year:04d}-{dt.month:02d}-{dt.day:02d}"
+    except Exception:
+        pass
     return None
 
 
 def extract_fields_from_lines(lines):
     # lines: list of strings from top->bottom
     text = "\n".join(lines)
-    # try to find total by scanning lines bottom-up for keywords or numbers
+
+    # Initialize
     total = None
     date = None
+    supplier = None
+    supplier_nif = None
+    vat_percent = None
+    vat_amount = None
+    total_ex_vat = None
+
+    # 1) Try to detect supplier and NIF from top lines
+    top_lines = [l.strip() for l in lines[:8] if l.strip()]
+    # NIF: 9 digits (Portuguese), sometimes with spaces/dots
+    import re
+    for i, l in enumerate(top_lines):
+        m = re.search(r"\b(\d{9})\b", l.replace('.', '').replace(' ', ''))
+        if m:
+            supplier_nif = m.group(1)
+            # supplier likely on same line or previous line
+            if i > 0:
+                supplier = top_lines[i-1]
+            else:
+                supplier = top_lines[i]
+            break
+    # if no NIF, pick longest top line that looks like a company name
+    if not supplier:
+        candidate = None
+        for l in top_lines:
+            # ignore generic words
+            if any(k in l.upper() for k in ("FACTUR", "RECIBO", "NIF", "MORADA", "DATA", "TEL", "TAX")):
+                continue
+            if candidate is None or len(l) > len(candidate):
+                candidate = l
+        supplier = candidate
+
+    # 2) Detect total (prefer bottom-up with keywords)
     for line in reversed(lines):
         l = line.upper()
-        # detect total keywords
-        if any(k in l for k in ("TOTAL", "VALOR", "MONTANTE", "TOTAL A PAGAR", "SUM")):
-            amt = parse_amount(l)
+        if any(k in l for k in ("TOTAL", "VALOR", "MONTANTE", "TOTAL A PAGAR", "LIQUIDO A PAGAR", "TOTAL COM IVA")):
+            amt = parse_amount(line)
             if amt is not None:
                 total = amt
                 break
-    # if not found, try any number in full text (last one)
     if total is None:
         total = parse_amount(text)
 
-    # detect date by scanning lines
+    # 3) Detect VAT lines: look for IVA/VAT and percentage or amounts
+    vat_patterns = []
+    for line in lines:
+        u = line.upper()
+        if 'IVA' in u or 'VAT' in u or '%' in u:
+            vat_patterns.append(line)
+    # examine VAT candidate lines for percent and amount
+    def parse_vat_line(s):
+        p_pct = None
+        p_amt = None
+        # percent like 23% or 23,00 %
+        m_pct = re.search(r"(\d{1,2}(?:[.,]\d)?)\s*%", s)
+        if m_pct:
+            p_pct = float(m_pct.group(1).replace(',', '.'))
+        # amount using parse_amount
+        p_amt = parse_amount(s)
+        return p_pct, p_amt
+
+    for vline in vat_patterns:
+        pp, pa = parse_vat_line(vline)
+        if pp is not None or pa is not None:
+            # prefer percent if present
+            if pp is not None:
+                vat_percent = pp
+            if pa is not None:
+                vat_amount = pa
+
+    # 4) Try detect subtotal/base amount (lines with 'BASE', 'SUBTOTAL')
+    base = None
+    for line in reversed(lines):
+        u = line.upper()
+        if any(k in u for k in ("BASE", "SUBTOTAL", "SUB-TOTAL", "BASE IMPON")):
+            b = parse_amount(line)
+            if b is not None:
+                base = b
+                break
+
+    # 5) Compute missing values if possible
+    # If we have total and vat_amount we can compute base
+    if total is not None and vat_amount is not None and base is None:
+        total_ex_vat = round(max(0.0, total - vat_amount), 2)
+    # If we have base and vat_percent, compute vat_amount
+    if base is not None and vat_percent is not None and vat_amount is None:
+        vat_amount = round(base * (vat_percent / 100.0), 2)
+        total = round(base + vat_amount, 2)
+        total_ex_vat = base
+    # If we have total and vat_percent but not vat_amount nor base
+    if total is not None and vat_percent is not None and vat_amount is None and total_ex_vat is None:
+        # assume total includes VAT -> compute base = total / (1 + p/100)
+        try:
+            denom = 1.0 + (vat_percent / 100.0)
+            base_est = total / denom
+            vat_amount = round(total - base_est, 2)
+            total_ex_vat = round(base_est, 2)
+        except Exception:
+            pass
+
+    # If still missing total_ex_vat but have base or can infer
+    if total_ex_vat is None and base is not None:
+        total_ex_vat = base
+    if total_ex_vat is None and total is not None and vat_amount is not None:
+        total_ex_vat = round(total - vat_amount, 2)
+
+    # 6) Detect date by scanning lines
     for line in lines:
         if any(k in line.upper() for k in ("DATA", "DATE", "DT")):
             d = parse_date(line)
@@ -309,7 +459,15 @@ def extract_fields_from_lines(lines):
         # fallback: search whole text
         date = parse_date(text)
 
-    return {'total': total, 'date': date}
+    return {
+        'supplier': supplier,
+        'supplier_nif': supplier_nif,
+        'total': total,
+        'total_ex_vat': total_ex_vat,
+        'vat_amount': vat_amount,
+        'vat_percent': vat_percent,
+        'date': date
+    }
 
 
 @app.route('/ocr', methods=['POST'])
@@ -387,14 +545,16 @@ def run_ocr():
             except Exception as exc:
                 return jsonify({'ok': False, 'error': 'Azure OCR error', 'detail': str(exc)}), 500
 
-        lines = extract_lines_from_tesseract(preproc)
-        text = '\n'.join(lines)
-        # extract structured fields (total, date)
-        try:
-            fields = extract_fields_from_lines(lines)
-        except Exception:
-            fields = {'total': None, 'date': None}
-        return jsonify({'ok': True, 'text': text, 'lines': lines, 'fields': fields})
+            res = extract_lines_from_tesseract(preproc)
+            lines = res.get('lines') if isinstance(res, dict) else res
+            psm_used = res.get('psm') if isinstance(res, dict) else None
+            text = '\n'.join(lines)
+            # extract structured fields (total, date)
+            try:
+                fields = extract_fields_from_lines(lines)
+            except Exception:
+                fields = {'total': None, 'date': None}
+            return jsonify({'ok': True, 'text': text, 'lines': lines, 'ocr_raw_lines': lines, 'tesseract_psm': psm_used, 'fields': fields})
     except Exception as exc:
         return jsonify({'ok': False, 'error': str(exc)}), 500
     finally:
