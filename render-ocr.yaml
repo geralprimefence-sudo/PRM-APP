@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: faturas-ocr
+    env: docker
+    dockerfilePath: paddleocr-service/Dockerfile
+    plan: starter
+    autoDeploy: true
+    envVars:
+      - key: API_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: '*'
