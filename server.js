@@ -240,6 +240,8 @@ return score
 
 }
 
+
+
 function textoOCRSuficientementeBom(texto,score){
 	const t = String(texto || "").toLowerCase()
 	if(!t.trim()) return false
@@ -2039,71 +2041,88 @@ return res.status(500).json({ok:false,erro:"Falha a extrair dados",pending:req.s
 })
 
 app.post("/api/confirmar-upload",auth,async(req,res)=>{
+try{
 
-if(!req.session.pendingUpload){
-return res.status(400).json({ok:false,erro:"Sem upload pendente"})
+	if(!req.session.pendingUpload){
+		return res.status(400).json({ok:false,erro:"Sem upload pendente"})
+	}
+
+	const pendente = req.session.pendingUpload
+
+	const fornecedor = (req.body.fornecedor || pendente.fornecedor || "desconhecido").trim()
+	const tipo = (req.body.tipo || pendente.tipo || "despesa").trim().toLowerCase()==="receita" ? "receita" : "despesa"
+	const valorTotal = normalizarValor(req.body.valor ?? pendente.valorTotal ?? pendente.valor)
+	const valorIva = normalizarValor(req.body.valorIva ?? pendente.valorIva ?? 0)
+	let valorSemIva = normalizarValor(req.body.valorSemIva ?? pendente.valorSemIva)
+	const dataFinal = dataParaInput(req.body.data || pendente.data)
+
+	if(Number.isNaN(valorTotal) || valorTotal<=0){
+		return res.status(400).json({ok:false,erro:"Valor invalido"})
+	}
+
+	const ivaSeguro = Number.isNaN(valorIva) ? 0 : Math.max(0,valorIva)
+	if(Number.isNaN(valorSemIva)){
+		valorSemIva = Math.max(0,valorTotal - ivaSeguro)
+	}
+
+	const totalSeguro = Math.round(Number(valorTotal) * 100) / 100
+	const semIvaSeguro = Math.round(Number(valorSemIva) * 100) / 100
+	const ivaFinal = Math.round(Number(ivaSeguro) * 100) / 100
+
+	if(!dataFinal){
+		return res.status(400).json({ok:false,erro:"Data invalida"})
+	}
+
+	const fullConfirmado = resolverCaminhoUploadSeguro(pendente.ficheiro)
+	if(!fullConfirmado){
+		return res.status(400).json({ok:false,erro:"Documento original nao encontrado. Faz novo upload."})
+	}
+
+	const ficheiroConfirmado = path.relative(UPLOADS_DIR,fullConfirmado).replace(/\\/g,"/") || path.basename(fullConfirmado)
+
+	// Verificar duplicados antes de inserir
+	const duplicado = await encontrarRegistoDuplicado(req.session.userId, fornecedor, dataFinal, totalSeguro)
+	if(duplicado){
+		return res.status(409).json({ok:false,erro:"Duplicado detectado",duplicate:duplicado})
+	}
+
+	await pool.query(
+		`INSERT INTO registos
+		(user_id,tipo,fornecedor,valor,valor_sem_iva,valor_iva,valor_total,data,ficheiro)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+		[
+			req.session.userId,
+			tipo,
+			fornecedor,
+			totalSeguro,
+			semIvaSeguro,
+			ivaFinal,
+			totalSeguro,
+			dataFinal,
+			ficheiroConfirmado
+		]
+	)
+
+	req.session.pendingUpload = null
+
+	return res.json({ok:true,redirect:"/dashboard"})
+
+}catch(err){
+	// Log detailed context and stack for debugging in Render logs
+	try{
+		console.error("Erro em /api/confirmar-upload",{
+			message: err?.message || String(err),
+			stack: err?.stack || null,
+			body: typeof req.body === 'object' ? JSON.stringify(req.body) : String(req.body || ''),
+			pending: req.session && req.session.pendingUpload ? JSON.stringify(req.session.pendingUpload) : null
+		})
+	}catch(_){
+		console.error("Erro ao registar erro em /api/confirmar-upload", err)
+	}
+
+	return res.status(500).json({ok:false,erro:"Erro interno"})
+
 }
-
-const pendente = req.session.pendingUpload
-
-const fornecedor = (req.body.fornecedor || pendente.fornecedor || "desconhecido").trim()
-const tipo = (req.body.tipo || pendente.tipo || "despesa").trim().toLowerCase()==="receita" ? "receita" : "despesa"
-const valorTotal = normalizarValor(req.body.valor ?? pendente.valorTotal ?? pendente.valor)
-const valorIva = normalizarValor(req.body.valorIva ?? pendente.valorIva ?? 0)
-let valorSemIva = normalizarValor(req.body.valorSemIva ?? pendente.valorSemIva)
-const dataFinal = dataParaInput(req.body.data || pendente.data)
-
-if(Number.isNaN(valorTotal) || valorTotal<=0){
-return res.status(400).json({ok:false,erro:"Valor invalido"})
-}
-
-const ivaSeguro = Number.isNaN(valorIva) ? 0 : Math.max(0,valorIva)
-if(Number.isNaN(valorSemIva)){
-valorSemIva = Math.max(0,valorTotal - ivaSeguro)
-}
-
-const totalSeguro = Math.round(Number(valorTotal) * 100) / 100
-const semIvaSeguro = Math.round(Number(valorSemIva) * 100) / 100
-const ivaFinal = Math.round(Number(ivaSeguro) * 100) / 100
-
-if(!dataFinal){
-return res.status(400).json({ok:false,erro:"Data invalida"})
-}
-
-const fullConfirmado = resolverCaminhoUploadSeguro(pendente.ficheiro)
-if(!fullConfirmado){
-	return res.status(400).json({ok:false,erro:"Documento original nao encontrado. Faz novo upload."})
-}
-
-const ficheiroConfirmado = path.relative(UPLOADS_DIR,fullConfirmado).replace(/\\/g,"/") || path.basename(fullConfirmado)
-
-// Verificar duplicados antes de inserir
-const duplicado = await encontrarRegistoDuplicado(req.session.userId, fornecedor, dataFinal, totalSeguro)
-if(duplicado){
-	return res.status(409).json({ok:false,erro:"Duplicado detectado",duplicate:duplicado})
-}
-
-await pool.query(
-	`INSERT INTO registos
-	(user_id,tipo,fornecedor,valor,valor_sem_iva,valor_iva,valor_total,data,ficheiro)
-	VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-	[
-		req.session.userId,
-		tipo,
-		fornecedor,
-		totalSeguro,
-		semIvaSeguro,
-		ivaFinal,
-		totalSeguro,
-		dataFinal,
-		ficheiroConfirmado
-	]
-)
-
-req.session.pendingUpload = null
-
-res.json({ok:true,redirect:"/dashboard"})
-
 })
 
 app.post("/api/cancelar-upload",auth,(req,res)=>{
