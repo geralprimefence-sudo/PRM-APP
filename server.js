@@ -1199,6 +1199,50 @@ return /[a-zA-Z\u00C0-\u017F]/.test(l)
 
 }
 
+function similarFornecedor(a,b){
+	if(!a || !b) return false
+	const norm = (s)=> String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim()
+	const A = norm(a)
+	const B = norm(b)
+	if(!A || !B) return false
+	if(A === B) return true
+	if(A.includes(B) || B.includes(A)) return true
+	const tokensA = new Set(A.split(/\s+/).filter(Boolean))
+	const tokensB = new Set(B.split(/\s+/).filter(Boolean))
+	let common = 0
+	for(const t of tokensA) if(tokensB.has(t)) common++
+	const minTokens = Math.min(Math.max(1,tokensA.size), Math.max(1,tokensB.size))
+	if(common >= 2) return true
+	if(common / minTokens >= 0.6) return true
+	return false
+}
+
+async function encontrarRegistoDuplicado(userId,fornecedor,dataStr,valorTotal){
+	const valor = Number(valorTotal || 0)
+	if(!Number.isFinite(valor) || valor <= 0) return null
+	const lim = 0.02
+	try{
+		const res = await pool.query(
+			`SELECT * FROM registos WHERE user_id=$1 AND ABS(COALESCE(valor_total,valor,0) - $2) <= $3 ORDER BY created_at DESC LIMIT 50`,
+			[userId,valor,lim]
+		)
+		const inputDate = dataParaInput(dataStr) ? new Date(dataParaInput(dataStr)) : null
+		for(const row of res.rows){
+			let dateOk = false
+			if(row.data && inputDate){
+				const dRow = new Date(row.data)
+				const diff = Math.abs(dRow.getTime() - inputDate.getTime())
+				if(diff <= (3 * 24 * 60 * 60 * 1000)) dateOk = true
+			}
+			const nomeOk = similarFornecedor(fornecedor, row.fornecedor)
+			if(dateOk || nomeOk) return row
+		}
+	}catch(err){
+		console.error("Erro a procurar duplicados",err?.message || err)
+	}
+	return null
+}
+
 function limparLinhaEmpresa(linha){
 
 if(!linha) return ""
@@ -1966,6 +2010,20 @@ ocrStatus:"done",
 ocrFonte:"async"
 }
 
+// Verificar duplicados e anexar informação ao pending para que a UI mostre aviso
+try{
+	const possible = await encontrarRegistoDuplicado(req.session.userId, (fornecedorFinal||""), dataFinal, totalFinal)
+	if(possible){
+		req.session.pendingUpload.duplicate = {
+			id: possible.id,
+			fornecedor: possible.fornecedor,
+			data: dataParaInput(possible.data),
+			valor: Number(possible.valor_total ?? possible.valor ?? 0)
+		}
+		req.session.pendingUpload.duplicateDetected = true
+	}
+}catch(_){ }
+
 return res.json({ok:true,processing:false,pending:req.session.pendingUpload})
 
 }catch(err){
@@ -2014,26 +2072,32 @@ return res.status(400).json({ok:false,erro:"Data invalida"})
 
 const fullConfirmado = resolverCaminhoUploadSeguro(pendente.ficheiro)
 if(!fullConfirmado){
-return res.status(400).json({ok:false,erro:"Documento original nao encontrado. Faz novo upload."})
+	return res.status(400).json({ok:false,erro:"Documento original nao encontrado. Faz novo upload."})
 }
 
 const ficheiroConfirmado = path.relative(UPLOADS_DIR,fullConfirmado).replace(/\\/g,"/") || path.basename(fullConfirmado)
 
+// Verificar duplicados antes de inserir
+const duplicado = await encontrarRegistoDuplicado(req.session.userId, fornecedor, dataFinal, totalSeguro)
+if(duplicado){
+	return res.status(409).json({ok:false,erro:"Duplicado detectado",duplicate:duplicado})
+}
+
 await pool.query(
-`INSERT INTO registos
-(user_id,tipo,fornecedor,valor,valor_sem_iva,valor_iva,valor_total,data,ficheiro)
-VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-[
-req.session.userId,
-tipo,
-fornecedor,
-totalSeguro,
-semIvaSeguro,
-ivaFinal,
-totalSeguro,
-dataFinal,
-ficheiroConfirmado
-]
+	`INSERT INTO registos
+	(user_id,tipo,fornecedor,valor,valor_sem_iva,valor_iva,valor_total,data,ficheiro)
+	VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+	[
+		req.session.userId,
+		tipo,
+		fornecedor,
+		totalSeguro,
+		semIvaSeguro,
+		ivaFinal,
+		totalSeguro,
+		dataFinal,
+		ficheiroConfirmado
+	]
 )
 
 req.session.pendingUpload = null
@@ -2284,5 +2348,49 @@ return res.status(500).send("Erro interno")
 app.listen(PORT,()=>{
 
 console.log("Servidor ativo na porta",PORT)
+
+})
+
+// Endpoint para upload OCR rápido a partir do telemóvel (sem autenticação) - apenas para testes
+app.options("/api/mobile/ocr-upload",(req,res)=>{
+	res.setHeader("Access-Control-Allow-Origin","*")
+	res.setHeader("Access-Control-Allow-Methods","POST,OPTIONS")
+	res.setHeader("Access-Control-Allow-Headers","Content-Type")
+	return res.sendStatus(200)
+})
+
+app.post("/api/mobile/ocr-upload", upload.single("file"), async (req,res)=>{
+	res.setHeader("Access-Control-Allow-Origin","*")
+
+	try{
+		if(!req.file || !req.file.path){
+			return res.status(400).json({ok:false,erro:"Ficheiro em falta"})
+		}
+
+		const full = req.file.path
+
+		// Extrai texto e dados (usa o pipeline existente)
+		const texto = await extrairTexto(full,{fast:false,allowExternal:true})
+		let dados = extrairDadosFatura(String(texto || ""))
+		const dadosQr = await extrairDadosQrDaImagem(full)
+		dados = combinarDadosComQr(dados,dadosQr)
+
+		const resultado = {
+			fornecedor: dados.empresa || dados.cliente || "",
+			nif: dados.nif || "",
+			valor: Number(dados.valorTotal ?? dados.valor ?? 0),
+			valorIva: Number(dados.valorIva ?? 0),
+			valorSemIva: Number(dados.valorSemIva ?? 0),
+			data: dataParaInput(dados.data) || "",
+			ficheiro: path.relative(UPLOADS_DIR, full).replace(/\\/g, "/"),
+			ocr_text: String(texto || "")
+		}
+
+		return res.json({ok:true,resultado})
+
+	}catch(err){
+		console.error("Erro em /api/mobile/ocr-upload",err?.message || err)
+		return res.status(500).json({ok:false,erro:"Falha ao processar documento"})
+	}
 
 })

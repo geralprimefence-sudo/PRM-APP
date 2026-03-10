@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  ocr:
+    build: ./paddleocr-service
+    image: faturas-app-ocr:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./paddleocr-service:/app
+    restart: unless-stopped
+version: '3.8'
+services:
+  ocr-service:
+    build: .
+    container_name: faturas_ocr
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1

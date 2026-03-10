@@ -237,6 +237,8 @@ async function carregarPendente(){
 
   const p = data.pending
   aplicarPendingNosCampos(p,false)
+  // Mostrar aviso de possível duplicado
+  mostrarDuplicado(p)
 
   if(precisaOCRAssincrono(p)){
     executarOCRAssincrono()
@@ -275,6 +277,14 @@ function aplicarPendingNosCampos(p,sobreporCampos = true){
   if(!camposEditados.tipo && p.tipo){
     inputTipo.value = p.tipo === "receita" ? "receita" : "despesa"
   }
+}
+
+function mostrarDuplicado(p){
+  if(!p || !p.duplicateDetected || !p.duplicate) return
+  const d = p.duplicate
+  const valorTxt = (typeof d.valor === 'number') ? d.valor.toFixed(2) : d.valor
+  const texto = `Possível duplicado detectado: ${d.fornecedor || '—'} — ${d.data || '—'} — ${valorTxt} €`
+  showMsg(texto, "error")
 }
 
 function precisaOCRAssincrono(p){
@@ -329,6 +339,9 @@ async function executarOCRAssincrono(){
 
   aplicarPendingNosCampos(p,true)
 
+  // Mostrar aviso de possível duplicado
+  mostrarDuplicado(p)
+
   showMsg("Dados lidos automaticamente. Confirma antes de guardar.", "success")
   hideMsg(1800)
   ocrEmCurso = false
@@ -349,6 +362,7 @@ async function acompanharOCRPendente(){
 
     if(estado === "done"){
       aplicarPendingNosCampos(p,true)
+      mostrarDuplicado(p)
       showMsg("Dados lidos automaticamente. Confirma antes de guardar.", "success")
       hideMsg(1800)
       ocrEmCurso = false
