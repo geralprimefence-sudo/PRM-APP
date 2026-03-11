@@ -102,7 +102,8 @@ canvas{display:none;}
 </div>
 
 <form id="fallbackForm" style="display:none;margin-top:10px;">
-  <input id="fallbackInput" type="file" name="file" accept="image/*" capture="environment" style="width:100%;">
+  <button id="fallbackBtn" type="button" style="display:none;padding:10px 14px;border-radius:8px;background:#334155;color:#e6eef8;border:none;cursor:pointer">Escolher ficheiro</button>
+  <input id="fallbackInput" type="file" name="file" accept="image/*" capture="environment" style="display:none;">
 </form>
 <p class="msg" id="msg">Alinha o recibo na vertical e evita sombras.</p>
 </div>
@@ -173,7 +174,12 @@ async function iniciarCamera(){
   }catch(err){
     msg.textContent = "Nao foi possivel abrir a camara de scan neste browser/rede. Usa a camera normal abaixo."
     captureBtn.disabled = true
+    // Show an explicit fallback button (not the raw file input) so random taps
+    // on the page don't trigger the device file-picker.
     fallbackForm.style.display = "block"
+    const fallbackBtn = document.getElementById('fallbackBtn')
+    if(fallbackBtn){ fallbackBtn.style.display = 'inline-block' }
+    if(fallbackInput){ fallbackInput.style.display = 'none' }
   }
 }
 
@@ -297,6 +303,8 @@ retryBtn.addEventListener("click", ()=>{
   definirEstadoProcessamento(false)
 })
 
+// When user selects a file from the explicit button, the input change handler
+// processes the file as before.
 fallbackInput.addEventListener("change", async (e)=>{
   if(e.target.files && e.target.files.length){
     const file = e.target.files[0]
@@ -320,6 +328,12 @@ fallbackInput.addEventListener("change", async (e)=>{
     }
   }
 })
+
+// Wire the explicit fallback button to open the hidden file input.
+const _fallbackBtn = document.getElementById('fallbackBtn')
+if(_fallbackBtn){
+  _fallbackBtn.addEventListener('click', ()=> { fallbackInput.click() })
+}
 
 cancelBtn.addEventListener("click", ()=>{
   pararCamera()
