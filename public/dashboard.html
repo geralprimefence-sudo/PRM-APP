@@ -992,7 +992,17 @@ const valorIva = Number(registo.valor_iva ?? 0).toLocaleString("pt-PT",{minimumF
 const valorSemIva = Number(registo.valor_sem_iva ?? 0).toLocaleString("pt-PT",{minimumFractionDigits:2}).toLowerCase()
 const data = formatarData(registo.data).toLowerCase()
 
-return fornecedor.includes(termo) || valorTotal.includes(termo) || valorIva.includes(termo) || valorSemIva.includes(termo) || data.includes(termo)
+// Support month names in Portuguese (mes por extenso)
+const monthNames = [
+	'janeiro','fevereiro','março','abril','maio','junho',
+	'julho','agosto','setembro','outubro','novembro','dezembro'
+]
+let monthName = ''
+const parsed = parseDataRegisto(registo.data)
+if(parsed){ monthName = monthNames[parsed.getMonth()] }
+
+const haystack = `${fornecedor} ${valorTotal} ${valorIva} ${valorSemIva} ${data} ${monthName}`
+return haystack.includes(termo)
 
 }
 
