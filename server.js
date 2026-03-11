@@ -47,9 +47,30 @@ fs.mkdirSync(UPLOADS_DIR,{recursive:true})
 fs.mkdirSync(TEMP_DIR,{recursive:true})
 
 
+// Capture raw body for debug when JSON parsing fails
 app.use(express.urlencoded({ extended: true }))
-app.use(express.json())
+app.use(express.json({
+	verify: function (req, res, buf, encoding) {
+		try { req.rawBody = buf.toString(encoding || 'utf8') } catch (e) { req.rawBody = '' }
+	}
+}))
 app.use(express.static("public"))
+
+// Body parse error handler (logs raw body when JSON is invalid)
+app.use((err, req, res, next) => {
+	if (!err) return next()
+	try{
+		if (err.type === 'entity.parse.failed' || err instanceof SyntaxError) {
+			console.error('Body parse error', {
+				message: err.message,
+				stack: err.stack,
+				rawBody: req && req.rawBody ? req.rawBody : null
+			})
+			return res.status(400).json({ ok: false, erro: 'JSON mal formado' })
+		}
+	}catch(_){ }
+	return next(err)
+})
 app.use("/uploads",express.static(UPLOADS_DIR))
 
 
@@ -239,6 +260,8 @@ if(fornecedor && fornecedor.length > 50) score -= 6
 return score
 
 }
+
+
 
 function textoOCRSuficientementeBom(texto,score){
 	const t = String(texto || "").toLowerCase()
@@ -1538,32 +1561,6 @@ return candidatos[0].data
 
 
 
-function extrairDadosFatura(texto){
-
-let valor = 0
-let valorSemIva = 0
-let valorIva = 0
-let valorTotal = 0
-let data = null
-let empresa = "desconhecido"
-let cliente = ""
-let nif = ""
-let tipo = "despesa"
-
-const textoTratado = normalizarTextoOCR(texto)
-const textoLower = textoTratado.toLowerCase()
-
-
-
-const totais = extrairTotaisDoTexto(textoTratado)
-valorTotal = totais.total
-valorIva = totais.iva
-valorSemIva = totais.semIva
-valor = valorTotal
-
-if(Number.isNaN(valor)){
-valor = 0
-}
 
 function qualidadeDadosExtraidos(dados){
 	const total = Number(dados?.valorTotal ?? dados?.valor ?? 0)
@@ -1595,8 +1592,34 @@ function dadosCriticosOk(dados){
 	return total > 0 && dataValida && fornecedorValido
 }
 
-data = extrairDataDoTexto(textoTratado)
+function extrairDadosFatura(texto){
 
+let valor = 0
+let valorSemIva = 0
+let valorIva = 0
+let valorTotal = 0
+let data = null
+let empresa = "desconhecido"
+let cliente = ""
+let nif = ""
+let tipo = "despesa"
+
+const textoTratado = normalizarTextoOCR(texto)
+const textoLower = textoTratado.toLowerCase()
+
+
+
+const totais = extrairTotaisDoTexto(textoTratado)
+valorTotal = totais.total
+valorIva = totais.iva
+valorSemIva = totais.semIva
+valor = valorTotal
+
+if(Number.isNaN(valor)){
+	valor = 0
+}
+
+data = extrairDataDoTexto(textoTratado)
 
 nif = extrairNifDoTexto(textoTratado)
 
@@ -2039,71 +2062,88 @@ return res.status(500).json({ok:false,erro:"Falha a extrair dados",pending:req.s
 })
 
 app.post("/api/confirmar-upload",auth,async(req,res)=>{
+try{
 
-if(!req.session.pendingUpload){
-return res.status(400).json({ok:false,erro:"Sem upload pendente"})
+	if(!req.session.pendingUpload){
+		return res.status(400).json({ok:false,erro:"Sem upload pendente"})
+	}
+
+	const pendente = req.session.pendingUpload
+
+	const fornecedor = (req.body.fornecedor || pendente.fornecedor || "desconhecido").trim()
+	const tipo = (req.body.tipo || pendente.tipo || "despesa").trim().toLowerCase()==="receita" ? "receita" : "despesa"
+	const valorTotal = normalizarValor(req.body.valor ?? pendente.valorTotal ?? pendente.valor)
+	const valorIva = normalizarValor(req.body.valorIva ?? pendente.valorIva ?? 0)
+	let valorSemIva = normalizarValor(req.body.valorSemIva ?? pendente.valorSemIva)
+	const dataFinal = dataParaInput(req.body.data || pendente.data)
+
+	if(Number.isNaN(valorTotal) || valorTotal<=0){
+		return res.status(400).json({ok:false,erro:"Valor invalido"})
+	}
+
+	const ivaSeguro = Number.isNaN(valorIva) ? 0 : Math.max(0,valorIva)
+	if(Number.isNaN(valorSemIva)){
+		valorSemIva = Math.max(0,valorTotal - ivaSeguro)
+	}
+
+	const totalSeguro = Math.round(Number(valorTotal) * 100) / 100
+	const semIvaSeguro = Math.round(Number(valorSemIva) * 100) / 100
+	const ivaFinal = Math.round(Number(ivaSeguro) * 100) / 100
+
+	if(!dataFinal){
+		return res.status(400).json({ok:false,erro:"Data invalida"})
+	}
+
+	const fullConfirmado = resolverCaminhoUploadSeguro(pendente.ficheiro)
+	if(!fullConfirmado){
+		return res.status(400).json({ok:false,erro:"Documento original nao encontrado. Faz novo upload."})
+	}
+
+	const ficheiroConfirmado = path.relative(UPLOADS_DIR,fullConfirmado).replace(/\\/g,"/") || path.basename(fullConfirmado)
+
+	// Verificar duplicados antes de inserir
+	const duplicado = await encontrarRegistoDuplicado(req.session.userId, fornecedor, dataFinal, totalSeguro)
+	if(duplicado){
+		return res.status(409).json({ok:false,erro:"Duplicado detectado",duplicate:duplicado})
+	}
+
+	await pool.query(
+		`INSERT INTO registos
+		(user_id,tipo,fornecedor,valor,valor_sem_iva,valor_iva,valor_total,data,ficheiro)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+		[
+			req.session.userId,
+			tipo,
+			fornecedor,
+			totalSeguro,
+			semIvaSeguro,
+			ivaFinal,
+			totalSeguro,
+			dataFinal,
+			ficheiroConfirmado
+		]
+	)
+
+	req.session.pendingUpload = null
+
+	return res.json({ok:true,redirect:"/dashboard"})
+
+}catch(err){
+	// Log detailed context and stack for debugging in Render logs
+	try{
+		console.error("Erro em /api/confirmar-upload",{
+			message: err?.message || String(err),
+			stack: err?.stack || null,
+			body: typeof req.body === 'object' ? JSON.stringify(req.body) : String(req.body || ''),
+			pending: req.session && req.session.pendingUpload ? JSON.stringify(req.session.pendingUpload) : null
+		})
+	}catch(_){
+		console.error("Erro ao registar erro em /api/confirmar-upload", err)
+	}
+
+	return res.status(500).json({ok:false,erro:"Erro interno"})
+
 }
-
-const pendente = req.session.pendingUpload
-
-const fornecedor = (req.body.fornecedor || pendente.fornecedor || "desconhecido").trim()
-const tipo = (req.body.tipo || pendente.tipo || "despesa").trim().toLowerCase()==="receita" ? "receita" : "despesa"
-const valorTotal = normalizarValor(req.body.valor ?? pendente.valorTotal ?? pendente.valor)
-const valorIva = normalizarValor(req.body.valorIva ?? pendente.valorIva ?? 0)
-let valorSemIva = normalizarValor(req.body.valorSemIva ?? pendente.valorSemIva)
-const dataFinal = dataParaInput(req.body.data || pendente.data)
-
-if(Number.isNaN(valorTotal) || valorTotal<=0){
-return res.status(400).json({ok:false,erro:"Valor invalido"})
-}
-
-const ivaSeguro = Number.isNaN(valorIva) ? 0 : Math.max(0,valorIva)
-if(Number.isNaN(valorSemIva)){
-valorSemIva = Math.max(0,valorTotal - ivaSeguro)
-}
-
-const totalSeguro = Math.round(Number(valorTotal) * 100) / 100
-const semIvaSeguro = Math.round(Number(valorSemIva) * 100) / 100
-const ivaFinal = Math.round(Number(ivaSeguro) * 100) / 100
-
-if(!dataFinal){
-return res.status(400).json({ok:false,erro:"Data invalida"})
-}
-
-const fullConfirmado = resolverCaminhoUploadSeguro(pendente.ficheiro)
-if(!fullConfirmado){
-	return res.status(400).json({ok:false,erro:"Documento original nao encontrado. Faz novo upload."})
-}
-
-const ficheiroConfirmado = path.relative(UPLOADS_DIR,fullConfirmado).replace(/\\/g,"/") || path.basename(fullConfirmado)
-
-// Verificar duplicados antes de inserir
-const duplicado = await encontrarRegistoDuplicado(req.session.userId, fornecedor, dataFinal, totalSeguro)
-if(duplicado){
-	return res.status(409).json({ok:false,erro:"Duplicado detectado",duplicate:duplicado})
-}
-
-await pool.query(
-	`INSERT INTO registos
-	(user_id,tipo,fornecedor,valor,valor_sem_iva,valor_iva,valor_total,data,ficheiro)
-	VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-	[
-		req.session.userId,
-		tipo,
-		fornecedor,
-		totalSeguro,
-		semIvaSeguro,
-		ivaFinal,
-		totalSeguro,
-		dataFinal,
-		ficheiroConfirmado
-	]
-)
-
-req.session.pendingUpload = null
-
-res.json({ok:true,redirect:"/dashboard"})
-
 })
 
 app.post("/api/cancelar-upload",auth,(req,res)=>{
