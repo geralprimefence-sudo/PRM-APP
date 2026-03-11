@@ -2434,3 +2434,31 @@ app.post("/api/mobile/ocr-upload", upload.single("file"), async (req,res)=>{
 	}
 
 })
+
+// Visualizador simples que embebe o documento servido por /api/documento
+app.get("/visualizador",auth,(req,res)=>{
+	try{
+		const ref = String(req.query.ficheiro || "").trim()
+		if(!ref) return res.status(400).send("Ficheiro nao indicado")
+
+		const ficheiro = encodeURIComponent(ref)
+		const url = `/api/documento?ficheiro=${ficheiro}`
+
+		return res.send(`<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Visualizador</title>
+<style>html,body{height:100%;margin:0;background:#111;color:#fff} .top{padding:10px;background:#0b1220;display:flex;gap:8px;align-items:center} .btn{background:#1f2937;color:#fff;padding:8px 12px;border-radius:6px;text-decoration:none}</style>
+</head>
+<body>
+<div class="top"><a class="btn" href="/confirmar-upload">Voltar</a><div style="flex:1"></div></div>
+<iframe src="${url}" style="width:100%;height:calc(100% - 48px);border:0;" allowfullscreen></iframe>
+</body>
+</html>`)
+	}catch(err){
+		console.error("Erro em /visualizador",err)
+		return res.status(500).send("Erro interno")
+	}
+})

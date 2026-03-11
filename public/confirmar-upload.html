@@ -290,10 +290,8 @@ function aplicarPendingNosCampos(p,sobreporCampos = true){
         try{
           const raw = String(p.ficheiro || "")
           const base = raw.replace(/\\\\/g,'/').replace(/^.*\//,'')
-          // Usar o endpoint /api/documento com URL absoluta para garantir que
-          // o pedido é feito pelo browser com cookies de sessão e o servidor
-          // responde com Content-Disposition inline quando possível.
-          const safePath = window.location.origin + '/api/documento?ficheiro=' + encodeURIComponent(base)
+          // Abrir o visualizador do servidor (embebe o documento via /api/documento)
+          const safePath = window.location.origin + '/visualizador?ficheiro=' + encodeURIComponent(base)
           abrirBtn.style.display = 'inline-block'
           // Navegar na mesma aba evita trigger de apps externas no Android
           abrirBtn.onclick = ()=> { window.location.href = safePath }
