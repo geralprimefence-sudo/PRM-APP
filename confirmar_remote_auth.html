@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8">
+<title>Confirmar Registo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+<style>
+.page{
+width:95%;
+max-width:680px;
+margin:24px auto;
+}
+.panel{
+background:#1e293b;
+padding:20px;
+border-radius:12px;
+}
+.row{
+display:grid;
+grid-template-columns:1fr;
+gap:8px;
+margin-bottom:12px;
+}
+.row-valores{
+display:grid;
+grid-template-columns:repeat(3,minmax(0,1fr));
+gap:10px;
+margin-bottom:12px;
+}
+.row label{
+font-size:14px;
+font-weight:600;
+}
+.valor-box{
+display:grid;
+gap:8px;
+}
+.actions{
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+margin-top:12px;
+}
+.actions button{
+flex:1;
+min-height:42px;
+}
+.btn-cancelar{
+background:#ef4444;
+}
+.btn-sec{
+background:#334155;
+}
+.hint{
+font-size:13px;
+color:#cbd5e1;
+margin-bottom:10px;
+}
+
+@media(max-width:760px){
+.page{
+width:96%;
+margin:12px auto;
+}
+.panel{
+padding:14px;
+}
+.row-valores{
+grid-template-columns:1fr;
+}
+.actions{
+flex-direction:column;
+}
+}
+</style>
+</head>
+
+<body>
+<div class="page">
+<div class="panel">
+<h2>Confirmar Registo</h2>
+<p class="hint">Confirma ou corrige os dados extraidos antes de guardar.</p>
+<div id="mensagem" class="form-message hidden"></div>
+
+<form id="confirmForm">
+<div class="row">
+<label for="fornecedor">Fornecedor</label>
+<input id="fornecedor" name="fornecedor" type="text" required>
+</div>
+
+<input id="valor" name="valor" type="hidden">
+
+<div class="row-valores">
+<div class="valor-box">
+<label for="valorTotal">Total</label>
+<input id="valorTotal" name="valorTotal" type="text" inputmode="decimal" required>
+</div>
+<div class="valor-box">
+<label for="valorIva">IVA</label>
+<input id="valorIva" name="valorIva" type="text" inputmode="decimal" required>
+</div>
+<div class="valor-box">
+<label for="valorSemIva">Sem IVA</label>
+<input id="valorSemIva" name="valorSemIva" type="text" inputmode="decimal" required>
+</div>
+</div>
+
+<div class="row">
+<label for="data">Data</label>
+<input id="data" name="data" type="date" required>
+</div>
+
+<div class="row">
+<label for="tipo">Tipo</label>
+<select id="tipo" name="tipo" required>
+<option value="receita">Receita</option>
+<option value="despesa">Despesa</option>
+</select>
+</div>
+
+<div class="row">
+<label for="nif">NIF lido</label>
+<input id="nif" name="nif" type="text" readonly>
+</div>
+
+<div class="actions">
+<button type="submit">Guardar Registo</button>
+<button type="button" class="btn-cancelar" id="cancelarBtn">Cancelar</button>
+<button type="button" class="btn-sec" onclick="window.location.href='/dashboard'">Voltar</button>
+</div>
+</form>
+</div>
+</div>
+
+<script>
+const form = document.getElementById("confirmForm")
+const msg = document.getElementById("mensagem")
+const cancelarBtn = document.getElementById("cancelarBtn")
+const inputFornecedor = document.getElementById("fornecedor")
+const inputValor = document.getElementById("valor")
+const inputValorSemIva = document.getElementById("valorSemIva")
+const inputValorIva = document.getElementById("valorIva")
+const inputValorTotal = document.getElementById("valorTotal")
+const inputData = document.getElementById("data")
+const inputTipo = document.getElementById("tipo")
+const inputNif = document.getElementById("nif")
+let ocrEmCurso = false
+const camposEditados = {
+  fornecedor:false,
+  data:false,
+  valorTotal:false,
+  valorIva:false,
+  valorSemIva:false,
+  nif:false,
+  tipo:false
+}
+
+function parseNumeroPt(raw){
+  if(raw===null || raw===undefined) return NaN
+  let s = String(raw).trim().replace(/\s+/g,"")
+  s = s.replace(/[^\d,.-]/g,"")
+  if(s.includes(",") && s.includes(".")){
+    s = s.replace(/\./g,"").replace(",",".")
+  }else if(s.includes(",")){
+    s = s.replace(",",".")
+  }
+  return Number(s)
+}
+
+function formatNumeroPt(v){
+  const n = Number(v)
+  if(Number.isNaN(n)) return "0,00"
+  return n.toLocaleString("pt-PT",{minimumFractionDigits:2,maximumFractionDigits:2})
+}
+
+function sincronizarTotais(origem){
+  const semIva = parseNumeroPt(inputValorSemIva.value)
+  const iva = parseNumeroPt(inputValorIva.value)
+  const total = parseNumeroPt(inputValorTotal.value)
+
+  if(origem === "sem_iva" || origem === "iva"){
+    const t = (Number.isNaN(semIva)?0:semIva) + (Number.isNaN(iva)?0:iva)
+    inputValorTotal.value = formatNumeroPt(t)
+    inputValor.value = formatNumeroPt(t)
+    return
+  }
+
+  if(origem === "total"){
+    const t = Number.isNaN(total) ? 0 : total
+    const i = Number.isNaN(iva) ? 0 : iva
+    inputValorSemIva.value = formatNumeroPt(Math.max(0,t - i))
+    inputValor.value = formatNumeroPt(t)
+    return
+  }
+
+  const t = Number.isNaN(total) ? 0 : total
+  inputValor.value = formatNumeroPt(t)
+}
+
+function showMsg(text, tipo){
+  msg.textContent = text
+  msg.classList.remove("hidden", "error", "success")
+  msg.classList.add(tipo)
+}
+
+function hideMsg(delayMs = 0){
+  const fechar = ()=>{
+    msg.classList.add("hidden")
+    msg.classList.remove("error","success")
+    msg.textContent = ""
+  }
+  if(delayMs>0){
+    setTimeout(fechar,delayMs)
+    return
+  }
+  fechar()
+}
+
+function fetchComTimeout(url,options = {},timeoutMs = 20000){
+  const controller = new AbortController()
+  const timer = setTimeout(()=> controller.abort(),timeoutMs)
+  return fetch(url,{...options,signal:controller.signal})
+    .finally(()=> clearTimeout(timer))
+}
+
+async function carregarPendente(){
+  const res = await fetch("/api/pending-upload")
+  const data = await res.json().catch(() => ({ ok:false }))
+
+  if(!res.ok || !data.ok){
+    showMsg("Sem upload pendente para confirmar.", "error")
+    form.style.display = "none"
+    return
+  }
+
+  const p = data.pending
+  aplicarPendingNosCampos(p,false)
+  // Mostrar aviso de possível duplicado
+  mostrarDuplicado(p)
+
+  if(precisaOCRAssincrono(p)){
+    executarOCRAssincrono()
+  }
+}
+
+function aplicarPendingNosCampos(p,sobreporCampos = true){
+  if(!p) return
+
+  const total = Number(p.valorTotal ?? p.valor ?? 0)
+  const iva = Number(p.valorIva ?? 0)
+  const semIva = Number(p.valorSemIva ?? Math.max(0,total - iva))
+
+  if(!camposEditados.fornecedor && (sobreporCampos || !inputFornecedor.value || inputFornecedor.value.trim()==="" || inputFornecedor.value.toLowerCase()==="desconhecido")){
+    if(p.fornecedor) inputFornecedor.value = p.fornecedor
+  }
+
+  if(!camposEditados.data && (sobreporCampos || !inputData.value || inputData.value.trim()==="")){
+    if(p.data) inputData.value = p.data
+  }
+
+  const valoresBloqueados = camposEditados.valorTotal || camposEditados.valorIva || camposEditados.valorSemIva
+  if(!valoresBloqueados && (sobreporCampos || !(parseNumeroPt(inputValorTotal.value) > 0))){
+    if(total > 0){
+      inputValor.value = formatNumeroPt(total)
+      inputValorTotal.value = formatNumeroPt(total)
+      inputValorIva.value = formatNumeroPt(iva)
+      inputValorSemIva.value = formatNumeroPt(semIva)
+    }
+  }
+
+  if(!camposEditados.nif && (sobreporCampos || !inputNif.value || inputNif.value.trim()==="")){
+    if(p.nif) inputNif.value = p.nif
+  }
+
+  if(!camposEditados.tipo && p.tipo){
+    inputTipo.value = p.tipo === "receita" ? "receita" : "despesa"
+  }
+}
+
+function mostrarDuplicado(p){
+  if(!p || !p.duplicateDetected || !p.duplicate) return
+  const d = p.duplicate
+  const valorTxt = (typeof d.valor === 'number') ? d.valor.toFixed(2) : d.valor
+  const texto = `Possível duplicado detectado: ${d.fornecedor || '—'} — ${d.data || '—'} — ${valorTxt} €`
+  showMsg(texto, "error")
+}
+
+function precisaOCRAssincrono(p){
+  if(!p) return false
+
+  const total = Number(p.valorTotal ?? p.valor ?? 0)
+  const fornecedor = String(p.fornecedor || "").trim().toLowerCase()
+  const data = String(p.data || "").trim()
+  const estado = String(p.ocrStatus || "").toLowerCase()
+
+  if(estado === "done") return false
+  if(estado === "processing" || estado === "pending") return true
+
+  const fornecedorFraco = !fornecedor || fornecedor === "desconhecido"
+  const dataFraca = !data
+  const totalFraco = !(total > 0)
+
+  return fornecedorFraco || dataFraca || totalFraco
+}
+
+async function executarOCRAssincrono(){
+  if(ocrEmCurso) return
+  ocrEmCurso = true
+  showMsg("A extrair dados automaticamente (fornecedor, data e valor)...", "success")
+
+  let res
+  let data
+  try{
+    res = await fetchComTimeout("/api/pending-upload/ocr", { method: "POST" }, 9000)
+    data = await res.json().catch(() => ({ ok:false }))
+  }catch(_){
+    showMsg("A extracao esta a demorar. Vou continuar a verificar em segundo plano...", "success")
+    await acompanharOCRPendente()
+    return
+  }
+
+  if(!res.ok || !data.ok || !data.pending){
+    showMsg("Nao foi possivel preencher automaticamente. Podes corrigir manualmente.", "error")
+    hideMsg(2600)
+    ocrEmCurso = false
+    return
+  }
+
+  const p = data.pending
+  const estado = String(p.ocrStatus || "").toLowerCase()
+
+  if(data.processing || estado === "processing" || estado === "pending"){
+    showMsg("A extracao ainda esta a decorrer...", "success")
+    await acompanharOCRPendente()
+    return
+  }
+
+  aplicarPendingNosCampos(p,true)
+
+  // Mostrar aviso de possível duplicado
+  mostrarDuplicado(p)
+
+  showMsg("Dados lidos automaticamente. Confirma antes de guardar.", "success")
+  hideMsg(1800)
+  ocrEmCurso = false
+}
+
+async function acompanharOCRPendente(){
+  const maxTentativas = 12
+
+  for(let i=0;i<maxTentativas;i++){
+    await new Promise((r)=> setTimeout(r,2500))
+
+    const res = await fetch("/api/pending-upload")
+    const data = await res.json().catch(()=>({ok:false}))
+    if(!res.ok || !data.ok || !data.pending) continue
+
+    const p = data.pending
+    const estado = String(p.ocrStatus || "").toLowerCase()
+
+    if(estado === "done"){
+      aplicarPendingNosCampos(p,true)
+      mostrarDuplicado(p)
+      showMsg("Dados lidos automaticamente. Confirma antes de guardar.", "success")
+      hideMsg(1800)
+      ocrEmCurso = false
+      return
+    }
+
+    if(estado === "failed"){
+      showMsg("Nao foi possivel preencher automaticamente. Podes corrigir manualmente.", "error")
+      hideMsg(2600)
+      ocrEmCurso = false
+      return
+    }
+  }
+
+  showMsg("A extracao demorou demasiado. Podes preencher manualmente.", "error")
+  hideMsg(3000)
+  ocrEmCurso = false
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault()
+
+  const payload = {
+    fornecedor: inputFornecedor.value,
+    valor: inputValorTotal.value,
+    valorSemIva: inputValorSemIva.value,
+    valorIva: inputValorIva.value,
+    data: inputData.value,
+    tipo: inputTipo.value
+  }
+
+  const res = await fetch("/api/confirmar-upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+
+  const data = await res.json().catch(() => ({ ok:false, erro:"Erro ao guardar" }))
+
+  if(!res.ok || !data.ok){
+    showMsg(data.erro || "Erro ao guardar", "error")
+    return
+  }
+
+  showMsg("Registo guardado com sucesso.", "success")
+  window.location.href = data.redirect || "/dashboard"
+})
+
+cancelarBtn.addEventListener("click", async () => {
+  const res = await fetch("/api/cancelar-upload", { method: "POST" })
+  const data = await res.json().catch(() => ({ ok:false }))
+  if(!res.ok || !data.ok){
+    showMsg("Erro ao cancelar upload.", "error")
+    return
+  }
+  window.location.href = data.redirect || "/dashboard"
+})
+
+carregarPendente()
+
+inputFornecedor.addEventListener("input",()=> camposEditados.fornecedor = true)
+inputData.addEventListener("input",()=> camposEditados.data = true)
+inputValorTotal.addEventListener("input",()=> camposEditados.valorTotal = true)
+inputValorIva.addEventListener("input",()=> camposEditados.valorIva = true)
+inputValorSemIva.addEventListener("input",()=> camposEditados.valorSemIva = true)
+inputNif.addEventListener("input",()=> camposEditados.nif = true)
+inputTipo.addEventListener("change",()=> camposEditados.tipo = true)
+
+inputValorSemIva.addEventListener("input",()=> sincronizarTotais("sem_iva"))
+inputValorIva.addEventListener("input",()=> sincronizarTotais("iva"))
+inputValorTotal.addEventListener("input",()=> sincronizarTotais("total"))
+inputValorSemIva.addEventListener("blur",()=> inputValorSemIva.value = formatNumeroPt(parseNumeroPt(inputValorSemIva.value)))
+inputValorIva.addEventListener("blur",()=> inputValorIva.value = formatNumeroPt(parseNumeroPt(inputValorIva.value)))
+inputValorTotal.addEventListener("blur",()=> inputValorTotal.value = formatNumeroPt(parseNumeroPt(inputValorTotal.value)))
+</script>
+</body>
+
+</html>
