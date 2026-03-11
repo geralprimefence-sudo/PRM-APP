@@ -759,14 +759,18 @@ cursor:default;
 <div class="filtros-topo">
 <div class="ferramentas-lista">
 <input id="pesquisaInput" class="ferramenta-campo" type="text" placeholder="Pesquisar fornecedor ou valor...">
+
+	<div class="filtros-curtos">
+		<button type="button" class="btn-curto" onclick="selecionarJanelaDias(1, this)">Hoje</button>
+		<button type="button" class="btn-curto" onclick="selecionarJanelaDias(14, this)">14 dias</button>
+	</div>
+
 </div>
 
-<div class="filtros-curtos">
-<button type="button" class="btn-curto" onclick="selecionarJanelaDias(1, this)">Hoje</button>
-<button type="button" class="btn-curto" onclick="selecionarJanelaDias(14, this)">14 dias</button>
-<button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
-<button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
-<button type="button" class="btn-periodo" onclick="selecionarPeriodo('ano', this)">Ano</button>
+<div class="filtros-curtos" style="margin-top:8px;">
+	<button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
+	<button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
+	<button type="button" class="btn-periodo" onclick="selecionarPeriodo('ano', this)">Ano</button>
 </div>
 </div>
 
