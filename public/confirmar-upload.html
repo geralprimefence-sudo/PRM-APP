@@ -290,7 +290,10 @@ function aplicarPendingNosCampos(p,sobreporCampos = true){
         try{
           const raw = String(p.ficheiro || "")
           const base = raw.replace(/\\\\/g,'/').replace(/^.*\//,'')
-          const safePath = '/uploads/' + encodeURIComponent(base)
+          // Usar o endpoint /api/documento com URL absoluta para garantir que
+          // o pedido é feito pelo browser com cookies de sessão e o servidor
+          // responde com Content-Disposition inline quando possível.
+          const safePath = window.location.origin + '/api/documento?ficheiro=' + encodeURIComponent(base)
           abrirBtn.style.display = 'inline-block'
           abrirBtn.onclick = ()=> window.open(safePath, '_blank', 'noopener')
         }catch(_){
