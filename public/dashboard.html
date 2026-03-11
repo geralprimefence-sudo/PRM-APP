@@ -1139,8 +1139,12 @@ function selecionarPeriodo(periodo,botao){
 
 periodoAtual = periodo
 
+// Clear any short-window filter (Hoje / 15 dias) so period selection takes effect
+janelaDiasAtual = 0
+document.querySelectorAll(".btn-curto").forEach(b => b.classList.remove("ativo"))
+
 document.querySelectorAll(".btn-periodo").forEach(b => b.classList.remove("ativo"))
-botao.classList.add("ativo")
+if(botao) botao.classList.add("ativo")
 
 renderPeriodoAtual()
 
