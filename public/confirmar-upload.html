@@ -129,6 +129,10 @@ flex-direction:column;
 <button type="submit">Guardar Registo</button>
 <button type="button" class="btn-cancelar" id="cancelarBtn">Cancelar</button>
   <button type="button" class="btn-sec" onclick="window.location.href='/dashboard'">Voltar</button>
+  <form id="changeDocForm" action="/upload" method="POST" enctype="multipart/form-data" style="display:inline-block;">
+    <input id="changeDocInput" type="file" name="file" accept="application/pdf,image/*" style="display:none">
+    <button type="button" id="changeDocBtn" class="btn-sec" style="display:none;">Alterar Documento</button>
+  </form>
   <button type="button" id="abrirDocBtn" class="btn-sec" style="display:none;" title="Abrir documento" aria-label="Abrir documento">Abrir Documento</button>
 </div>
 </form>
@@ -465,6 +469,16 @@ inputValorTotal.addEventListener("input",()=> sincronizarTotais("total"))
 inputValorSemIva.addEventListener("blur",()=> inputValorSemIva.value = formatNumeroPt(parseNumeroPt(inputValorSemIva.value)))
 inputValorIva.addEventListener("blur",()=> inputValorIva.value = formatNumeroPt(parseNumeroPt(inputValorIva.value)))
 inputValorTotal.addEventListener("blur",()=> inputValorTotal.value = formatNumeroPt(parseNumeroPt(inputValorTotal.value)))
+
+// Wire change-document input to submit the form when a file is selected
+const _changeDocInput = document.getElementById('changeDocInput')
+if(_changeDocInput){
+  _changeDocInput.addEventListener('change',(e)=>{
+    if(e.target.files && e.target.files.length){
+      document.getElementById('changeDocForm').submit()
+    }
+  })
+}
 </script>
 </body>
 
