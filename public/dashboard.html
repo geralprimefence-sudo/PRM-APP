@@ -419,13 +419,13 @@ min-height:22px;
 display:flex;
 align-items:center;
 gap:6px;
-flex-wrap:wrap;
+flex-wrap:nowrap;
 }
 
 th:nth-child(6),
 td:nth-child(6){
-width:150px;
-min-width:150px;
+width:200px;
+min-width:200px;
 }
 
 .btn-ver{background:#3498db;color:white;}
@@ -763,14 +763,11 @@ cursor:default;
 	<div class="filtros-curtos">
 		<button type="button" class="btn-curto" onclick="selecionarJanelaDias(1, this)">Hoje</button>
 		<button type="button" class="btn-curto" onclick="selecionarJanelaDias(14, this)">14 dias</button>
+		<button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
+		<button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
+		<button type="button" class="btn-periodo" onclick="selecionarPeriodo('ano', this)">Ano</button>
 	</div>
 
-</div>
-
-<div class="filtros-curtos" style="margin-top:8px;">
-	<button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
-	<button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
-	<button type="button" class="btn-periodo" onclick="selecionarPeriodo('ano', this)">Ano</button>
 </div>
 </div>
 
