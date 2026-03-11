@@ -295,7 +295,8 @@ function aplicarPendingNosCampos(p,sobreporCampos = true){
           // responde com Content-Disposition inline quando possível.
           const safePath = window.location.origin + '/api/documento?ficheiro=' + encodeURIComponent(base)
           abrirBtn.style.display = 'inline-block'
-          abrirBtn.onclick = ()=> window.open(safePath, '_blank', 'noopener')
+          // Navegar na mesma aba evita trigger de apps externas no Android
+          abrirBtn.onclick = ()=> { window.location.href = safePath }
         }catch(_){
           abrirBtn.style.display = 'none'
           abrirBtn.onclick = null
