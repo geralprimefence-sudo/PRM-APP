@@ -1,5 +1,10 @@
 from flask import Flask, request, jsonify
-from paddleocr import PaddleOCR
+try:
+    from paddleocr import PaddleOCR
+    _paddle_available = True
+except Exception:
+    PaddleOCR = None
+    _paddle_available = False
 import tempfile
 import os
 import cv2
@@ -7,7 +12,14 @@ import numpy as np
 
 app = Flask(__name__)
 
-ocr = PaddleOCR(use_angle_cls=True, lang='pt')
+if _paddle_available:
+    try:
+        ocr = PaddleOCR(use_angle_cls=True, lang='pt')
+    except Exception:
+        ocr = None
+        _paddle_available = False
+else:
+    ocr = None
 
 
 def extract_lines(result):
@@ -24,6 +36,9 @@ def extract_lines(result):
 
 @app.route('/ocr', methods=['POST'])
 def run_ocr():
+    if not _paddle_available or ocr is None:
+        return jsonify({'ok': False, 'error': 'PaddleOCR not available'}), 503
+
     if 'file' not in request.files:
         return jsonify({'ok': False, 'error': 'missing file'}), 400
 
