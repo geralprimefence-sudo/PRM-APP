@@ -743,10 +743,8 @@ cursor:default;
 <div class="upload-actions">
   <button type="button" class="auto-upload-btn btn-camera" onclick="abrirScannerFoto()">Foto (Scan)</button>
   <form id="formDoc" action="/upload" method="POST" enctype="multipart/form-data" style="display:inline-block;">
-    <button type="button" class="auto-upload-btn btn-documento">
-      Doc/PDF
-      <input id="docInput" class="auto-upload-input" type="file" name="file" accept="application/pdf" required>
-    </button>
+		<button type="button" id="docButton" class="auto-upload-btn btn-documento">Doc/PDF</button>
+		<input id="docInput" class="auto-upload-input" type="file" name="file" accept="application/pdf" required aria-hidden="true">
   </form>
   <button type="button" class="auto-upload-btn btn-docs" style="margin-left:auto; background:#64748b; color:#fff;" onclick="abrirDocs()">Docs</button>
 </div>
@@ -900,6 +898,16 @@ if(e.target.files && e.target.files.length){
 document.getElementById("formDoc").submit()
 }
 })
+
+// Support safer file selection UX: button triggers the hidden file input.
+const docButton = document.getElementById('docButton')
+const docInput = document.getElementById('docInput')
+if(docButton && docInput){
+	docButton.addEventListener('click', (ev)=>{
+		ev.preventDefault()
+		docInput.click()
+	})
+}
 
 function parseDataRegisto(dataBruta){
 
