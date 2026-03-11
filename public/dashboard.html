@@ -763,7 +763,7 @@ cursor:default;
 
 <div class="filtros-curtos">
 <button type="button" class="btn-curto" onclick="selecionarJanelaDias(1, this)">Hoje</button>
-<button type="button" class="btn-curto" onclick="selecionarJanelaDias(15, this)">15 dias</button>
+<button type="button" class="btn-curto" onclick="selecionarJanelaDias(14, this)">14 dias</button>
 <button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
 <button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
 <button type="button" class="btn-periodo" onclick="selecionarPeriodo('ano', this)">Ano</button>
@@ -1139,7 +1139,7 @@ function selecionarPeriodo(periodo,botao){
 
 periodoAtual = periodo
 
-// Clear any short-window filter (Hoje / 15 dias) so period selection takes effect
+ // Clear any short-window filter (Hoje / 14 dias) so period selection takes effect
 janelaDiasAtual = 0
 document.querySelectorAll(".btn-curto").forEach(b => { b.classList.remove("ativo"); try{ b.setAttribute('aria-pressed','false') }catch(_){ } try{ b.blur && b.blur() }catch(_){ } })
 
