@@ -126,14 +126,10 @@ flex-direction:column;
 </div>
 
 <div class="actions">
-</div>
   <button type="submit">Guardar</button>
-  <form id="changeDocForm" action="/upload" method="POST" enctype="multipart/form-data" style="display:inline-block;">
-    <input id="changeDocInput" type="file" name="file" accept="application/pdf,image/*" style="display:none">
-    <button type="button" id="changeDocBtn" class="btn-sec" style="display:none;">Alterar</button>
-  </form>
   <button type="button" class="btn-sec" onclick="window.location.href='/capturar-foto'">Voltar</button>
   <button type="button" id="abrirDocBtn" class="btn-sec" style="display:none;" title="Abrir" aria-label="Abrir">Abrir</button>
+  <button type="button" class="btn-cancelar" id="cancelarBtn">Cancelar</button>
 </div>
 </form>
 </div>
@@ -142,6 +138,7 @@ flex-direction:column;
 <script>
 const form = document.getElementById("confirmForm")
 const msg = document.getElementById("mensagem")
+const cancelarBtn = document.getElementById("cancelarBtn")
 const inputFornecedor = document.getElementById("fornecedor")
 const inputValor = document.getElementById("valor")
 const inputValorSemIva = document.getElementById("valorSemIva")
@@ -300,10 +297,7 @@ function aplicarPendingNosCampos(p,sobreporCampos = true){
           abrirBtn.style.display = 'inline-block'
           // Navegar na mesma aba evita trigger de apps externas no Android
           abrirBtn.onclick = ()=> { window.location.href = safePath }
-          if(changeBtn && changeInput){
-            changeBtn.style.display = 'inline-block'
-            changeBtn.onclick = ()=> { changeInput.click() }
-          }
+          // change button removed in this UI version
         }catch(_){
           abrirBtn.style.display = 'none'
           abrirBtn.onclick = null
@@ -466,13 +460,16 @@ inputValorSemIva.addEventListener("blur",()=> inputValorSemIva.value = formatNum
 inputValorIva.addEventListener("blur",()=> inputValorIva.value = formatNumeroPt(parseNumeroPt(inputValorIva.value)))
 inputValorTotal.addEventListener("blur",()=> inputValorTotal.value = formatNumeroPt(parseNumeroPt(inputValorTotal.value)))
 
-// Wire change-document input to submit the form when a file is selected
-const _changeDocInput = document.getElementById('changeDocInput')
-if(_changeDocInput){
-  _changeDocInput.addEventListener('change',(e)=>{
-    if(e.target.files && e.target.files.length){
-      document.getElementById('changeDocForm').submit()
+// Cancel button behaviour
+if(cancelarBtn){
+  cancelarBtn.addEventListener("click", async () => {
+    const res = await fetch("/api/cancelar-upload", { method: "POST" })
+    const data = await res.json().catch(() => ({ ok:false }))
+    if(!res.ok || !data.ok){
+      showMsg("Erro ao cancelar upload.", "error")
+      return
     }
+    window.location.href = data.redirect || "/dashboard"
   })
 }
 </script>
