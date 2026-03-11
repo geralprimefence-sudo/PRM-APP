@@ -285,9 +285,18 @@ function aplicarPendingNosCampos(p,sobreporCampos = true){
     if(abrirBtn){
       if(p.ficheiro){
         // ficheiro normalmente é apenas o nome gerado pelo multer
-        const safePath = '/uploads/' + encodeURIComponent(String(p.ficheiro).replace(/\\/g,'/'))
-        abrirBtn.style.display = 'inline-block'
-        abrirBtn.onclick = ()=> window.open(safePath, '_blank', 'noopener')
+        // Se por alguma razão veio um caminho local (ex: file:///... ou C:\\...),
+        // extraímos apenas o nome base para construir o URL do servidor.
+        try{
+          const raw = String(p.ficheiro || "")
+          const base = raw.replace(/\\\\/g,'/').replace(/^.*\//,'')
+          const safePath = '/uploads/' + encodeURIComponent(base)
+          abrirBtn.style.display = 'inline-block'
+          abrirBtn.onclick = ()=> window.open(safePath, '_blank', 'noopener')
+        }catch(_){
+          abrirBtn.style.display = 'none'
+          abrirBtn.onclick = null
+        }
       }else{
         abrirBtn.style.display = 'none'
         abrirBtn.onclick = null
