@@ -1154,6 +1154,9 @@ function selecionarJanelaDias(dias,botao){
 
 janelaDiasAtual = dias
 
+// Clear period buttons so only the short-window selection is shown
+document.querySelectorAll(".btn-periodo").forEach(b => { b.classList.remove("ativo"); try{ b.setAttribute('aria-pressed','false') }catch(_){ } })
+
 document.querySelectorAll(".btn-curto").forEach((b)=> { b.classList.remove("ativo"); try{ b.setAttribute('aria-pressed','false') }catch(_){ } })
 if(botao){ botao.classList.add("ativo"); try{ botao.setAttribute('aria-pressed','true') }catch(_){ } }
 
