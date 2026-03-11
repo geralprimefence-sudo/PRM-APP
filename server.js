@@ -2450,11 +2450,51 @@ app.get("/visualizador",auth,(req,res)=>{
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Visualizador</title>
-<style>html,body{height:100%;margin:0;background:#111;color:#fff} .top{padding:10px;background:#0b1220;display:flex;gap:8px;align-items:center} .btn{background:#1f2937;color:#fff;padding:8px 12px;border-radius:6px;text-decoration:none}</style>
+<style>html,body{height:100%;margin:0;background:#111;color:#fff;font-family:Arial,Helvetica,sans-serif} .top{padding:10px;background:#0b1220;display:flex;gap:8px;align-items:center} .btn{background:#1f2937;color:#fff;padding:8px 12px;border-radius:6px;text-decoration:none} .center{display:flex;align-items:center;justify-content:center;height:calc(100% - 48px);padding:8px}</style>
 </head>
 <body>
-<div class="top"><a class="btn" href="/confirmar-upload">Voltar</a><div style="flex:1"></div></div>
-<iframe src="${url}" style="width:100%;height:calc(100% - 48px);border:0;" allowfullscreen></iframe>
+<div class="top"><a class="btn" href="/confirmar-upload">Voltar</a><a id="downloadBtn" class="btn" href="${url}&download=1">Descarregar</a><div style="flex:1"></div></div>
+<div id="container" class="center">A carregar documento...</div>
+<script>
+	(async function(){
+		try{
+			const res = await fetch('${url}', { credentials: 'same-origin' })
+			if(!res.ok){
+				document.getElementById('container').textContent = 'Erro ao abrir documento'
+				return
+			}
+			const contentType = res.headers.get('content-type') || ''
+			const blob = await res.blob()
+			const blobUrl = URL.createObjectURL(blob)
+			const container = document.getElementById('container')
+			container.innerHTML = ''
+			if(contentType.startsWith('image/')){
+				const img = document.createElement('img')
+				img.src = blobUrl
+				img.style.maxWidth = '100%'
+				img.style.height = 'auto'
+				img.alt = 'Documento'
+				container.appendChild(img)
+			}else if(contentType === 'application/pdf'){
+				const iframe = document.createElement('iframe')
+				iframe.src = blobUrl
+				iframe.style.width = '100%'
+				iframe.style.height = '100%'
+				iframe.style.border = '0'
+				container.appendChild(iframe)
+			}else{
+				// Fallback: abrir em nova aba usando blob URL
+				window.location.href = blobUrl
+			}
+			// Atualizar o botão de descarregar para apontar ao blob (mantemos opção server-side também)
+			const dl = document.getElementById('downloadBtn')
+			if(dl){ dl.href = '${url}&download=1' }
+		}catch(err){
+			console.error('Visualizador erro',err)
+			document.getElementById('container').textContent = 'Erro ao carregar documento'
+		}
+	})()
+</script>
 </body>
 </html>`)
 	}catch(err){
