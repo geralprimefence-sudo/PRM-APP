@@ -128,7 +128,8 @@ flex-direction:column;
 <div class="actions">
 <button type="submit">Guardar Registo</button>
 <button type="button" class="btn-cancelar" id="cancelarBtn">Cancelar</button>
-<button type="button" class="btn-sec" onclick="window.location.href='/dashboard'">Voltar</button>
+  <button type="button" class="btn-sec" onclick="window.location.href='/dashboard'">Voltar</button>
+  <button type="button" id="abrirDocBtn" class="btn-sec" style="display:none;" title="Abrir documento" aria-label="Abrir documento">Abrir Documento</button>
 </div>
 </form>
 </div>
@@ -277,6 +278,22 @@ function aplicarPendingNosCampos(p,sobreporCampos = true){
   if(!camposEditados.tipo && p.tipo){
     inputTipo.value = p.tipo === "receita" ? "receita" : "despesa"
   }
+
+  // Mostrar botão para abrir o documento pendente se houver ficheiro
+  try{
+    const abrirBtn = document.getElementById('abrirDocBtn')
+    if(abrirBtn){
+      if(p.ficheiro){
+        // ficheiro normalmente é apenas o nome gerado pelo multer
+        const safePath = '/uploads/' + encodeURIComponent(String(p.ficheiro).replace(/\\/g,'/'))
+        abrirBtn.style.display = 'inline-block'
+        abrirBtn.onclick = ()=> window.open(safePath, '_blank', 'noopener')
+      }else{
+        abrirBtn.style.display = 'none'
+        abrirBtn.onclick = null
+      }
+    }
+  }catch(_){ }
 }
 
 function mostrarDuplicado(p){

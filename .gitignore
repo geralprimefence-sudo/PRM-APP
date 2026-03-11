@@ -1,3 +1,45 @@
+# System
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Logs & artifacts
+*.log
+*.txt
+*.sqlite
+*.db
+.env
+cookies.txt
+
+# Generated JSON artifacts (deploy/test logs)
+paddle_deploy*.json
+*deploy*.json
+*_body.json
+*_resp.json
+*_response.json
+pending*.json
+confirm*.json
+render-*.json
+
+# Deploy / service artifacts
+paddle_service*.json
+inst-logs*.json
+instances.json
+status*.json
+*_exec.json
+*_logs*.json
+*result*.json
+*_final_*.json
+*_output.json
+
+# IDE
+.vscode/
 node_modules/
 .env
 uploads/

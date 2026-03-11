@@ -19,3 +19,12 @@ services:
         sync: false
       - key: UPLOADS_DIR
         value: /var/data/uploads
+  - type: web
+    name: paddleocr-service
+    runtime: python
+    plan: starter
+    rootDir: paddleocr-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    autoDeploy: true
+    envVars: []
