@@ -286,6 +286,8 @@ function aplicarPendingNosCampos(p,sobreporCampos = true){
   // Mostrar botão para abrir o documento pendente se houver ficheiro
   try{
     const abrirBtn = document.getElementById('abrirDocBtn')
+    const changeBtn = document.getElementById('changeDocBtn')
+    const changeInput = document.getElementById('changeDocInput')
     if(abrirBtn){
       if(p.ficheiro){
         // ficheiro normalmente é apenas o nome gerado pelo multer
@@ -299,6 +301,10 @@ function aplicarPendingNosCampos(p,sobreporCampos = true){
           abrirBtn.style.display = 'inline-block'
           // Navegar na mesma aba evita trigger de apps externas no Android
           abrirBtn.onclick = ()=> { window.location.href = safePath }
+          if(changeBtn && changeInput){
+            changeBtn.style.display = 'inline-block'
+            changeBtn.onclick = ()=> { changeInput.click() }
+          }
         }catch(_){
           abrirBtn.style.display = 'none'
           abrirBtn.onclick = null
@@ -306,6 +312,7 @@ function aplicarPendingNosCampos(p,sobreporCampos = true){
       }else{
         abrirBtn.style.display = 'none'
         abrirBtn.onclick = null
+        if(changeBtn) changeBtn.style.display = 'none'
       }
     }
   }catch(_){ }
