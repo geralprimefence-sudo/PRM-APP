@@ -903,10 +903,16 @@ document.getElementById("formDoc").submit()
 const docButton = document.getElementById('docButton')
 const docInput = document.getElementById('docInput')
 if(docButton && docInput){
-	docButton.addEventListener('click', (ev)=>{
-		ev.preventDefault()
-		docInput.click()
-	})
+	if(!eMobile()){
+		docButton.addEventListener('click', (ev)=>{
+			ev.preventDefault()
+			docInput.click()
+		})
+	}else{
+		// On mobile hide the doc button and disable the hidden input
+		try{ docButton.style.display = 'none' }catch(_){ }
+		try{ docInput.disabled = true }catch(_){ }
+	}
 }
 
 function parseDataRegisto(dataBruta){
