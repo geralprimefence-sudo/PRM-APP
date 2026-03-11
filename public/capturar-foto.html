@@ -248,7 +248,19 @@ async function enviarBlob(blob){
 captureBtn.addEventListener("click", async ()=>{
   if(aProcessar) return
 
-  if(!video.videoWidth || !video.videoHeight){
+  // Ensure video feed is ready — try to start/play and wait a short while
+  async function ensureVideoReady(timeoutMs = 2000){
+    const start = Date.now()
+    while(!video.videoWidth || !video.videoHeight){
+      try{ await video.play().catch(()=>{}) }catch(_){ }
+      if(Date.now() - start > timeoutMs) break
+      await new Promise(r=> setTimeout(r,150))
+    }
+    return !!(video.videoWidth && video.videoHeight)
+  }
+
+  const ready = await ensureVideoReady(2000)
+  if(!ready){
     msg.textContent = "A camara ainda esta a iniciar."
     return
   }
