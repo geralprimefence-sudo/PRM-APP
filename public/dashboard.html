@@ -736,6 +736,64 @@ cursor:default;
 
 </div>
 
+<!-- Export button and modal -->
+<div style="max-width:1200px;margin:8px auto;padding:0 18px;">
+	<button id="openExportBtn" style="padding:8px 12px;border-radius:6px;border:1px solid #ccc;background:#fff;">Exportar (CSV/PDF)</button>
+</div>
+
+<div id="exportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;z-index:9999">
+	<div style="background:#fff;padding:18px;border-radius:8px;min-width:320px;max-width:520px;margin:auto">
+		<h3>Exportar registos</h3>
+		<div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+			<label style="font-size:13px">De: <input id="exportFrom" type="date" /></label>
+			<label style="font-size:13px">Até: <input id="exportTo" type="date" /></label>
+		</div>
+		<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+			<button id="exportCsvBtn">Excel (CSV)</button>
+			<button id="exportPdfBtn">PDF</button>
+			<button id="exportCancelBtn">Cancelar</button>
+		</div>
+	</div>
+</div>
+
+<script>
+document.getElementById('openExportBtn').addEventListener('click', ()=>{
+	document.getElementById('exportModal').style.display = 'flex'
+})
+document.getElementById('exportCancelBtn').addEventListener('click', ()=>{
+	document.getElementById('exportModal').style.display = 'none'
+})
+
+function triggerDownload(url){
+	const a = document.createElement('a')
+	a.href = url
+	a.rel = 'noopener'
+	document.body.appendChild(a)
+	a.click()
+	a.remove()
+}
+
+function buildExportUrl(format){
+	const from = document.getElementById('exportFrom').value
+	const to = document.getElementById('exportTo').value
+	const parts = [`format=${encodeURIComponent(format)}`]
+	if(from) parts.push(`from=${encodeURIComponent(from)}`)
+	if(to) parts.push(`to=${encodeURIComponent(to)}`)
+	return '/api/export?' + parts.join('&')
+}
+
+document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
+	const url = buildExportUrl('csv')
+	triggerDownload(url)
+	document.getElementById('exportModal').style.display = 'none'
+})
+document.getElementById('exportPdfBtn').addEventListener('click', ()=>{
+	const url = buildExportUrl('pdf')
+	triggerDownload(url)
+	document.getElementById('exportModal').style.display = 'none'
+})
+</script>
+
 
 
 <div class="upload">
@@ -799,7 +857,7 @@ cursor:default;
 
 <div class="bloco-tabela" id="blocoDespesas">
 <h3>Despesas</h3>
-<table>
+<h1>PRM Dashboard</h1>
 <thead>
 <tr>
 <th>Data</th>
