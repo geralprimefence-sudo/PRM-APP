@@ -47,9 +47,30 @@ fs.mkdirSync(UPLOADS_DIR,{recursive:true})
 fs.mkdirSync(TEMP_DIR,{recursive:true})
 
 
+// Capture raw body for debug when JSON parsing fails
 app.use(express.urlencoded({ extended: true }))
-app.use(express.json())
+app.use(express.json({
+	verify: function (req, res, buf, encoding) {
+		try { req.rawBody = buf.toString(encoding || 'utf8') } catch (e) { req.rawBody = '' }
+	}
+}))
 app.use(express.static("public"))
+
+// Body parse error handler (logs raw body when JSON is invalid)
+app.use((err, req, res, next) => {
+	if (!err) return next()
+	try{
+		if (err.type === 'entity.parse.failed' || err instanceof SyntaxError) {
+			console.error('Body parse error', {
+				message: err.message,
+				stack: err.stack,
+				rawBody: req && req.rawBody ? req.rawBody : null
+			})
+			return res.status(400).json({ ok: false, erro: 'JSON mal formado' })
+		}
+	}catch(_){ }
+	return next(err)
+})
 app.use("/uploads",express.static(UPLOADS_DIR))
 
 
@@ -1540,32 +1561,6 @@ return candidatos[0].data
 
 
 
-function extrairDadosFatura(texto){
-
-let valor = 0
-let valorSemIva = 0
-let valorIva = 0
-let valorTotal = 0
-let data = null
-let empresa = "desconhecido"
-let cliente = ""
-let nif = ""
-let tipo = "despesa"
-
-const textoTratado = normalizarTextoOCR(texto)
-const textoLower = textoTratado.toLowerCase()
-
-
-
-const totais = extrairTotaisDoTexto(textoTratado)
-valorTotal = totais.total
-valorIva = totais.iva
-valorSemIva = totais.semIva
-valor = valorTotal
-
-if(Number.isNaN(valor)){
-valor = 0
-}
 
 function qualidadeDadosExtraidos(dados){
 	const total = Number(dados?.valorTotal ?? dados?.valor ?? 0)
@@ -1597,8 +1592,34 @@ function dadosCriticosOk(dados){
 	return total > 0 && dataValida && fornecedorValido
 }
 
-data = extrairDataDoTexto(textoTratado)
+function extrairDadosFatura(texto){
 
+let valor = 0
+let valorSemIva = 0
+let valorIva = 0
+let valorTotal = 0
+let data = null
+let empresa = "desconhecido"
+let cliente = ""
+let nif = ""
+let tipo = "despesa"
+
+const textoTratado = normalizarTextoOCR(texto)
+const textoLower = textoTratado.toLowerCase()
+
+
+
+const totais = extrairTotaisDoTexto(textoTratado)
+valorTotal = totais.total
+valorIva = totais.iva
+valorSemIva = totais.semIva
+valor = valorTotal
+
+if(Number.isNaN(valor)){
+	valor = 0
+}
+
+data = extrairDataDoTexto(textoTratado)
 
 nif = extrairNifDoTexto(textoTratado)
 
