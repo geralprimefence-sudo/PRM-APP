@@ -134,6 +134,7 @@ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 await pool.query("ALTER TABLE registos ADD COLUMN IF NOT EXISTS valor_sem_iva NUMERIC")
 await pool.query("ALTER TABLE registos ADD COLUMN IF NOT EXISTS valor_iva NUMERIC")
 await pool.query("ALTER TABLE registos ADD COLUMN IF NOT EXISTS valor_total NUMERIC")
+await pool.query("ALTER TABLE registos ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
 
 const admin = await pool.query(
 "SELECT * FROM users WHERE username=$1",
