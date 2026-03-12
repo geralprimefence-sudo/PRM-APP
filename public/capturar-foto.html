@@ -217,14 +217,16 @@ async function enviarBlob(blob){
   // (handled below). For external OCR endpoints we expect JSON.
   const res = await fetch(endpoint, { method:"POST", body:fd, headers, redirect: 'follow' })
 
+  // If the server redirected (session/login required) follow to login.
   if(res.redirected){
     window.location.href = res.url
     return
   }
 
-  if(res.redirected){
-    // server redirected us (typical /upload fast path)
-    window.location.href = res.url
+  // If server returned HTML (e.g. login page) or unauthorized, redirect to login.
+  const ct = (res.headers.get('content-type') || '').toLowerCase()
+  if(res.status === 401 || res.status === 403 || ct.includes('text/html')){
+    window.location.href = '/login'
     return
   }
 
@@ -233,9 +235,6 @@ async function enviarBlob(blob){
     try{
       const j = await res.json().catch(()=>null)
       if(j && j.ok){
-        // If external OCR returned fields but we posted to external service
-        // there is no server-side pending upload; redirect to confirm page
-        // and session will be empty — user can paste fields manually.
         window.location.href = '/confirmar-upload'
         return
       }
