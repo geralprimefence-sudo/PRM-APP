@@ -1029,13 +1029,27 @@ const despesas = registos
 
 const saldo = receitas - despesas
 
+function inferIvaFromRecord(r){
+	const total = Number(r.valor_total ?? r.valor ?? 0)
+	let iva = Number(r.valor_iva ?? 0)
+	const sem = Number(r.valor_sem_iva ?? 0)
+	if((!iva || iva===0) && (!sem || sem===0) && total>0){
+		const taxa = 23
+		const semv = arredondar2(total / (1 + (taxa/100)))
+		iva = arredondar2(total - semv)
+	} else if((!iva || iva===0) && sem>0){
+		iva = arredondar2(total - sem)
+	}
+	return Number(iva || 0)
+}
+
 const ivaRecebido = registos
-.filter(r => (r.tipo || "").toLowerCase()==="receita")
-.reduce((acc,r)=>acc + Number(r.valor_iva ?? 0),0)
+	.filter(r => (r.tipo || "").toLowerCase()==="receita")
+	.reduce((acc,r)=> acc + inferIvaFromRecord(r),0)
 
 const ivaPago = registos
-.filter(r => (r.tipo || "").toLowerCase()!=="receita")
-.reduce((acc,r)=>acc + Number(r.valor_iva ?? 0),0)
+	.filter(r => (r.tipo || "").toLowerCase()!=="receita")
+	.reduce((acc,r)=> acc + inferIvaFromRecord(r),0)
 
 const saldoIva = ivaRecebido - ivaPago
 
