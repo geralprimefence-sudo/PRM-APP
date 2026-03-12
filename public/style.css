@@ -219,8 +219,8 @@ color:white;
 /* RESPONSIVO */
 
 @media(max-width:700px){
-	th:nth-child(6),
-	td:nth-child(6){
+	th:nth-child(5),
+	td:nth-child(5){
 	width:80px;
 	min-width:70px;
 	word-break:break-word;

@@ -1,71 +1,59 @@
 <!DOCTYPE html>
 <html>
 
-<head>
-
-<meta charset="UTF-8">
-<title>PRM Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<header>
+	<header style="display: flex; align-items: center; justify-content: space-between; background: #111827; color: #fff; padding: 16px 18px; position: sticky; top: 0; z-index: 10;">
+		<img src="/logo.png" alt="Contabill" class="header-logo" style="height: 54px; width: auto; max-width: min(44vw, 340px); background: #fff; border-radius: 8px; padding: 5px 14px 5px 0; object-fit: contain; margin-left: 0; margin-right: auto;">
+		<a href="/logout"><button class="logout logout-small" style="margin-left: 18px;">Logout</button></a>
+	</header>
+</header>
 
 <style>
-
-:root{
---bg:#f3f5f9;
---surface:#ffffff;
---surface-soft:#eef2f7;
---text:#101828;
---muted:#475467;
---line:#e4e7ec;
---primary:#2563eb;
---primary-strong:#1d4ed8;
---danger:#ef4444;
---shadow:0 6px 16px rgba(16,24,40,0.08);
+/* ...existing code... */
+.header-col {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
 }
-
-*{
-box-sizing:border-box;
-}
-
-body{
-font-family:Arial,Helvetica,sans-serif;
-background:linear-gradient(180deg,#f8fafc 0%,var(--bg) 100%);
-margin:0;
-color:var(--text);
-overflow-x:hidden;
-}
-
-header{
-background:#111827;
-color:#fff;
-padding:16px 18px;
-display:flex;
-justify-content:space-between;
-align-items:center;
-gap:12px;
-position:sticky;
-top:0;
-z-index:10;
-}
-
-header h1{
-font-size:22px;
-margin:0;
-line-height:1.2;
-}
-
-.header-logo{
-display:block;
-height:42px;
-width:auto;
-max-width:min(56vw,320px);
-background:#fff;
-border-radius:8px;
-padding:5px 10px;
-}
-
-.container{
-padding:22px 18px 30px;
-max-width:1200px;
+.logout-small {
+	font-size: 12px;
+	padding: 3px 12px;
+	border-radius: 7px;
+	margin-top: 2px;
+	width: auto;
+	min-width: 0;
+	align-self: flex-start;
+	box-shadow: none;
+@media (max-width: 820px) {
+	.col-iva, .col-semiva,
+	td:nth-child(4), td:nth-child(5) {
+		display: none !important;
+	}
+	th, td {
+		font-size: 11px !important;
+		padding: 6px 3px !important;
+		max-width: 70px !important;
+		word-break: break-word !important;
+		white-space: normal !important;
+	}
+	th:nth-child(1), td:nth-child(1) {
+		min-width: 60px !important;
+		max-width: 70px !important;
+	}
+	th:nth-child(2), td:nth-child(2) {
+		min-width: 80px !important;
+		max-width: 90px !important;
+	}
+	th:nth-child(3), td:nth-child(3) {
+		min-width: 60px !important;
+		max-width: 70px !important;
+	}
+	th:last-child, td:last-child {
+		min-width: 50px !important;
+		max-width: 60px !important;
+		text-align: center !important;
+	}
 margin:auto;
 }
 
@@ -317,9 +305,11 @@ color:#667085;
 
 th:nth-child(3),
 th:nth-child(4),
+th:nth-child(5),
 td:nth-child(3),
-td:nth-child(4){
-	white-space:nowrap;
+td:nth-child(4),
+td:nth-child(5){
+white-space:nowrap;
 }
 
 tbody tr:last-child td{
@@ -341,6 +331,36 @@ button:hover{background:var(--primary-strong);}
 .logout{background:var(--danger);}
 .logout:hover{background:#dc2626;}
 
+.logout-small {
+	font-size: 12px;
+	padding: 3px 12px;
+	border-radius: 7px;
+	margin-top: 2px;
+	width: auto;
+	min-width: 0;
+	align-self: flex-start;
+	box-shadow: none;
+}
+@media (max-width: 820px) {
+	.acoes-linha {
+		flex-wrap: wrap !important;
+		gap: 2px !important;
+	}
+	.acoes button {
+		font-size: 10px !important;
+		padding: 3px 6px !important;
+		min-width: 0 !important;
+		margin: 1px !important;
+	}
+	.logout-small {
+		font-size: 11px !important;
+		padding: 2px 10px !important;
+		width: auto !important;
+		min-width: 0 !important;
+		margin-top: 2px !important;
+	}
+}
+
 .acoes button{
 padding:2px 6px;
 margin:1px;
@@ -360,8 +380,8 @@ gap:3px;
 flex-wrap:nowrap;
 }
 
-th:nth-child(5),
-td:nth-child(5){
+th:nth-child(6),
+td:nth-child(6){
 width:150px;
 min-width:150px;
 }
@@ -591,8 +611,8 @@ font-size:10px;
 justify-content:flex-start;
 }
 
-th:nth-child(5),
-td:nth-child(5){
+th:nth-child(6),
+td:nth-child(6){
 width:132px;
 min-width:132px;
 }
@@ -687,7 +707,6 @@ Documento/PDF
 
 <div class="filtros-curtos">
 <button type="button" class="btn-curto" onclick="selecionarJanelaDias(1, this)">Hoje</button>
-<button type="button" class="btn-curto" onclick="selecionarJanelaDias(7, this)">7 dias</button>
 <button type="button" class="btn-curto" onclick="selecionarJanelaDias(15, this)">15 dias</button>
 <button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
 <button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
@@ -702,6 +721,7 @@ Documento/PDF
 
 <div class="tabelas-grid">
 
+
 <div class="bloco-tabela" id="blocoReceitas">
 <h3>Receitas</h3>
 <table>
@@ -710,14 +730,15 @@ Documento/PDF
 <th>Data</th>
 <th>Cliente</th>
 <th>Total</th>
-<th>IVA</th>
-
+<th class="col-iva">IVA</th>
+<th class="col-semiva">Sem IVA</th>
 <th>Ações</th>
 </tr>
 </thead>
 <tbody id="tabelaReceitas"></tbody>
 </table>
 </div>
+
 
 <div class="bloco-tabela" id="blocoDespesas">
 <h3>Despesas</h3>
@@ -727,14 +748,44 @@ Documento/PDF
 <th>Data</th>
 <th>Fornecedor</th>
 <th>Total</th>
-<th>IVA</th>
-
+<th class="col-iva">IVA</th>
+<th class="col-semiva">Sem IVA</th>
 <th>Ações</th>
 </tr>
 </thead>
 <tbody id="tabelaDespesas"></tbody>
 </table>
 </div>
+@media (max-width: 820px) {
+	.col-iva, .col-semiva,
+	td:nth-child(4), td:nth-child(5) {
+		display: none !important;
+	}
+	th, td {
+		font-size: 11px !important;
+		padding: 6px 3px !important;
+		max-width: 70px !important;
+		word-break: break-word !important;
+		white-space: normal !important;
+	}
+	th:nth-child(1), td:nth-child(1) {
+		min-width: 60px !important;
+		max-width: 70px !important;
+	}
+	th:nth-child(2), td:nth-child(2) {
+		min-width: 80px !important;
+		max-width: 90px !important;
+	}
+	th:nth-child(3), td:nth-child(3) {
+		min-width: 60px !important;
+		max-width: 70px !important;
+	}
+	th:last-child, td:last-child {
+		min-width: 50px !important;
+		max-width: 60px !important;
+		text-align: center !important;
+	}
+}
 
 </div>
 
@@ -1005,6 +1056,7 @@ row.innerHTML = `
 <td data-label="${(r.tipo || "").toLowerCase()==="receita" ? "Cliente" : "Fornecedor"}">${fornecedorCelula}</td>
 <td data-label="Total">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</td>
 <td data-label="IVA">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</td>
+<td data-label="Sem IVA">${valorSemIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</td>
 
 <td class="acoes" data-label="Acoes">
 <div class="acoes-linha">
@@ -1026,11 +1078,11 @@ tabelaDespesas.appendChild(row)
 })
 
 if(!tabelaReceitas.children.length){
-tabelaReceitas.innerHTML = `<tr class="linha-vazia"><td data-label="" colspan="5">Sem receitas.</td></tr>`
+tabelaReceitas.innerHTML = `<tr class="linha-vazia"><td data-label="" colspan="6">Sem receitas.</td></tr>`
 }
 
 if(!tabelaDespesas.children.length){
-tabelaDespesas.innerHTML = `<tr class="linha-vazia"><td data-label="" colspan="5">Sem despesas.</td></tr>`
+tabelaDespesas.innerHTML = `<tr class="linha-vazia"><td data-label="" colspan="6">Sem despesas.</td></tr>`
 }
 
 aplicarVistaListas()
