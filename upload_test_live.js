@@ -1,4 +1,5 @@
 const https = require('https')
+const http = require('http')
 const fs = require('fs')
 const path = require('path')
 const FormData = require('form-data')
@@ -12,21 +13,33 @@ if(!fs.existsSync(FILE)){
   process.exit(2)
 }
 
+console.log('DEBUG: target=', TARGET, 'file=', FILE, 'api_key_present=', Boolean(API_KEY))
+
+process.on('uncaughtException', (err)=>{
+  console.error('UNCAUGHT EXCEPTION', err && err.message ? err.message : err)
+  process.exit(1)
+})
+process.on('unhandledRejection', (err)=>{
+  console.error('UNHANDLED REJECTION', err && err.message ? err.message : err)
+  process.exit(1)
+})
+
 const form = new FormData()
 form.append('file', fs.createReadStream(FILE))
 
 const url = new URL(TARGET)
 const headers = form.getHeaders()
 if(API_KEY) headers['x-api-key'] = API_KEY
+const isHttps = url.protocol === 'https:'
 const options = {
   method: 'POST',
   hostname: url.hostname,
-  port: url.port || 443,
+  port: url.port || (isHttps?443:80),
   path: url.pathname + url.search,
   headers
 }
 
-const req = https.request(options, (res) => {
+const req = (isHttps ? https : http).request(options, (res) => {
   let data = ''
   res.on('data', chunk => data += chunk)
   res.on('end', ()=>{

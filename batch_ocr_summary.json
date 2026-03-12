@@ -1,0 +1,15 @@
+{
+  "target": "https://prm-app-1.onrender.com/api/mobile/ocr-upload",
+  "runAt": "2026-03-12T13:51:44.507Z",
+  "total": 77,
+  "success": 77,
+  "fail": 0,
+  "missingNif": 48,
+  "missingDate": 26,
+  "totalValorCount": 69,
+  "totalValorSum": 687511.9600000003,
+  "minValor": 0.2,
+  "maxValor": 52809,
+  "successRate": 100,
+  "meanValor": 9963.941449275368
+}
