@@ -262,7 +262,9 @@ background:#fff;
 display:flex;
 gap:8px;
 margin:0 0 14px;
-flex-wrap:wrap;
+flex-wrap:nowrap;
+align-items:center;
+overflow-x:auto;
 }
 
 .btn-curto{
@@ -418,14 +420,14 @@ min-height:22px;
 .acoes-linha{
 display:flex;
 align-items:center;
-gap:3px;
+gap:6px;
 flex-wrap:nowrap;
 }
 
 th:nth-child(6),
 td:nth-child(6){
-width:150px;
-min-width:150px;
+width:200px;
+min-width:200px;
 }
 
 .btn-ver{background:#3498db;color:white;}
@@ -747,6 +749,8 @@ cursor:default;
 		<input id="docInput" class="auto-upload-input" type="file" name="file" accept="application/pdf" required aria-hidden="true">
   </form>
   <button type="button" class="auto-upload-btn btn-docs" style="margin-left:auto; background:#64748b; color:#fff;" onclick="abrirDocs()">Docs</button>
+	<button type="button" class="auto-upload-btn" style="background:#111827;color:#fff;margin-left:8px;" onclick="exportRegistos('pdf')">Exportar PDF</button>
+	<button type="button" class="auto-upload-btn" style="background:#0f172a;color:#fff;margin-left:6px;" onclick="exportRegistos('csv')">Exportar Excel</button>
 </div>
 
 <p class="upload-hint">Foto (Scan) abre a camara com moldura para focar o documento. Documento/PDF abre apenas ficheiros PDF.</p>
@@ -759,14 +763,15 @@ cursor:default;
 <div class="filtros-topo">
 <div class="ferramentas-lista">
 <input id="pesquisaInput" class="ferramenta-campo" type="text" placeholder="Pesquisar fornecedor ou valor...">
-</div>
 
-<div class="filtros-curtos">
-<button type="button" class="btn-curto" onclick="selecionarJanelaDias(1, this)">Hoje</button>
-<button type="button" class="btn-curto" onclick="selecionarJanelaDias(15, this)">15 dias</button>
-<button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
-<button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
-<button type="button" class="btn-periodo" onclick="selecionarPeriodo('ano', this)">Ano</button>
+	<div class="filtros-curtos">
+		<button type="button" class="btn-curto" onclick="selecionarJanelaDias(1, this)">Hoje</button>
+		<button type="button" class="btn-curto" onclick="selecionarJanelaDias(14, this)">14 dias</button>
+		<button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
+		<button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
+		<button type="button" class="btn-periodo" onclick="selecionarPeriodo('ano', this)">Ano</button>
+	</div>
+
 </div>
 </div>
 
@@ -991,7 +996,17 @@ const valorIva = Number(registo.valor_iva ?? 0).toLocaleString("pt-PT",{minimumF
 const valorSemIva = Number(registo.valor_sem_iva ?? 0).toLocaleString("pt-PT",{minimumFractionDigits:2}).toLowerCase()
 const data = formatarData(registo.data).toLowerCase()
 
-return fornecedor.includes(termo) || valorTotal.includes(termo) || valorIva.includes(termo) || valorSemIva.includes(termo) || data.includes(termo)
+// Support month names in Portuguese (mes por extenso)
+const monthNames = [
+	'janeiro','fevereiro','março','abril','maio','junho',
+	'julho','agosto','setembro','outubro','novembro','dezembro'
+]
+let monthName = ''
+const parsed = parseDataRegisto(registo.data)
+if(parsed){ monthName = monthNames[parsed.getMonth()] }
+
+const haystack = `${fornecedor} ${valorTotal} ${valorIva} ${valorSemIva} ${data} ${monthName}`
+return haystack.includes(termo)
 
 }
 
@@ -1139,7 +1154,7 @@ function selecionarPeriodo(periodo,botao){
 
 periodoAtual = periodo
 
-// Clear any short-window filter (Hoje / 15 dias) so period selection takes effect
+ // Clear any short-window filter (Hoje / 14 dias) so period selection takes effect
 janelaDiasAtual = 0
 document.querySelectorAll(".btn-curto").forEach(b => { b.classList.remove("ativo"); try{ b.setAttribute('aria-pressed','false') }catch(_){ } try{ b.blur && b.blur() }catch(_){ } })
 
@@ -1183,6 +1198,13 @@ function formatarData(dataBruta){
     return `${partes[2]}/${partes[1]}/${partes[0].slice(-2)}`
   }
   return texto
+}
+
+function exportRegistos(format){
+	// format: 'pdf' or 'csv'
+	const url = `/api/export?format=${encodeURIComponent(format)}`
+	// trigger download using navigation so cookies/auth are sent
+	window.location.href = url
 }
 
 function dataParaInputLocal(dataBruta){

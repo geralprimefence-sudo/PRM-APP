@@ -79,6 +79,8 @@ table{font-size:14px;}
 <div>
 <a href="/dashboard"><button>Dashboard</button></a>
 <a href="/logout"><button class="logout">Logout</button></a>
+<button style="margin-left:8px;background:#111827;color:#fff;" onclick="exportRegistos('pdf')">Exportar PDF</button>
+<button style="margin-left:6px;background:#0f172a;color:#fff;" onclick="exportRegistos('csv')">Exportar Excel</button>
 </div>
 </header>
 
@@ -153,6 +155,11 @@ linhas.appendChild(tr)
 }
 
 carregar()
+</script>
+<script>
+function exportRegistos(format){
+	window.location.href = `/api/export?format=${encodeURIComponent(format)}`
+}
 </script>
 </body>
 

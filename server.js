@@ -9,6 +9,7 @@ const fs = require("fs")
 const path = require("path")
 const pdfParse = require("pdf-parse")
 const Tesseract = require("tesseract.js")
+const PDFDocument = require('pdfkit')
 const { Pool } = require("pg")
 
 let sharp = null
@@ -2500,5 +2501,118 @@ app.get("/visualizador",auth,(req,res)=>{
 	}catch(err){
 		console.error("Erro em /visualizador",err)
 		return res.status(500).send("Erro interno")
+	}
+})
+
+
+app.get('/api/export', auth, async (req, res) => {
+	try{
+		const userId = req.session.userId
+		const format = String(req.query.format || 'csv').toLowerCase() // 'csv' or 'pdf' or 'excel'
+
+		const receitasRes = await pool.query(
+			`SELECT data, fornecedor, valor_sem_iva, valor_iva, COALESCE(valor_total,valor) as total FROM registos WHERE user_id=$1 AND tipo='receita' ORDER BY data DESC`,
+			[userId]
+		)
+
+		const despesasRes = await pool.query(
+			`SELECT data, fornecedor, valor_sem_iva, valor_iva, COALESCE(valor_total,valor) as total FROM registos WHERE user_id=$1 AND tipo='despesa' ORDER BY data DESC`,
+			[userId]
+		)
+
+		const fmtDate = (d) => {
+			if(!d) return ''
+			const dt = new Date(d)
+			if(Number.isNaN(dt.getTime())) return String(d)
+			const dd = String(dt.getDate()).padStart(2,'0')
+			const mm = String(dt.getMonth()+1).padStart(2,'0')
+			const yy = String(dt.getFullYear())
+			return `${dd}/${mm}/${yy}`
+		}
+
+		if(format === 'csv' || format === 'excel'){
+			let lines = []
+			// Receitas
+			lines.push('Receitas')
+			lines.push('Data,Cliente/Fornecedor,Valor Sem IVA,IVA,Total')
+			for(const r of receitasRes.rows){
+				const data = fmtDate(r.data)
+				const fornecedor = (r.fornecedor||'').replace(/"/g,'""')
+				const sem = Number(r.valor_sem_iva||0).toFixed(2)
+				const iva = Number(r.valor_iva||0).toFixed(2)
+				const total = Number(r.total||0).toFixed(2)
+				lines.push(`"${data}","${fornecedor}","${sem}","${iva}","${total}"`)
+			}
+			lines.push('')
+			// Despesas
+			lines.push('Despesas')
+			lines.push('Data,Cliente/Fornecedor,Valor Sem IVA,IVA,Total')
+			for(const r of despesasRes.rows){
+				const data = fmtDate(r.data)
+				const fornecedor = (r.fornecedor||'').replace(/"/g,'""')
+				const sem = Number(r.valor_sem_iva||0).toFixed(2)
+				const iva = Number(r.valor_iva||0).toFixed(2)
+				const total = Number(r.total||0).toFixed(2)
+				lines.push(`"${data}","${fornecedor}","${sem}","${iva}","${total}"`)
+			}
+
+			const filename = `export-${(new Date()).toISOString().slice(0,10)}.csv`
+			res.setHeader('Content-Type','text/csv; charset=utf-8')
+			res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+			return res.send(lines.join('\n'))
+		}
+
+		if(format === 'pdf'){
+			const doc = new PDFDocument({margin:40, size:'A4'})
+			const filename = `export-${(new Date()).toISOString().slice(0,10)}.pdf`
+			res.setHeader('Content-Type','application/pdf')
+			res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+			doc.pipe(res)
+
+			const colPositions = [40,130,330,420,490]
+			const rowHeight = 18
+
+			const renderSection = (title, rows) => {
+				doc.moveDown(0.5)
+				doc.fontSize(14).text(title, {underline:true})
+				doc.moveDown(0.2)
+				doc.fontSize(10)
+				// header
+				doc.text('Data', colPositions[0], doc.y, {continued:false})
+				doc.text('Cliente/Fornecedor', colPositions[1], doc.y, {continued:false})
+				doc.text('Valor Sem IVA', colPositions[2], doc.y, {continued:false})
+				doc.text('IVA', colPositions[3], doc.y, {continued:false})
+				doc.text('Total', colPositions[4], doc.y, {continued:false})
+				doc.moveDown(0.2)
+
+				for(const r of rows){
+					if(doc.y > doc.page.height - 80) doc.addPage()
+					doc.fontSize(10)
+					doc.text(fmtDate(r.data), colPositions[0], doc.y, {width:80})
+					doc.text(String(r.fornecedor||''), colPositions[1], doc.y, {width:180})
+					doc.text(Number(r.valor_sem_iva||0).toFixed(2), colPositions[2], doc.y, {width:70,align:'right'})
+					doc.text(Number(r.valor_iva||0).toFixed(2), colPositions[3], doc.y, {width:50,align:'right'})
+					doc.text(Number(r.total||0).toFixed(2), colPositions[4], doc.y, {width:70,align:'right'})
+					doc.moveDown(0.4)
+				}
+				doc.moveDown(0.6)
+			}
+
+			// Title
+			doc.fontSize(18).text('Export - Registos', {align:'center'})
+			doc.moveDown(0.8)
+
+			renderSection('Receitas', receitasRes.rows)
+			renderSection('Despesas', despesasRes.rows)
+
+			doc.end()
+			return
+		}
+
+		return res.status(400).json({error:'Formato inválido'})
+
+	}catch(err){
+		console.error('Erro em /api/export',err)
+		res.status(500).send('Erro interno')
 	}
 })
