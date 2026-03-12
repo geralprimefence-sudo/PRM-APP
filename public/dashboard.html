@@ -1085,8 +1085,19 @@ registos.forEach(r=>{
 
 const dataCurta = formatarData(r.data)
 const valorSemIva = Number(r.valor_sem_iva ?? 0)
-const valorIva = Number(r.valor_iva ?? 0)
+let valorIva = Number(r.valor_iva ?? 0)
 const valorTotal = Number(r.valor_total ?? r.valor ?? 0)
+
+// If IVA or Sem IVA are missing, try to infer them from total.
+// Prefer existing semiva if present; otherwise assume standard 23% tax.
+if((!valorIva || valorIva === 0) && (!valorSemIva || valorSemIva === 0) && valorTotal > 0){
+	const taxa = 23
+	const sem = arredondar2(valorTotal / (1 + (taxa/100)))
+	valorIva = arredondar2(valorTotal - sem)
+	// note: do not mutate r here, only use inferred values for display and totals
+} else if((!valorIva || valorIva === 0) && valorSemIva > 0){
+	valorIva = arredondar2(valorTotal - valorSemIva)
+}
 const idRegisto = Number(r.id || 0)
 const documentoDisponivel = r.documentoDisponivel !== false
 const tituloVer = documentoDisponivel
