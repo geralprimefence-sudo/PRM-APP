@@ -22,7 +22,8 @@
 		text-align: right !important;
 		padding-right: 10px !important;
 	}
-	th:nth-child(4), th:nth-child(5), td:nth-child(4), td:nth-child(5) {
+	/* Keep IVA visible: hide only Sem IVA (5th column) on narrow screens */
+	th:nth-child(5), td:nth-child(5) {
 		display: none !important;
 	}
 	.tabelas-grid {
@@ -262,9 +263,7 @@ background:#fff;
 display:flex;
 gap:8px;
 margin:0 0 14px;
-flex-wrap:nowrap;
-align-items:center;
-overflow-x:auto;
+flex-wrap:wrap;
 }
 
 .btn-curto{
@@ -420,14 +419,14 @@ min-height:22px;
 .acoes-linha{
 display:flex;
 align-items:center;
-gap:6px;
+gap:3px;
 flex-wrap:nowrap;
 }
 
 th:nth-child(6),
 td:nth-child(6){
-width:200px;
-min-width:200px;
+width:150px;
+min-width:150px;
 }
 
 .btn-ver{background:#3498db;color:white;}
@@ -675,7 +674,8 @@ cursor:default;
 </style>
 <style>
 @media (max-width: 820px) {
-	th:nth-child(4), th:nth-child(5), td:nth-child(4), td:nth-child(5) {
+	/* Keep IVA visible: hide only Sem IVA (5th column) on narrow screens */
+	th:nth-child(5), td:nth-child(5) {
 		display: none !important;
 	}
 	.tabelas-grid {
@@ -736,64 +736,6 @@ cursor:default;
 
 </div>
 
-<!-- Export button and modal -->
-<div style="max-width:1200px;margin:8px auto;padding:0 18px;">
-	<button id="openExportBtn" style="padding:8px 12px;border-radius:6px;border:1px solid #ccc;background:#fff;">Exportar (CSV/PDF)</button>
-</div>
-
-<div id="exportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;z-index:9999">
-	<div style="background:#fff;padding:18px;border-radius:8px;min-width:320px;max-width:520px;margin:auto">
-		<h3>Exportar registos</h3>
-		<div style="display:flex;gap:8px;align-items:center;margin-top:8px">
-			<label style="font-size:13px">De: <input id="exportFrom" type="date" /></label>
-			<label style="font-size:13px">Até: <input id="exportTo" type="date" /></label>
-		</div>
-		<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-			<button id="exportCsvBtn">Excel (CSV)</button>
-			<button id="exportPdfBtn">PDF</button>
-			<button id="exportCancelBtn">Cancelar</button>
-		</div>
-	</div>
-</div>
-
-<script>
-document.getElementById('openExportBtn').addEventListener('click', ()=>{
-	document.getElementById('exportModal').style.display = 'flex'
-})
-document.getElementById('exportCancelBtn').addEventListener('click', ()=>{
-	document.getElementById('exportModal').style.display = 'none'
-})
-
-function triggerDownload(url){
-	const a = document.createElement('a')
-	a.href = url
-	a.rel = 'noopener'
-	document.body.appendChild(a)
-	a.click()
-	a.remove()
-}
-
-function buildExportUrl(format){
-	const from = document.getElementById('exportFrom').value
-	const to = document.getElementById('exportTo').value
-	const parts = [`format=${encodeURIComponent(format)}`]
-	if(from) parts.push(`from=${encodeURIComponent(from)}`)
-	if(to) parts.push(`to=${encodeURIComponent(to)}`)
-	return '/api/export?' + parts.join('&')
-}
-
-document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
-	const url = buildExportUrl('csv')
-	triggerDownload(url)
-	document.getElementById('exportModal').style.display = 'none'
-})
-document.getElementById('exportPdfBtn').addEventListener('click', ()=>{
-	const url = buildExportUrl('pdf')
-	triggerDownload(url)
-	document.getElementById('exportModal').style.display = 'none'
-})
-</script>
-
 
 
 <div class="upload">
@@ -819,15 +761,14 @@ document.getElementById('exportPdfBtn').addEventListener('click', ()=>{
 <div class="filtros-topo">
 <div class="ferramentas-lista">
 <input id="pesquisaInput" class="ferramenta-campo" type="text" placeholder="Pesquisar fornecedor ou valor...">
+</div>
 
-	<div class="filtros-curtos">
-		<button type="button" class="btn-curto" onclick="selecionarJanelaDias(1, this)">Hoje</button>
-		<button type="button" class="btn-curto" onclick="selecionarJanelaDias(14, this)">14 dias</button>
-		<button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
-		<button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
-		<button type="button" class="btn-periodo" onclick="selecionarPeriodo('ano', this)">Ano</button>
-	</div>
-
+<div class="filtros-curtos">
+<button type="button" class="btn-curto" onclick="selecionarJanelaDias(1, this)">Hoje</button>
+<button type="button" class="btn-curto" onclick="selecionarJanelaDias(15, this)">15 dias</button>
+<button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
+<button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
+<button type="button" class="btn-periodo" onclick="selecionarPeriodo('ano', this)">Ano</button>
 </div>
 </div>
 
@@ -857,7 +798,7 @@ document.getElementById('exportPdfBtn').addEventListener('click', ()=>{
 
 <div class="bloco-tabela" id="blocoDespesas">
 <h3>Despesas</h3>
-<h1>PRM Dashboard</h1>
+<table>
 <thead>
 <tr>
 <th>Data</th>
@@ -1052,17 +993,7 @@ const valorIva = Number(registo.valor_iva ?? 0).toLocaleString("pt-PT",{minimumF
 const valorSemIva = Number(registo.valor_sem_iva ?? 0).toLocaleString("pt-PT",{minimumFractionDigits:2}).toLowerCase()
 const data = formatarData(registo.data).toLowerCase()
 
-// Support month names in Portuguese (mes por extenso)
-const monthNames = [
-	'janeiro','fevereiro','março','abril','maio','junho',
-	'julho','agosto','setembro','outubro','novembro','dezembro'
-]
-let monthName = ''
-const parsed = parseDataRegisto(registo.data)
-if(parsed){ monthName = monthNames[parsed.getMonth()] }
-
-const haystack = `${fornecedor} ${valorTotal} ${valorIva} ${valorSemIva} ${data} ${monthName}`
-return haystack.includes(termo)
+return fornecedor.includes(termo) || valorTotal.includes(termo) || valorIva.includes(termo) || valorSemIva.includes(termo) || data.includes(termo)
 
 }
 
@@ -1210,7 +1141,7 @@ function selecionarPeriodo(periodo,botao){
 
 periodoAtual = periodo
 
- // Clear any short-window filter (Hoje / 14 dias) so period selection takes effect
+// Clear any short-window filter (Hoje / 15 dias) so period selection takes effect
 janelaDiasAtual = 0
 document.querySelectorAll(".btn-curto").forEach(b => { b.classList.remove("ativo"); try{ b.setAttribute('aria-pressed','false') }catch(_){ } try{ b.blur && b.blur() }catch(_){ } })
 
