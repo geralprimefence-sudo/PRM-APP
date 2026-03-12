@@ -2509,16 +2509,13 @@ app.get('/api/export', auth, async (req, res) => {
 	try{
 		const userId = req.session.userId
 		const format = String(req.query.format || 'csv').toLowerCase() // 'csv' or 'pdf' or 'excel'
+		const tipoFilter = String(req.query.tipo || '').toLowerCase() // 'receita' or 'despesa' or '' for both
 
-		const receitasRes = await pool.query(
-			`SELECT data, fornecedor, valor_sem_iva, valor_iva, COALESCE(valor_total,valor) as total FROM registos WHERE user_id=$1 AND tipo='receita' ORDER BY data DESC`,
-			[userId]
-		)
+		const qryReceitas = `SELECT data, fornecedor, valor_sem_iva, valor_iva, COALESCE(valor_total,valor) as total FROM registos WHERE user_id=$1 AND tipo='receita' ORDER BY data DESC`
+		const qryDespesas = `SELECT data, fornecedor, valor_sem_iva, valor_iva, COALESCE(valor_total,valor) as total FROM registos WHERE user_id=$1 AND tipo='despesa' ORDER BY data DESC`
 
-		const despesasRes = await pool.query(
-			`SELECT data, fornecedor, valor_sem_iva, valor_iva, COALESCE(valor_total,valor) as total FROM registos WHERE user_id=$1 AND tipo='despesa' ORDER BY data DESC`,
-			[userId]
-		)
+		const receitasRes = tipoFilter === 'despesa' ? { rows: [] } : await pool.query(qryReceitas, [userId])
+		const despesasRes = tipoFilter === 'receita' ? { rows: [] } : await pool.query(qryDespesas, [userId])
 
 		const fmtDate = (d) => {
 			if(!d) return ''
@@ -2530,12 +2527,14 @@ app.get('/api/export', auth, async (req, res) => {
 			return `${dd}/${mm}/${yy}`
 		}
 
-		if(format === 'csv' || format === 'excel'){
-			let lines = []
-			// Receitas
-			lines.push('Receitas')
+		const logoPath = path.join(__dirname, 'public', 'logo.png')
+
+		// Helper: render a single section as CSV lines
+		const sectionToCsvLines = (title, rows) => {
+			const lines = []
+			lines.push(title)
 			lines.push('Data,Cliente/Fornecedor,Valor Sem IVA,IVA,Total')
-			for(const r of receitasRes.rows){
+			for(const r of rows){
 				const data = fmtDate(r.data)
 				const fornecedor = (r.fornecedor||'').replace(/"/g,'""')
 				const sem = Number(r.valor_sem_iva||0).toFixed(2)
@@ -2543,19 +2542,25 @@ app.get('/api/export', auth, async (req, res) => {
 				const total = Number(r.total||0).toFixed(2)
 				lines.push(`"${data}","${fornecedor}","${sem}","${iva}","${total}"`)
 			}
-			lines.push('')
-			// Despesas
-			lines.push('Despesas')
-			lines.push('Data,Cliente/Fornecedor,Valor Sem IVA,IVA,Total')
-			for(const r of despesasRes.rows){
-				const data = fmtDate(r.data)
-				const fornecedor = (r.fornecedor||'').replace(/"/g,'""')
-				const sem = Number(r.valor_sem_iva||0).toFixed(2)
-				const iva = Number(r.valor_iva||0).toFixed(2)
-				const total = Number(r.total||0).toFixed(2)
-				lines.push(`"${data}","${fornecedor}","${sem}","${iva}","${total}"`)
+			return lines
+		}
+
+		if(format === 'csv' || format === 'excel'){
+			// If a specific tipo was requested, return only that section as a standalone file
+			if(tipoFilter === 'receita' || tipoFilter === 'despesa'){
+				const rows = tipoFilter === 'receita' ? receitasRes.rows : despesasRes.rows
+				const lines = sectionToCsvLines(tipoFilter === 'receita' ? 'Receitas' : 'Despesas', rows)
+				const filename = `export-${tipoFilter}-${(new Date()).toISOString().slice(0,10)}.csv`
+				res.setHeader('Content-Type','text/csv; charset=utf-8')
+				res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+				return res.send(lines.join('\n'))
 			}
 
+			// default: both sections in a single CSV
+			let lines = []
+			lines = lines.concat(sectionToCsvLines('Receitas', receitasRes.rows))
+			lines.push('')
+			lines = lines.concat(sectionToCsvLines('Despesas', despesasRes.rows))
 			const filename = `export-${(new Date()).toISOString().slice(0,10)}.csv`
 			res.setHeader('Content-Type','text/csv; charset=utf-8')
 			res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
@@ -2564,14 +2569,56 @@ app.get('/api/export', auth, async (req, res) => {
 
 		if(format === 'pdf'){
 			const doc = new PDFDocument({margin:40, size:'A4'})
-			const filename = `export-${(new Date()).toISOString().slice(0,10)}.pdf`
+			const filenameBase = tipoFilter ? `export-${tipoFilter}` : `export`
+			const filename = `${filenameBase}-${(new Date()).toISOString().slice(0,10)}.pdf`
 			res.setHeader('Content-Type','application/pdf')
 			res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
 			doc.pipe(res)
 
 			const colPositions = [40,130,330,420,490]
-			const rowHeight = 18
 
+			const addHeader = (title) => {
+				// logo at left and title centred
+				try{
+					if(fs.existsSync(logoPath)){
+						doc.image(logoPath, 40, doc.y, {width:80})
+					}
+				}catch(_){ }
+				doc.fontSize(18).text(title, {align:'center'})
+				doc.moveDown(0.6)
+			}
+
+			// ensure header on each new page
+			const currentSectionTitle = tipoFilter ? (tipoFilter==='receita' ? 'Receitas' : 'Despesas') : 'Export - Registos'
+			doc.on('pageAdded', () => { addHeader(currentSectionTitle) })
+
+			if(tipoFilter === 'receita' || tipoFilter === 'despesa'){
+				addHeader(tipoFilter==='receita' ? 'Receitas' : 'Despesas')
+				const rows = tipoFilter === 'receita' ? receitasRes.rows : despesasRes.rows
+				doc.fontSize(10)
+				// header row
+				doc.text('Data', colPositions[0], doc.y)
+				doc.text('Cliente/Fornecedor', colPositions[1], doc.y)
+				doc.text('Valor Sem IVA', colPositions[2], doc.y)
+				doc.text('IVA', colPositions[3], doc.y)
+				doc.text('Total', colPositions[4], doc.y)
+				doc.moveDown(0.2)
+				for(const r of rows){
+					if(doc.y > doc.page.height - 80) doc.addPage()
+					doc.fontSize(10)
+					doc.text(fmtDate(r.data), colPositions[0], doc.y, {width:80})
+					doc.text(String(r.fornecedor||''), colPositions[1], doc.y, {width:180})
+					doc.text(Number(r.valor_sem_iva||0).toFixed(2), colPositions[2], doc.y, {width:70,align:'right'})
+					doc.text(Number(r.valor_iva||0).toFixed(2), colPositions[3], doc.y, {width:50,align:'right'})
+					doc.text(Number(r.total||0).toFixed(2), colPositions[4], doc.y, {width:70,align:'right'})
+					doc.moveDown(0.4)
+				}
+				doc.end()
+				return
+			}
+
+			// default: both sections in one PDF but each section gets its own header/logo
+			addHeader('Export - Registos')
 			const renderSection = (title, rows) => {
 				doc.moveDown(0.5)
 				doc.fontSize(14).text(title, {underline:true})
@@ -2597,10 +2644,6 @@ app.get('/api/export', auth, async (req, res) => {
 				}
 				doc.moveDown(0.6)
 			}
-
-			// Title
-			doc.fontSize(18).text('Export - Registos', {align:'center'})
-			doc.moveDown(0.8)
 
 			renderSection('Receitas', receitasRes.rows)
 			renderSection('Despesas', despesasRes.rows)

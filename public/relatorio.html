@@ -157,10 +157,49 @@ linhas.appendChild(tr)
 carregar()
 </script>
 <script>
-function exportRegistos(format){
-	window.location.href = `/api/export?format=${encodeURIComponent(format)}`
+function exportRegistos(format, tipo){
+		let url = `/api/export?format=${encodeURIComponent(format)}`
+		if(tipo){ url += `&tipo=${encodeURIComponent(tipo)}` }
+		window.location.href = url
+}
+
+function openExportModalRel(){
+		const modal = document.getElementById('exportModalRel')
+		if(modal) modal.style.display = 'block'
+}
+
+function closeExportModalRel(){
+		const modal = document.getElementById('exportModalRel')
+		if(modal) modal.style.display = 'none'
+}
+
+function submitExportFromModalRel(){
+		const tipo = document.querySelector('input[name="exportTipoRel"]:checked')?.value || ''
+		const format = document.querySelector('input[name="exportFormatRel"]:checked')?.value || 'csv'
+		closeExportModalRel()
+		exportRegistos(format, tipo)
 }
 </script>
+
+<!-- Export modal for relatorio -->
+<div id="exportModalRel" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:9999;">
+	<div style="background:#fff;padding:18px;border-radius:8px;max-width:420px;margin:40px auto;">
+		<h3>Exportar</h3>
+		<div style="margin-top:8px;">
+			<label style="display:block;margin-bottom:6px;"><input type="radio" name="exportTipoRel" value="" checked> Ambos (Receitas + Despesas)</label>
+			<label style="display:block;margin-bottom:6px;"><input type="radio" name="exportTipoRel" value="receita"> Receitas</label>
+			<label style="display:block;margin-bottom:6px;"><input type="radio" name="exportTipoRel" value="despesa"> Despesas</label>
+		</div>
+		<div style="margin-top:12px;">
+			<label style="display:block;margin-bottom:6px;"><input type="radio" name="exportFormatRel" value="csv" checked> Excel (CSV)</label>
+			<label style="display:block;margin-bottom:6px;"><input type="radio" name="exportFormatRel" value="pdf"> PDF</label>
+		</div>
+		<div style="margin-top:14px;text-align:right;">
+			<button onclick="closeExportModalRel()" style="margin-right:8px;">Cancelar</button>
+			<button onclick="submitExportFromModalRel()" style="background:#0f172a;color:#fff;padding:6px 12px;border-radius:6px;">Exportar</button>
+		</div>
+	</div>
+</div>
 </body>
 
 </html>

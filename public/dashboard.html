@@ -724,6 +724,26 @@ cursor:default;
 <h2 id="despesas">0 €</h2>
 </div>
 
+<!-- Export modal -->
+<div id="exportModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:9999;">
+	<div style="background:#fff;padding:18px;border-radius:8px;max-width:420px;margin:40px auto;">
+		<h3>Exportar</h3>
+		<div style="margin-top:8px;">
+			<label style="display:block;margin-bottom:6px;"><input type="radio" name="exportTipo" value="" checked> Ambos (Receitas + Despesas)</label>
+			<label style="display:block;margin-bottom:6px;"><input type="radio" name="exportTipo" value="receita"> Receitas</label>
+			<label style="display:block;margin-bottom:6px;"><input type="radio" name="exportTipo" value="despesa"> Despesas</label>
+		</div>
+		<div style="margin-top:12px;">
+			<label style="display:block;margin-bottom:6px;"><input type="radio" name="exportFormat" value="csv" checked> Excel (CSV)</label>
+			<label style="display:block;margin-bottom:6px;"><input type="radio" name="exportFormat" value="pdf"> PDF</label>
+		</div>
+		<div style="margin-top:14px;text-align:right;">
+			<button onclick="closeExportModal()" style="margin-right:8px;">Cancelar</button>
+			<button onclick="submitExportFromModal()" style="background:#0f172a;color:#fff;padding:6px 12px;border-radius:6px;">Exportar</button>
+		</div>
+	</div>
+</div>
+
 <div class="card">
 <h3>Saldo</h3>
 <h2 id="saldo">0 €</h2>
@@ -749,6 +769,7 @@ cursor:default;
 		<input id="docInput" class="auto-upload-input" type="file" name="file" accept="application/pdf" required aria-hidden="true">
   </form>
   <button type="button" class="auto-upload-btn btn-docs" style="margin-left:auto; background:#64748b; color:#fff;" onclick="abrirDocs()">Docs</button>
+	<button type="button" class="auto-upload-btn" style="background:#334155;color:#fff;margin-left:8px;" onclick="openExportModal()">Exportar...</button>
 	<button type="button" class="auto-upload-btn" style="background:#111827;color:#fff;margin-left:8px;" onclick="exportRegistos('pdf')">Exportar PDF</button>
 	<button type="button" class="auto-upload-btn" style="background:#0f172a;color:#fff;margin-left:6px;" onclick="exportRegistos('csv')">Exportar Excel</button>
 </div>
@@ -1200,11 +1221,29 @@ function formatarData(dataBruta){
   return texto
 }
 
-function exportRegistos(format){
+function exportRegistos(format, tipo){
 	// format: 'pdf' or 'csv'
-	const url = `/api/export?format=${encodeURIComponent(format)}`
+	let url = `/api/export?format=${encodeURIComponent(format)}`
+	if(tipo){ url += `&tipo=${encodeURIComponent(tipo)}` }
 	// trigger download using navigation so cookies/auth are sent
 	window.location.href = url
+}
+
+function openExportModal(){
+	const modal = document.getElementById('exportModal')
+	if(modal) modal.style.display = 'block'
+}
+
+function closeExportModal(){
+	const modal = document.getElementById('exportModal')
+	if(modal) modal.style.display = 'none'
+}
+
+function submitExportFromModal(){
+	const tipo = document.querySelector('input[name="exportTipo"]:checked')?.value || ''
+	const format = document.querySelector('input[name="exportFormat"]:checked')?.value || 'csv'
+	closeExportModal()
+	exportRegistos(format, tipo)
 }
 
 function dataParaInputLocal(dataBruta){
