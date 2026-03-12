@@ -2559,7 +2559,28 @@ app.get('/api/export', auth, async (req, res) => {
 				sheetRows.forEach(r => sheet.addRow(r))
 				// columns styling
 				sheet.columns = [ {width:12},{width:40},{width:14},{width:10},{width:12} ]
-				sheet.getRow(1).font = {bold:true}
+				// header style
+				const headerRow = sheet.getRow(1)
+				headerRow.font = {bold:true}
+				headerRow.alignment = {vertical:'middle', horizontal:'center'}
+				headerRow.eachCell((cell)=>{
+					cell.fill = { type: 'pattern', pattern:'solid', fgColor:{argb:'FF1E293B'} }
+					cell.font = {bold:true, color:{argb:'FFFFFFFF'}}
+					cell.border = {top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'}}
+				})
+				// data formatting
+				for(let r=2;r<=sheet.rowCount;r++){
+					const row = sheet.getRow(r)
+					row.getCell(3).numFmt = '#,##0.00'
+					row.getCell(4).numFmt = '#,##0.00'
+					row.getCell(5).numFmt = '#,##0.00'
+					row.getCell(3).alignment = {horizontal:'right'}
+					row.getCell(4).alignment = {horizontal:'right'}
+					row.getCell(5).alignment = {horizontal:'right'}
+					row.eachCell((cell)=>{
+						cell.border = {top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'}}
+					})
+				}
 
 				// Transposed sheet: headers become first column, each record becomes a column
 				const sheetT = workbook.addWorksheet(`${title} (Transposed)`)
@@ -2575,7 +2596,13 @@ app.get('/api/export', auth, async (req, res) => {
 				}
 				transposed.forEach(r=> sheetT.addRow(r))
 				sheetT.columns = [{width:24}].concat(new Array(Math.max(5,sheetRows.length)).fill({width:14}))
+				// style transposed
 				sheetT.getRow(1).font = {bold:true}
+				sheetT.eachRow((row, rowNumber) => {
+					row.eachCell((cell) => {
+						cell.border = {top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'}}
+					})
+				})
 			}
 
 			if(tipoFilter === 'receita' || tipoFilter === '') makeSheetsFor('Receitas', receitasRes.rows)
@@ -2624,10 +2651,10 @@ app.get('/api/export', auth, async (req, res) => {
 			const addHeader = (title) => {
 				try{
 					if(fs.existsSync(logoPath)){
-						doc.image(logoPath, 40, doc.y, {width:80})
+						doc.image(logoPath, 40, 40, {width:80})
 					}
 				}catch(_){ }
-				doc.fontSize(20).text(title, 0, 48, {align:'center'})
+				doc.fontSize(20).font('Helvetica-Bold').text(title, 0, 48, {align:'center'})
 				doc.moveDown(1)
 			}
 
@@ -2636,13 +2663,23 @@ app.get('/api/export', auth, async (req, res) => {
 				let y = startY
 				const rowHeight = 20
 				doc.fontSize(10)
-				// header
+				// header background
+				const headerH = 20
+				doc.save()
+				doc.rect(36, y-6, doc.page.width - 72, headerH).fill('#F3F4F6')
+				doc.fillColor('#000000')
 				doc.font('Helvetica-Bold')
 				for(let i=0;i<headers.length;i++){
 					doc.text(headers[i], colPositions[i], y)
 				}
-				y += rowHeight
+				doc.restore()
+				y += headerH
 				doc.font('Helvetica')
+
+				// draw vertical separators
+				for(const x of colPositions){
+					doc.moveTo(x-8, startY-6).lineTo(x-8, doc.page.height-60).strokeColor('#E5E7EB').stroke()
+				}
 
 				for(const r of rows){
 					if(y > doc.page.height - 80){ doc.addPage(); y = 60; }
@@ -2655,8 +2692,10 @@ app.get('/api/export', auth, async (req, res) => {
 					doc.text(Number(r.valor_sem_iva||0).toFixed(2), colPositions[2], y, {width:70, align:'right'})
 					doc.text(Number(r.valor_iva||0).toFixed(2), colPositions[3], y, {width:50, align:'right'})
 					doc.text(Number(r.total||0).toFixed(2), colPositions[4], y, {width:70, align:'right'})
+					// separator line
+					doc.moveTo(36, y + rowHeight - 6).lineTo(doc.page.width - 36, y + rowHeight - 6).strokeColor('#E5E7EB').stroke()
 					// advance y by max of rowHeight and clienteBoxHeight
-					y += Math.max(rowHeight, clienteBoxHeight + 4)
+					y += Math.max(rowHeight, clienteBoxHeight + 6)
 				}
 				return y + 8
 			}
