@@ -739,7 +739,17 @@ cursor:default;
 		</div>
 		<div style="margin-top:14px;text-align:right;">
 			<button onclick="closeExportModal()" style="margin-right:8px;">Cancelar</button>
-			<button onclick="submitExportFromModal()" style="background:#0f172a;color:#fff;padding:6px 12px;border-radius:6px;">Exportar</button>
+			<div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;">
+				<div style="display:flex;flex-direction:column;align-items:flex-end;margin-right:8px;">
+					<label style="font-size:12px;color:#374151;margin-bottom:4px;">Data início</label>
+					<input id="exportStartDate" type="date" style="padding:6px;border:1px solid #e5e7eb;border-radius:4px;" />
+				</div>
+				<div style="display:flex;flex-direction:column;align-items:flex-end;margin-right:8px;">
+					<label style="font-size:12px;color:#374151;margin-bottom:4px;">Data fim</label>
+					<input id="exportEndDate" type="date" style="padding:6px;border:1px solid #e5e7eb;border-radius:4px;" />
+				</div>
+				<button onclick="submitExportFromModal()" style="background:#0f172a;color:#fff;padding:6px 12px;border-radius:6px;">Exportar</button>
+			</div>
 		</div>
 	</div>
 </div>
@@ -770,6 +780,7 @@ cursor:default;
   </form>
   <button type="button" class="auto-upload-btn btn-docs" style="margin-left:auto; background:#64748b; color:#fff;" onclick="abrirDocs()">Docs</button>
 	<button type="button" class="auto-upload-btn" style="background:#334155;color:#fff;margin-left:8px;" onclick="openExportModal()">Exportar...</button>
+		<button type="button" class="auto-upload-btn" style="background:#0b74de;color:#fff;margin-left:8px;" onclick="openExportModal()">Downloads</button>
 	<button type="button" class="auto-upload-btn" style="background:#111827;color:#fff;margin-left:8px;" onclick="exportRegistos('pdf')">Exportar PDF</button>
 	<button type="button" class="auto-upload-btn" style="background:#0f172a;color:#fff;margin-left:6px;" onclick="exportRegistos('csv')">Exportar Excel</button>
 </div>
@@ -1221,10 +1232,12 @@ function formatarData(dataBruta){
   return texto
 }
 
-function exportRegistos(format, tipo){
-	// format: 'pdf' or 'csv'
+function exportRegistos(format, tipo, startDate, endDate){
+	// format: 'pdf' or 'csv' or 'excel'
 	let url = `/api/export?format=${encodeURIComponent(format)}`
 	if(tipo){ url += `&tipo=${encodeURIComponent(tipo)}` }
+	if(startDate){ url += `&start=${encodeURIComponent(startDate)}` }
+	if(endDate){ url += `&end=${encodeURIComponent(endDate)}` }
 	// trigger download using navigation so cookies/auth are sent
 	window.location.href = url
 }
@@ -1242,8 +1255,10 @@ function closeExportModal(){
 function submitExportFromModal(){
 	const tipo = document.querySelector('input[name="exportTipo"]:checked')?.value || ''
 	const format = document.querySelector('input[name="exportFormat"]:checked')?.value || 'csv'
+	const start = document.getElementById('exportStartDate')?.value || ''
+	const end = document.getElementById('exportEndDate')?.value || ''
 	closeExportModal()
-	exportRegistos(format, tipo)
+	exportRegistos(format, tipo, start, end)
 }
 
 function dataParaInputLocal(dataBruta){
