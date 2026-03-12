@@ -78,31 +78,6 @@ table{font-size:14px;}
 <h1>Relatorio</h1>
 <div>
 <a href="/dashboard"><button>Dashboard</button></a>
-<button id="openExportBtnRel">Exportar (CSV/PDF)</button>
-
-<div id="exportModalRel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;z-index:9999">
-	<div style="background:#fff;padding:18px;border-radius:8px;min-width:320px;max-width:520px;margin:auto">
-		<h3>Exportar registos</h3>
-		<div style="display:flex;gap:8px;align-items:center;margin-top:8px">
-			<label style="font-size:13px">De: <input id="exportFromRel" type="date" /></label>
-			<label style="font-size:13px">Até: <input id="exportToRel" type="date" /></label>
-		</div>
-		<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-			<button id="exportCsvBtnRel">Excel (CSV)</button>
-			<button id="exportPdfBtnRel">PDF</button>
-			<button id="exportCancelBtnRel">Cancelar</button>
-		</div>
-	</div>
-</div>
-
-<script>
-document.getElementById('openExportBtnRel').addEventListener('click', ()=>{ document.getElementById('exportModalRel').style.display = 'flex' })
-document.getElementById('exportCancelBtnRel').addEventListener('click', ()=>{ document.getElementById('exportModalRel').style.display = 'none' })
-function triggerDownloadRel(url){ const a=document.createElement('a'); a.href=url; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove(); }
-function buildExportUrlRel(format){ const from=document.getElementById('exportFromRel').value; const to=document.getElementById('exportToRel').value; const parts=[`format=${encodeURIComponent(format)}`]; if(from) parts.push(`from=${encodeURIComponent(from)}`); if(to) parts.push(`to=${encodeURIComponent(to)}`); return '/api/export?'+parts.join('&') }
-document.getElementById('exportCsvBtnRel').addEventListener('click', ()=>{ triggerDownloadRel(buildExportUrlRel('csv')); document.getElementById('exportModalRel').style.display='none' })
-document.getElementById('exportPdfBtnRel').addEventListener('click', ()=>{ triggerDownloadRel(buildExportUrlRel('pdf')); document.getElementById('exportModalRel').style.display='none' })
-</script>
 <a href="/logout"><button class="logout">Logout</button></a>
 </div>
 </header>
