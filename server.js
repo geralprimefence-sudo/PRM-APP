@@ -284,6 +284,17 @@ async function preprocessarImagemParaOCR(file,modo = "balanced"){
 	const out = path.join(TEMP_DIR,tmpName)
 
 	try{
+		// evitar procesar imagens muito pequenas (causa erros em lib de imagens)
+		try{
+			const meta = await sharp(file).metadata()
+			if(meta && (meta.width < 30 || meta.height < 30)){
+				console.warn('Imagem demasiado pequena para preprocessamento OCR:', meta.width + 'x' + meta.height, file)
+				return null
+			}
+		}catch(e){
+			// se metadata falhar, prosseguir com tentativa de processamento
+		}
+
 		let img = sharp(file)
 			.rotate()
 			.resize({width:1750,height:1750,fit:"inside",withoutEnlargement:true})
@@ -382,6 +393,17 @@ async function lerQrCodeDaImagem(file,modo = "raw"){
 	if(!jsQR || !sharp) return null
 
 	try{
+		// evitar procesar imagens muito pequenas que causam erros em raw()/toBuffer()
+		try{
+			const meta = await sharp(file).metadata()
+			if(meta && (meta.width < 20 || meta.height < 20)){
+				console.warn('Imagem demasiado pequena para leitura QR:', meta.width + 'x' + meta.height, file)
+				return null
+			}
+		}catch(e){
+			// ignorar erro de metadata e continuar
+		}
+
 		let img = sharp(file).rotate().resize({width:1900,height:1900,fit:"inside",withoutEnlargement:true})
 		if(modo === "enhanced"){
 			img = img.grayscale().normalize().sharpen({sigma:1.1,m1:0.9,m2:0.3,x1:2,y2:10,y3:20})
