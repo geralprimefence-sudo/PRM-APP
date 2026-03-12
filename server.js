@@ -2545,7 +2545,51 @@ app.get('/api/export', auth, async (req, res) => {
 			return lines
 		}
 
-		if(format === 'csv' || format === 'excel'){
+		if(format === 'excel' || format === 'xlsx'){
+			// Generate real XLSX workbook with vertical and transposed sheets
+			const ExcelJS = require('exceljs')
+			const workbook = new ExcelJS.Workbook()
+
+			const makeSheetsFor = (title, rows) => {
+				const sheetRows = rows.map(r => [fmtDate(r.data), String(r.fornecedor||''), Number(r.valor_sem_iva||0).toFixed(2), Number(r.valor_iva||0).toFixed(2), Number(r.total||0).toFixed(2)])
+				const headers = ['Data','Cliente/Fornecedor','Valor Sem IVA','IVA','Total']
+
+				const sheet = workbook.addWorksheet(`${title} (Rows)`, {views:[{state:'frozen',ySplit:1}]})
+				sheet.addRow(headers)
+				sheetRows.forEach(r => sheet.addRow(r))
+				// columns styling
+				sheet.columns = [ {width:12},{width:40},{width:14},{width:10},{width:12} ]
+				sheet.getRow(1).font = {bold:true}
+
+				// Transposed sheet: headers become first column, each record becomes a column
+				const sheetT = workbook.addWorksheet(`${title} (Transposed)`)
+				// first column = headers
+				const transposed = []
+				transposed.push(['Campo'].concat(sheetRows.map((_,i)=> `Registo ${i+1}`)))
+				for(let c=0;c<headers.length;c++){
+					const row = [headers[c]]
+					for(let r=0;r<sheetRows.length;r++){
+						row.push(sheetRows[r][c])
+					}
+					transposed.push(row)
+				}
+				transposed.forEach(r=> sheetT.addRow(r))
+				sheetT.columns = [{width:24}].concat(new Array(Math.max(5,sheetRows.length)).fill({width:14}))
+				sheetT.getRow(1).font = {bold:true}
+			}
+
+			if(tipoFilter === 'receita' || tipoFilter === '') makeSheetsFor('Receitas', receitasRes.rows)
+			if(tipoFilter === 'despesa' || tipoFilter === '') makeSheetsFor('Despesas', despesasRes.rows)
+
+			const filename = `export-${tipoFilter || 'all'}-${(new Date()).toISOString().slice(0,10)}.xlsx`
+			res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+			res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+			await workbook.xlsx.write(res)
+			res.end()
+			return
+		}
+
+		if(format === 'csv'){
 			// If a specific tipo was requested, return only that section as a standalone file
 			if(tipoFilter === 'receita' || tipoFilter === 'despesa'){
 				const rows = tipoFilter === 'receita' ? receitasRes.rows : despesasRes.rows
@@ -2575,78 +2619,62 @@ app.get('/api/export', auth, async (req, res) => {
 			res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
 			doc.pipe(res)
 
-			const colPositions = [40,130,330,420,490]
+			const colPositions = [40,170,360,450,520]
 
 			const addHeader = (title) => {
-				// logo at left and title centred
 				try{
 					if(fs.existsSync(logoPath)){
 						doc.image(logoPath, 40, doc.y, {width:80})
 					}
 				}catch(_){ }
-				doc.fontSize(18).text(title, {align:'center'})
-				doc.moveDown(0.6)
+				doc.fontSize(20).text(title, 0, 48, {align:'center'})
+				doc.moveDown(1)
 			}
 
-			// ensure header on each new page
-			const currentSectionTitle = tipoFilter ? (tipoFilter==='receita' ? 'Receitas' : 'Despesas') : 'Export - Registos'
-			doc.on('pageAdded', () => { addHeader(currentSectionTitle) })
-
-			if(tipoFilter === 'receita' || tipoFilter === 'despesa'){
-				addHeader(tipoFilter==='receita' ? 'Receitas' : 'Despesas')
-				const rows = tipoFilter === 'receita' ? receitasRes.rows : despesasRes.rows
-				doc.fontSize(10)
-				// header row
-				doc.text('Data', colPositions[0], doc.y)
-				doc.text('Cliente/Fornecedor', colPositions[1], doc.y)
-				doc.text('Valor Sem IVA', colPositions[2], doc.y)
-				doc.text('IVA', colPositions[3], doc.y)
-				doc.text('Total', colPositions[4], doc.y)
-				doc.moveDown(0.2)
-				for(const r of rows){
-					if(doc.y > doc.page.height - 80) doc.addPage()
-					doc.fontSize(10)
-					doc.text(fmtDate(r.data), colPositions[0], doc.y, {width:80})
-					doc.text(String(r.fornecedor||''), colPositions[1], doc.y, {width:180})
-					doc.text(Number(r.valor_sem_iva||0).toFixed(2), colPositions[2], doc.y, {width:70,align:'right'})
-					doc.text(Number(r.valor_iva||0).toFixed(2), colPositions[3], doc.y, {width:50,align:'right'})
-					doc.text(Number(r.total||0).toFixed(2), colPositions[4], doc.y, {width:70,align:'right'})
-					doc.moveDown(0.4)
-				}
-				doc.end()
-				return
-			}
-
-			// default: both sections in one PDF but each section gets its own header/logo
-			addHeader('Export - Registos')
-			const renderSection = (title, rows) => {
-				doc.moveDown(0.5)
-				doc.fontSize(14).text(title, {underline:true})
-				doc.moveDown(0.2)
+			// draw a table with fixed columns and row height; returns next y
+			const renderTable = (startY, headers, rows) => {
+				let y = startY
+				const rowHeight = 20
 				doc.fontSize(10)
 				// header
-				doc.text('Data', colPositions[0], doc.y, {continued:false})
-				doc.text('Cliente/Fornecedor', colPositions[1], doc.y, {continued:false})
-				doc.text('Valor Sem IVA', colPositions[2], doc.y, {continued:false})
-				doc.text('IVA', colPositions[3], doc.y, {continued:false})
-				doc.text('Total', colPositions[4], doc.y, {continued:false})
-				doc.moveDown(0.2)
+				doc.font('Helvetica-Bold')
+				for(let i=0;i<headers.length;i++){
+					doc.text(headers[i], colPositions[i], y)
+				}
+				y += rowHeight
+				doc.font('Helvetica')
 
 				for(const r of rows){
-					if(doc.y > doc.page.height - 80) doc.addPage()
-					doc.fontSize(10)
-					doc.text(fmtDate(r.data), colPositions[0], doc.y, {width:80})
-					doc.text(String(r.fornecedor||''), colPositions[1], doc.y, {width:180})
-					doc.text(Number(r.valor_sem_iva||0).toFixed(2), colPositions[2], doc.y, {width:70,align:'right'})
-					doc.text(Number(r.valor_iva||0).toFixed(2), colPositions[3], doc.y, {width:50,align:'right'})
-					doc.text(Number(r.total||0).toFixed(2), colPositions[4], doc.y, {width:70,align:'right'})
-					doc.moveDown(0.4)
+					if(y > doc.page.height - 80){ doc.addPage(); y = 60; }
+					// Data
+					doc.text(fmtDate(r.data), colPositions[0], y, {width:120})
+					// Cliente (wrap within width)
+					const clienteBoxHeight = doc.heightOfString(String(r.fornecedor||''), {width: 170, align:'left'})
+					doc.text(String(r.fornecedor||''), colPositions[1], y, {width:170})
+					// numeric columns aligned right
+					doc.text(Number(r.valor_sem_iva||0).toFixed(2), colPositions[2], y, {width:70, align:'right'})
+					doc.text(Number(r.valor_iva||0).toFixed(2), colPositions[3], y, {width:50, align:'right'})
+					doc.text(Number(r.total||0).toFixed(2), colPositions[4], y, {width:70, align:'right'})
+					// advance y by max of rowHeight and clienteBoxHeight
+					y += Math.max(rowHeight, clienteBoxHeight + 4)
 				}
-				doc.moveDown(0.6)
+				return y + 8
 			}
 
-			renderSection('Receitas', receitasRes.rows)
-			renderSection('Despesas', despesasRes.rows)
+			// Render flow
+			addHeader('Export - Registos')
+			let y = 80
+			if(tipoFilter === 'receita' || tipoFilter === ''){
+				doc.fontSize(16).font('Helvetica-Bold').text('Receitas', 40, y)
+				y += 22
+				y = renderTable(y, ['Data','Cliente/Fornecedor','Valor Sem IVA','IVA','Total'], receitasRes.rows)
+			}
+			if(tipoFilter === 'despesa' || tipoFilter === ''){
+				if(y > doc.page.height - 120){ doc.addPage(); y = 60 }
+				doc.fontSize(16).font('Helvetica-Bold').text('Despesas', 40, y)
+				y += 22
+				renderTable(y, ['Data','Cliente/Fornecedor','Valor Sem IVA','IVA','Total'], despesasRes.rows)
+			}
 
 			doc.end()
 			return
