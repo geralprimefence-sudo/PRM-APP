@@ -2511,11 +2511,23 @@ app.get('/api/export', auth, async (req, res) => {
 		const format = String(req.query.format || 'csv').toLowerCase() // 'csv' or 'pdf' or 'excel'
 		const tipoFilter = String(req.query.tipo || '').toLowerCase() // 'receita' or 'despesa' or '' for both
 
-		const qryReceitas = `SELECT data, fornecedor, valor_sem_iva, valor_iva, COALESCE(valor_total,valor) as total FROM registos WHERE user_id=$1 AND tipo='receita' ORDER BY data DESC`
-		const qryDespesas = `SELECT data, fornecedor, valor_sem_iva, valor_iva, COALESCE(valor_total,valor) as total FROM registos WHERE user_id=$1 AND tipo='despesa' ORDER BY data DESC`
+		const limitRaw = parseInt(req.query.limit || '0')
+		const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 0
 
-		const receitasRes = tipoFilter === 'despesa' ? { rows: [] } : await pool.query(qryReceitas, [userId])
-		const despesasRes = tipoFilter === 'receita' ? { rows: [] } : await pool.query(qryDespesas, [userId])
+		const buildQuery = (tipo) => {
+			const base = `SELECT data, fornecedor, valor_sem_iva, valor_iva, COALESCE(valor_total,valor) as total FROM registos WHERE user_id=$1 AND tipo='${tipo}' ORDER BY data DESC`
+			if(limit){
+				// add parameterized LIMIT
+				return { text: base + ` LIMIT $2`, params: [userId, limit] }
+			}
+			return { text: base, params: [userId] }
+		}
+
+		const receitasQ = buildQuery('receita')
+		const despesasQ = buildQuery('despesa')
+
+		const receitasRes = tipoFilter === 'despesa' ? { rows: [] } : await pool.query(receitasQ.text, receitasQ.params)
+		const despesasRes = tipoFilter === 'receita' ? { rows: [] } : await pool.query(despesasQ.text, despesasQ.params)
 
 		const fmtDate = (d) => {
 			if(!d) return ''
@@ -2551,58 +2563,73 @@ app.get('/api/export', auth, async (req, res) => {
 			const workbook = new ExcelJS.Workbook()
 
 			const makeSheetsFor = (title, rows) => {
-				const sheetRows = rows.map(r => [fmtDate(r.data), String(r.fornecedor||''), Number(r.valor_sem_iva||0).toFixed(2), Number(r.valor_iva||0).toFixed(2), Number(r.total||0).toFixed(2)])
+				console.log('makeSheetsFor start', {title, rowsLength: Array.isArray(rows) ? rows.length : 0})
+				// keep numeric values as numbers so Excel formats them correctly
+				const sheetRows = rows.map(r => [fmtDate(r.data), String(r.fornecedor||''), Number(r.valor_sem_iva||0), Number(r.valor_iva||0), Number(r.total||0)])
 				const headers = ['Data','Cliente/Fornecedor','Valor Sem IVA','IVA','Total']
 
+				// Rows-style sheet
 				const sheet = workbook.addWorksheet(`${title} (Rows)`, {views:[{state:'frozen',ySplit:1}]})
 				sheet.addRow(headers)
 				sheetRows.forEach(r => sheet.addRow(r))
-				// columns styling
-				sheet.columns = [ {width:12},{width:40},{width:14},{width:10},{width:12} ]
+				// columns styling (consistent across Receitas/Despesas)
+				sheet.columns = [ {width:12},{width:40},{width:16},{width:12},{width:14} ]
 				// header style
 				const headerRow = sheet.getRow(1)
 				headerRow.font = {bold:true}
 				headerRow.alignment = {vertical:'middle', horizontal:'center'}
-				headerRow.eachCell((cell)=>{
-					cell.fill = { type: 'pattern', pattern:'solid', fgColor:{argb:'FF1E293B'} }
-					cell.font = {bold:true, color:{argb:'FFFFFFFF'}}
-					cell.border = {top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'}}
+				try{
+					headerRow.eachCell((cell)=>{
+						cell.fill = { type: 'pattern', pattern:'solid', fgColor:{argb:'FF1E293B'} }
+						cell.font = {bold:true, color:{argb:'FFFFFFFF'}}
+						cell.border = {top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'}}
+					})
+				}catch(err){
+					console.error('headerRow.eachCell error', {title, err: String(err)})
+				}
+				// enforce column-level number formats and alignment
+				['3','4','5'].forEach((idx)=>{
+					const col = sheet.getColumn(parseInt(idx,10))
+					col.numFmt = '#,##0.00 €'
+					col.alignment = {horizontal:'right'}
 				})
-				// data formatting
+				sheet.autoFilter = { from: 'A1', to: 'E1' }
+
+				// apply borders to data rows
 				for(let r=2;r<=sheet.rowCount;r++){
 					const row = sheet.getRow(r)
-					row.getCell(3).numFmt = '#,##0.00'
-					row.getCell(4).numFmt = '#,##0.00'
-					row.getCell(5).numFmt = '#,##0.00'
-					row.getCell(3).alignment = {horizontal:'right'}
-					row.getCell(4).alignment = {horizontal:'right'}
-					row.getCell(5).alignment = {horizontal:'right'}
 					row.eachCell((cell)=>{
 						cell.border = {top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'}}
 					})
 				}
 
-				// Transposed sheet: headers become first column, each record becomes a column
-				const sheetT = workbook.addWorksheet(`${title} (Transposed)`)
-				// first column = headers
-				const transposed = []
-				transposed.push(['Campo'].concat(sheetRows.map((_,i)=> `Registo ${i+1}`)))
-				for(let c=0;c<headers.length;c++){
-					const row = [headers[c]]
-					for(let r=0;r<sheetRows.length;r++){
-						row.push(sheetRows[r][c])
+				// add totals row (consistent)
+				if(sheet.rowCount >= 2){
+					console.log('makeSheetsFor sums', {sheetRowCount: sheet.rowCount, sheetRowsLength: sheetRows.length})
+					let sumSem = 0, sumIva = 0, sumTot = 0
+					for(let r=2;r<=sheet.rowCount;r++){
+						try{
+							const rowObj = sheet.getRow(r)
+							const semCell = rowObj && rowObj.getCell ? rowObj.getCell(3) : null
+							const ivaCell = rowObj && rowObj.getCell ? rowObj.getCell(4) : null
+							const totCell = rowObj && rowObj.getCell ? rowObj.getCell(5) : null
+							const sem = semCell && semCell.value !== undefined ? Number(semCell.value || 0) : 0
+							const iva = ivaCell && ivaCell.value !== undefined ? Number(ivaCell.value || 0) : 0
+							const tot = totCell && totCell.value !== undefined ? Number(totCell.value || 0) : 0
+							sumSem += Number.isFinite(sem) ? sem : 0
+							sumIva += Number.isFinite(iva) ? iva : 0
+							sumTot += Number.isFinite(tot) ? tot : 0
+						}catch(_){ /* ignore malformed rows */ }
 					}
-					transposed.push(row)
-				}
-				transposed.forEach(r=> sheetT.addRow(r))
-				sheetT.columns = [{width:24}].concat(new Array(Math.max(5,sheetRows.length)).fill({width:14}))
-				// style transposed
-				sheetT.getRow(1).font = {bold:true}
-				sheetT.eachRow((row, rowNumber) => {
-					row.eachCell((cell) => {
+					const tr = sheet.addRow([ '', 'Totais', sumSem, sumIva, sumTot ])
+					tr.eachCell((cell)=>{
+						cell.font = {bold:true}
+						cell.fill = { type: 'pattern', pattern:'solid', fgColor:{argb:'FFF3F4F6'} }
 						cell.border = {top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'}}
 					})
-				})
+				}
+
+				// (transposed sheet removed to avoid layout/runtime edge-cases)
 			}
 
 			if(tipoFilter === 'receita' || tipoFilter === '') makeSheetsFor('Receitas', receitasRes.rows)
@@ -2646,15 +2673,33 @@ app.get('/api/export', auth, async (req, res) => {
 			res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
 			doc.pipe(res)
 
-			const colPositions = [40,170,360,450,520]
+			// compute column positions dynamically based on page margins and content width
+			const computeColPositions = () => {
+				const left = doc.page.margins && doc.page.margins.left ? doc.page.margins.left : 36
+				const right = doc.page.margins && doc.page.margins.right ? doc.page.margins.right : 36
+				const contentWidth = doc.page.width - left - right
+				// relative widths: Data ~18%, Cliente ~40%, SemIVA ~16%, IVA ~12%, Total ~14%
+				const rel = [0.18, 0.40, 0.16, 0.12, 0.14]
+				const positions = []
+				let x = left
+				for(let i=0;i<rel.length;i++){
+					positions.push(x)
+					const w = Math.round(contentWidth * rel[i])
+					x += w
+				}
+				return { positions, left, right, contentWidth, rel }
+			}
 
 			const addHeader = (title) => {
 				try{
 					if(fs.existsSync(logoPath)){
+						// place logo at top-left
 						doc.image(logoPath, 40, 40, {width:80})
 					}
 				}catch(_){ }
-				doc.fontSize(20).font('Helvetica-Bold').text(title, 0, 48, {align:'center'})
+				// simple, light header: title centred, dark text, no dark background
+				doc.fillColor('#0F172A')
+				doc.fontSize(18).font('Helvetica-Bold').text(title, 0, 50, {align:'center'})
 				doc.moveDown(1)
 			}
 
@@ -2663,39 +2708,91 @@ app.get('/api/export', auth, async (req, res) => {
 				let y = startY
 				const rowHeight = 20
 				doc.fontSize(10)
-				// header background
-				const headerH = 20
+				// compute dynamic positions
+				const colInfo = computeColPositions()
+				const colPositionsLocal = colInfo.positions
+				const leftPad = colInfo.left
+				const contentW = colInfo.contentWidth
+
+				// header background (light)
+				const headerH = 22
 				doc.save()
-				doc.rect(36, y-6, doc.page.width - 72, headerH).fill('#F3F4F6')
-				doc.fillColor('#000000')
+				doc.rect(leftPad - 4, y-6, contentW + 8, headerH).fill('#F3F4F6')
+				doc.fillColor('#0F172A')
 				doc.font('Helvetica-Bold')
 				for(let i=0;i<headers.length;i++){
-					doc.text(headers[i], colPositions[i], y)
+					doc.text(headers[i], colPositionsLocal[i], y)
 				}
 				doc.restore()
 				y += headerH
 				doc.font('Helvetica')
 
-				// draw vertical separators
-				for(const x of colPositions){
-					doc.moveTo(x-8, startY-6).lineTo(x-8, doc.page.height-60).strokeColor('#E5E7EB').stroke()
+				// draw vertical separators (subtle) at column boundaries
+				for(let i=0;i<colPositionsLocal.length;i++){
+					const x = colPositionsLocal[i]
+					doc.save()
+					doc.moveTo(x - 6, startY - 6).lineTo(x - 6, doc.page.height - 60).strokeColor('#E6E7EB').lineWidth(0.5).stroke()
+					doc.restore()
 				}
 
 				for(const r of rows){
 					if(y > doc.page.height - 80){ doc.addPage(); y = 60; }
 					// Data
-					doc.text(fmtDate(r.data), colPositions[0], y, {width:120})
+					const dataWidth = Math.round(contentW * colInfo.rel[0])
+					doc.text(fmtDate(r.data), colPositionsLocal[0], y, {width: dataWidth})
 					// Cliente (wrap within width)
-					const clienteBoxHeight = doc.heightOfString(String(r.fornecedor||''), {width: 170, align:'left'})
-					doc.text(String(r.fornecedor||''), colPositions[1], y, {width:170})
-					// numeric columns aligned right
-					doc.text(Number(r.valor_sem_iva||0).toFixed(2), colPositions[2], y, {width:70, align:'right'})
-					doc.text(Number(r.valor_iva||0).toFixed(2), colPositions[3], y, {width:50, align:'right'})
-					doc.text(Number(r.total||0).toFixed(2), colPositions[4], y, {width:70, align:'right'})
+					const clienteWidth = Math.round(contentW * colInfo.rel[1])
+					const clienteBoxHeight = doc.heightOfString(String(r.fornecedor||''), {width: clienteWidth, align:'left'})
+					doc.text(String(r.fornecedor||''), colPositionsLocal[1], y, {width: clienteWidth})
+					// numeric columns: use monospaced font for perfect decimal alignment
+					const semVal = Number(r.valor_sem_iva||0)
+					const ivaVal = Number(r.valor_iva||0)
+					const totVal = Number(r.total||0)
+					const semFmt = semVal.toLocaleString('pt-PT', {minimumFractionDigits:2, maximumFractionDigits:2})
+					const ivaFmt = ivaVal.toLocaleString('pt-PT', {minimumFractionDigits:2, maximumFractionDigits:2})
+					const totFmt = totVal.toLocaleString('pt-PT', {minimumFractionDigits:2, maximumFractionDigits:2})
+					// switch to monospaced font for numbers
+					doc.font('Courier').fontSize(10)
+					const semWidth = Math.round(contentW * colInfo.rel[2])
+					const ivaWidth = Math.round(contentW * colInfo.rel[3])
+					const totWidth = Math.round(contentW * colInfo.rel[4])
+					doc.text(semFmt, colPositionsLocal[2], y, {width: semWidth - 6, align:'right'})
+					doc.text(ivaFmt, colPositionsLocal[3], y, {width: ivaWidth - 6, align:'right'})
+					// Total: right-aligned within its column
+					doc.font('Courier').fontSize(9)
+					doc.text(totFmt, colPositionsLocal[4], y, {width: totWidth - 6, align:'right'})
+					// restore font for next line
+					doc.font('Helvetica').fontSize(10)
 					// separator line
-					doc.moveTo(36, y + rowHeight - 6).lineTo(doc.page.width - 36, y + rowHeight - 6).strokeColor('#E5E7EB').stroke()
+					doc.moveTo(leftPad - 4, y + rowHeight - 6).lineTo(leftPad - 4 + contentW + 8, y + rowHeight - 6).strokeColor('#E6E7EB').stroke()
 					// advance y by max of rowHeight and clienteBoxHeight
 					y += Math.max(rowHeight, clienteBoxHeight + 6)
+				}
+				// after rows, render totals row with light background and bold numbers
+				let sumSem = 0, sumIva = 0, sumTot = 0
+				for(const rr of rows){
+					sumSem += Number(rr.valor_sem_iva || 0)
+					sumIva += Number(rr.valor_iva || 0)
+					sumTot += Number(rr.total || rr.valor || 0)
+				}
+				if(rows.length){
+					// totals background
+					const totalsH = 20
+					doc.save()
+					doc.rect(leftPad - 4, y-6, contentW + 8, totalsH).fill('#F3F4F6')
+					doc.fillColor('#0F172A')
+					doc.font('Helvetica-Bold')
+					doc.text('Totais', colPositionsLocal[1], y)
+					// totals values in monospaced, right-aligned within their columns
+					const semFmt = sumSem.toLocaleString('pt-PT', {minimumFractionDigits:2, maximumFractionDigits:2})
+					const ivaFmt = sumIva.toLocaleString('pt-PT', {minimumFractionDigits:2, maximumFractionDigits:2})
+					const totFmt = sumTot.toLocaleString('pt-PT', {minimumFractionDigits:2, maximumFractionDigits:2})
+					doc.font('Courier').fontSize(10)
+					doc.text(semFmt, colPositionsLocal[2], y, {width: Math.round(contentW * colInfo.rel[2]) - 6, align:'right'})
+					doc.text(ivaFmt, colPositionsLocal[3], y, {width: Math.round(contentW * colInfo.rel[3]) - 6, align:'right'})
+					doc.text(totFmt, colPositionsLocal[4], y, {width: Math.round(contentW * colInfo.rel[4]) - 6, align:'right'})
+					doc.restore()
+					y += totalsH + 8
 				}
 				return y + 8
 			}

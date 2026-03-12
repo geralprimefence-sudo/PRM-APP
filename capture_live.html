@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8">
+<title>Capturar Foto</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{
+margin:0;
+font-family:Arial, sans-serif;
+background:#0f172a;
+color:#f8fafc;
+}
+.wrap{
+max-width:720px;
+margin:0 auto;
+padding:14px;
+}
+.video-wrap{
+position:relative;
+}
+video{
+width:100%;
+max-height:72vh;
+border-radius:12px;
+background:#000;
+}
+.scan-frame{
+position:absolute;
+left:12%;
+top:8%;
+width:76%;
+height:84%;
+border:2px solid #fbbf24;
+border-radius:10px;
+box-shadow:0 0 0 9999px rgba(0,0,0,0.22);
+pointer-events:none;
+}
+.actions{
+display:flex;
+gap:10px;
+margin-top:12px;
+flex-wrap:wrap;
+}
+.mode{
+display:flex;
+gap:8px;
+margin-top:10px;
+flex-wrap:wrap;
+}
+.mode button{
+padding:8px 12px;
+border-radius:999px;
+font-size:13px;
+background:#334155;
+color:#e2e8f0;
+}
+.mode button.ativo{
+background:#0ea5e9;
+color:#06283d;
+}
+button{
+border:none;
+border-radius:10px;
+padding:12px 16px;
+font-weight:700;
+cursor:pointer;
+}
+.btn-capture{background:#2563eb;color:#fff;}
+.btn-retry{background:#0f766e;color:#fff;}
+.btn-cancel{background:#ef4444;color:#fff;}
+.msg{
+margin-top:10px;
+font-size:14px;
+color:#cbd5e1;
+}
+canvas{display:none;}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+<h2>Camara</h2>
+<div class="video-wrap">
+<video id="video" autoplay playsinline muted></video>
+<div id="scanFrame" class="scan-frame"></div>
+</div>
+<canvas id="canvas"></canvas>
+<div class="actions">
+<button class="btn-capture" id="captureBtn" type="button">Capturar e enviar</button>
+<button class="btn-retry" id="retryBtn" type="button" style="display:none">Nova foto</button>
+<button class="btn-cancel" id="cancelBtn" type="button">Cancelar</button>
+</div>
+<div class="mode">
+<button type="button" id="modoScanBtn" class="ativo">Modo Scan OCR</button>
+<button type="button" id="modoNormalBtn">Modo Normal</button>
+</div>
+<div style="margin-top:10px;">
+  <label for="apiUrl" style="font-size:13px;color:#9ca3af;display:block;margin-bottom:6px">API URL (onde o OCR corre):</label>
+  <input id="apiUrl" type="text" style="width:100%;padding:8px;border-radius:8px;border:1px solid #334155;background:#071028;color:#e6eef8" placeholder="http://PC_IP:8001" />
+</div>
+
+<form id="fallbackForm" style="display:none;margin-top:10px;">
+  <button id="fallbackBtn" type="button" style="display:none;padding:10px 14px;border-radius:8px;background:#334155;color:#e6eef8;border:none;cursor:pointer">Escolher ficheiro</button>
+  <input id="fallbackInput" type="file" name="file" accept="image/*" capture="environment" style="display:none;">
+</form>
+<p class="msg" id="msg">Alinha o recibo na vertical e evita sombras.</p>
+</div>
+
+<script>
+const video = document.getElementById("video")
+const canvas = document.getElementById("canvas")
+const scanFrame = document.getElementById("scanFrame")
+const captureBtn = document.getElementById("captureBtn")
+const retryBtn = document.getElementById("retryBtn")
+const cancelBtn = document.getElementById("cancelBtn")
+const msg = document.getElementById("msg")
+const fallbackForm = document.getElementById("fallbackForm")
+const fallbackInput = document.getElementById("fallbackInput")
+const modoScanBtn = document.getElementById("modoScanBtn")
+const modoNormalBtn = document.getElementById("modoNormalBtn")
+const apiUrlInput = document.getElementById("apiUrl")
+
+let stream = null
+let modoScan = true
+const MAX_LADO_OCR = 1400
+const MAX_LADO_NORMAL = 1500
+let aProcessar = false
+
+function definirEstadoProcessamento(ativo){
+  aProcessar = ativo
+  captureBtn.disabled = ativo
+  retryBtn.disabled = ativo
+}
+
+function atualizarModoBotoes(){
+  modoScanBtn.classList.toggle("ativo", modoScan)
+  modoNormalBtn.classList.toggle("ativo", !modoScan)
+  modoScanBtn.setAttribute("aria-pressed", String(modoScan))
+  modoNormalBtn.setAttribute("aria-pressed", String(!modoScan))
+  scanFrame.style.display = modoScan ? "block" : "none"
+  msg.textContent = modoScan
+    ? "Modo Scan ativo: envia imagem completa para OCR robusto no servidor."
+    : "Modo Normal ativo: imagem natural com OCR no servidor."
+}
+
+function selecionarModo(scan){
+  if(aProcessar) return
+  modoScan = !!scan
+  atualizarModoBotoes()
+}
+
+function ligarEventosModo(){
+  const bind = (btn,scan)=>{
+    btn.addEventListener("click",()=> selecionarModo(scan))
+    btn.addEventListener("touchend",(e)=>{
+      e.preventDefault()
+      selecionarModo(scan)
+    },{passive:false})
+  }
+
+  bind(modoScanBtn,true)
+  bind(modoNormalBtn,false)
+}
+
+async function iniciarCamera(){
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:{ ideal:"environment" }, width:{ ideal:1280 }, height:{ ideal:720 } },
+      audio:false
+    })
+    video.srcObject = stream
+  }catch(err){
+    msg.textContent = "Nao foi possivel abrir a camara de scan neste browser/rede. Usa a camera normal abaixo."
+    captureBtn.disabled = true
+    // Show an explicit fallback button (not the raw file input) so random taps
+    // on the page don't trigger the device file-picker.
+    fallbackForm.style.display = "block"
+    const fallbackBtn = document.getElementById('fallbackBtn')
+    if(fallbackBtn){ fallbackBtn.style.display = 'inline-block' }
+    if(fallbackInput){ fallbackInput.style.display = 'none' }
+  }
+}
+
+function pararCamera(){
+  if(!stream) return
+  stream.getTracks().forEach((t)=>t.stop())
+  stream = null
+}
+
+async function enviarBlob(blob){
+  const fd = new FormData()
+  fd.append("file", blob, `captura-${Date.now()}.jpg`)
+  // Captura responde rapido; OCR corre em background na confirmacao.
+  fd.append("fast", "1")
+  fd.append("modo", modoScan ? "scan" : "normal")
+
+  // By default post to the app server `/upload` so the file is stored and
+  // the app's session-based flow can run OCR and populate the confirm page.
+  // If the user explicitly sets an API URL in the input, we'll send to that
+  // external OCR service instead (advanced use).
+  let endpoint
+  if(apiUrlInput && apiUrlInput.value && apiUrlInput.value.trim()){
+    const apiBase = apiUrlInput.value.trim()
+    endpoint = apiBase.replace(/\/$/, '') + '/ocr'
+  }else{
+    endpoint = '/upload'
+  }
+
+  msg.textContent = "A enviar ficheiro..."
+  const headers = {}
+  const apiKey = localStorage.getItem('ocr_api_key')
+  if(apiKey && endpoint.endsWith('/ocr')){ headers['X-API-Key'] = apiKey }
+
+  // If posting to our server `/upload` we expect a redirect to /confirmar-upload
+  // (handled below). For external OCR endpoints we expect JSON.
+  const res = await fetch(endpoint, { method:"POST", body:fd, headers, redirect: 'follow' })
+
+  if(res.redirected){
+    window.location.href = res.url
+    return
+  }
+
+  if(res.redirected){
+    // server redirected us (typical /upload fast path)
+    window.location.href = res.url
+    return
+  }
+
+  if(res.ok){
+    // external OCR returned 200 JSON -> forward user to confirm page
+    try{
+      const j = await res.json().catch(()=>null)
+      if(j && j.ok){
+        // If external OCR returned fields but we posted to external service
+        // there is no server-side pending upload; redirect to confirm page
+        // and session will be empty — user can paste fields manually.
+        window.location.href = '/confirmar-upload'
+        return
+      }
+    }catch(e){}
+  }
+
+  msg.textContent = "Erro ao enviar a foto."
+}
+
+captureBtn.addEventListener("click", async ()=>{
+  if(aProcessar) return
+
+  if(!video.videoWidth || !video.videoHeight){
+    msg.textContent = "A camara ainda esta a iniciar."
+    return
+  }
+
+  const fw = video.videoWidth
+  const fh = video.videoHeight
+
+  // Evita perda de dados: enviar frame completo e deixar o preprocessamento para o servidor.
+  const sx = 0
+  const sy = 0
+  const sw = fw
+  const sh = fh
+
+  const maxLado = modoScan ? MAX_LADO_OCR : MAX_LADO_NORMAL
+  const escala = Math.min(1, maxLado / Math.max(sw, sh))
+  const tw = Math.max(1, Math.round(sw * escala))
+  const th = Math.max(1, Math.round(sh * escala))
+
+  canvas.width = tw
+  canvas.height = th
+  const ctx = canvas.getContext("2d")
+
+  definirEstadoProcessamento(true)
+  msg.textContent = "A capturar foto..."
+
+  // Yield one frame so UI updates before image processing.
+  await new Promise((resolve)=> requestAnimationFrame(resolve))
+
+  ctx.drawImage(video,sx,sy,sw,sh,0,0,tw,th)
+
+  canvas.toBlob(async (blob)=>{
+    if(!blob){
+      msg.textContent = "Falha ao capturar foto."
+      definirEstadoProcessamento(false)
+      return
+    }
+
+    msg.textContent = "A preparar imagem..."
+    try{
+      await enviarBlob(blob)
+    }catch(err){
+      msg.textContent = "Erro ao enviar. Tenta novamente."
+      retryBtn.style.display = "inline-block"
+      definirEstadoProcessamento(false)
+    }
+  }, "image/jpeg", modoScan ? 0.9 : 0.9)
+})
+
+retryBtn.addEventListener("click", ()=>{
+  atualizarModoBotoes()
+  retryBtn.style.display = "none"
+  definirEstadoProcessamento(false)
+})
+
+// When user selects a file from the explicit button, the input change handler
+// processes the file as before.
+fallbackInput.addEventListener("change", async (e)=>{
+  if(e.target.files && e.target.files.length){
+    const file = e.target.files[0]
+    const fd = new FormData()
+    fd.append('file', file, file.name)
+    fd.append('modo', modoScan ? 'scan' : 'normal')
+
+    const apiBase = (apiUrlInput && apiUrlInput.value && apiUrlInput.value.trim()) ? apiUrlInput.value.trim() : `${location.protocol}//${location.hostname}:8001`
+    const endpoint = apiBase.replace(/\/$/, '') + '/ocr'
+
+    msg.textContent = 'A enviar ficheiro...'
+    try{
+      const headers = {}
+      const apiKey = localStorage.getItem('ocr_api_key')
+      if(apiKey){ headers['X-API-Key'] = apiKey }
+      const res = await fetch(endpoint, { method:'POST', body:fd, headers })
+      if(res.ok){ window.location.href = '/confirmar-upload'; return }
+      msg.textContent = 'Erro ao enviar a foto.'
+    }catch(err){
+      msg.textContent = 'Erro ao enviar a foto.'
+    }
+  }
+})
+
+// Wire the explicit fallback button to open the hidden file input.
+const _fallbackBtn = document.getElementById('fallbackBtn')
+if(_fallbackBtn){
+  _fallbackBtn.addEventListener('click', ()=> { fallbackInput.click() })
+}
+
+cancelBtn.addEventListener("click", ()=>{
+  pararCamera()
+  window.location.href = "/dashboard"
+})
+
+window.addEventListener("beforeunload", pararCamera)
+iniciarCamera()
+ligarEventosModo()
+atualizarModoBotoes()
+</script>
+</body>
+
+</html>
