@@ -2396,12 +2396,26 @@ console.log("Servidor ativo na porta",PORT)
 app.options("/api/mobile/ocr-upload",(req,res)=>{
 	res.setHeader("Access-Control-Allow-Origin","*")
 	res.setHeader("Access-Control-Allow-Methods","POST,OPTIONS")
-	res.setHeader("Access-Control-Allow-Headers","Content-Type")
+	res.setHeader("Access-Control-Allow-Headers","Content-Type, x-api-key")
 	return res.sendStatus(200)
 })
 
 app.post("/api/mobile/ocr-upload", upload.single("file"), async (req,res)=>{
 	res.setHeader("Access-Control-Allow-Origin","*")
+
+	// API key protection: if API_KEY is set in env, require it
+	try{
+		const requiredKey = process.env.API_KEY
+		if(requiredKey){
+			const provided = (req.headers['x-api-key'] || req.query.api_key || (req.headers.authorization || '').split(' ')[1] || '').trim()
+			if(!provided || provided !== requiredKey){
+				return res.status(401).json({ok:false,erro:"API_KEY inválida ou em falta"})
+			}
+		}
+	}catch(e){
+		console.warn('Erro ao verificar API_KEY',e?.message||e)
+		return res.status(500).json({ok:false,erro:'Erro interno ao validar API_KEY'})
+	}
 
 	try{
 		if(!req.file || !req.file.path){
