@@ -2714,17 +2714,28 @@ app.get('/api/export', auth, async (req, res) => {
 			const computeColPositions = () => {
 				const left = doc.page.margins && doc.page.margins.left ? doc.page.margins.left : 36
 				const right = doc.page.margins && doc.page.margins.right ? doc.page.margins.right : 36
-				const contentWidth = doc.page.width - left - right
+				const contentWidth = Math.max(100, doc.page.width - left - right)
 				// relative widths: Data ~18%, Cliente ~40%, SemIVA ~16%, IVA ~12%, Total ~14%
 				const rel = [0.18, 0.40, 0.16, 0.12, 0.14]
+				// compute pixel widths ensuring they sum exactly to contentWidth
+				const widths = rel.map((r)=> Math.floor(contentWidth * r))
+				const sumWidths = widths.reduce((a,b)=>a+b,0)
+				// distribute remaining pixels to the largest columns (cliente first)
+				let remainder = contentWidth - sumWidths
+				let idxOrder = [1,0,2,3,4]
+				let k = 0
+				while(remainder > 0){
+					widths[idxOrder[k % idxOrder.length]] += 1
+					remainder -= 1
+					k += 1
+				}
 				const positions = []
 				let x = left
-				for(let i=0;i<rel.length;i++){
+				for(let i=0;i<widths.length;i++){
 					positions.push(x)
-					const w = Math.round(contentWidth * rel[i])
-					x += w
+					x += widths[i]
 				}
-				return { positions, left, right, contentWidth, rel }
+				return { positions, left, right, contentWidth, rel, widths }
 			}
 
 			const addHeader = (title) => {
@@ -2750,6 +2761,7 @@ app.get('/api/export', auth, async (req, res) => {
 				const colPositionsLocal = colInfo.positions
 				const leftPad = colInfo.left
 				const contentW = colInfo.contentWidth
+				const colWidths = colInfo.widths
 
 				// header background (light)
 				const headerH = 22
@@ -2767,18 +2779,19 @@ app.get('/api/export', auth, async (req, res) => {
 				// draw vertical separators (subtle) at column boundaries
 				for(let i=0;i<colPositionsLocal.length;i++){
 					const x = colPositionsLocal[i]
+					if(x < leftPad || x > leftPad + contentW) continue
 					doc.save()
-					doc.moveTo(x - 6, startY - 6).lineTo(x - 6, doc.page.height - 60).strokeColor('#E6E7EB').lineWidth(0.5).stroke()
+					doc.moveTo(x + 0.5, startY - 6).lineTo(x + 0.5, doc.page.height - 60).strokeColor('#E6E7EB').lineWidth(0.5).stroke()
 					doc.restore()
 				}
 
 				for(const r of rows){
 					if(y > doc.page.height - 80){ doc.addPage(); y = 60; }
 					// Data
-					const dataWidth = Math.round(contentW * colInfo.rel[0])
+					const dataWidth = colWidths[0]
 					doc.text(fmtDate(r.data), colPositionsLocal[0], y, {width: dataWidth})
 					// Cliente (wrap within width)
-					const clienteWidth = Math.round(contentW * colInfo.rel[1])
+					const clienteWidth = colWidths[1]
 					const clienteBoxHeight = doc.heightOfString(String(r.fornecedor||''), {width: clienteWidth, align:'left'})
 					doc.text(String(r.fornecedor||''), colPositionsLocal[1], y, {width: clienteWidth})
 					// numeric columns: use monospaced font for perfect decimal alignment
@@ -2790,9 +2803,9 @@ app.get('/api/export', auth, async (req, res) => {
 					const totFmt = totVal.toLocaleString('pt-PT', {minimumFractionDigits:2, maximumFractionDigits:2})
 					// switch to monospaced font for numbers
 					doc.font('Courier').fontSize(10)
-					const semWidth = Math.round(contentW * colInfo.rel[2])
-					const ivaWidth = Math.round(contentW * colInfo.rel[3])
-					const totWidth = Math.round(contentW * colInfo.rel[4])
+					const semWidth = colWidths[2]
+					const ivaWidth = colWidths[3]
+					const totWidth = colWidths[4]
 					doc.text(semFmt, colPositionsLocal[2], y, {width: semWidth - 6, align:'right'})
 					doc.text(ivaFmt, colPositionsLocal[3], y, {width: ivaWidth - 6, align:'right'})
 					// Total: right-aligned within its column
@@ -2801,7 +2814,7 @@ app.get('/api/export', auth, async (req, res) => {
 					// restore font for next line
 					doc.font('Helvetica').fontSize(10)
 					// separator line
-					doc.moveTo(leftPad - 4, y + rowHeight - 6).lineTo(leftPad - 4 + contentW + 8, y + rowHeight - 6).strokeColor('#E6E7EB').stroke()
+					doc.moveTo(leftPad, y + rowHeight - 6).lineTo(leftPad + contentW, y + rowHeight - 6).strokeColor('#E6E7EB').stroke()
 					// advance y by max of rowHeight and clienteBoxHeight
 					y += Math.max(rowHeight, clienteBoxHeight + 6)
 				}
@@ -2816,7 +2829,7 @@ app.get('/api/export', auth, async (req, res) => {
 					// totals background
 					const totalsH = 20
 					doc.save()
-					doc.rect(leftPad - 4, y-6, contentW + 8, totalsH).fill('#F3F4F6')
+					doc.rect(leftPad, y-6, contentW, totalsH).fill('#F3F4F6')
 					doc.fillColor('#0F172A')
 					doc.font('Helvetica-Bold')
 					doc.text('Totais', colPositionsLocal[1], y)
@@ -2825,9 +2838,9 @@ app.get('/api/export', auth, async (req, res) => {
 					const ivaFmt = sumIva.toLocaleString('pt-PT', {minimumFractionDigits:2, maximumFractionDigits:2})
 					const totFmt = sumTot.toLocaleString('pt-PT', {minimumFractionDigits:2, maximumFractionDigits:2})
 					doc.font('Courier').fontSize(10)
-					doc.text(semFmt, colPositionsLocal[2], y, {width: Math.round(contentW * colInfo.rel[2]) - 6, align:'right'})
-					doc.text(ivaFmt, colPositionsLocal[3], y, {width: Math.round(contentW * colInfo.rel[3]) - 6, align:'right'})
-					doc.text(totFmt, colPositionsLocal[4], y, {width: Math.round(contentW * colInfo.rel[4]) - 6, align:'right'})
+					doc.text(semFmt, colPositionsLocal[2], y, {width: colWidths[2] - 6, align:'right'})
+					doc.text(ivaFmt, colPositionsLocal[3], y, {width: colWidths[3] - 6, align:'right'})
+					doc.text(totFmt, colPositionsLocal[4], y, {width: colWidths[4] - 6, align:'right'})
 					doc.restore()
 					y += totalsH + 8
 				}
