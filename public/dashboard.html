@@ -718,8 +718,8 @@ cursor:default;
 	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ width:88px; min-width:76px; max-width:100px; }
 	/* Total column enlarged to comfortably fit 9-digit numbers */
 	.bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ width:200px; min-width:180px; text-align:right; padding-right:6px; }
-	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ display:none !important; }
-	.bloco-tabela th:nth-child(5), .bloco-tabela td:nth-child(5){ display:none !important; }
+	/* keep IVA visible on small screens but allow other columns to compress; do not hide actions */
+	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ /* IVA */ }
 	/* actions column slimmed to keep visible */
 	/* actions column kept narrow and visible (moved to last column) */
 	.bloco-tabela th:last-child, .bloco-tabela td:last-child{ width:92px; min-width:80px; text-align:left; padding:0 6px; }
