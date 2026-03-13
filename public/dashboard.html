@@ -735,12 +735,17 @@ cursor:default;
 	.acoes-dropdown .acoes-dropdown{ position:absolute; right:0; top:100%; }
 
 	/* column widths and alignment for Data / Fornecedor / Total / IVA / Ações */
-	.bloco-tabela th:nth-child(1), .bloco-tabela td:nth-child(1){ min-width:90px; }
-	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ min-width:160px; }
-	.bloco-tabela th.col-total, .bloco-tabela td.col-total-cell, .bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ min-width:120px; }
-	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ min-width:100px; }
+	.bloco-tabela th:nth-child(1), .bloco-tabela td:nth-child(1){ min-width:80px; }
+	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ min-width:150px; }
+	.bloco-tabela th.col-total, .bloco-tabela td.col-total-cell, .bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ min-width:100px; max-width:140px; }
+	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ min-width:70px; max-width:100px; }
+	.bloco-tabela th:last-child, .bloco-tabela td:last-child{ width:110px; min-width:90px; }
 
-	.bloco-tabela th, .bloco-tabela td { text-align:left !important; padding:8px 10px; }
+	/* reduce padding to tighten spacing between columns */
+	.bloco-tabela th, .bloco-tabela td { text-align:left !important; padding:6px 8px; }
+
+	/* ensure values don't overflow */
+	.bloco-tabela .nowrap{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 	.tabela-footer .totals{ white-space:nowrap; }
 }
 </style>
