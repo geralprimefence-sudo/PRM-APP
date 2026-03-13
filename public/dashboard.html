@@ -721,8 +721,8 @@ cursor:default;
 	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ display:none !important; }
 	.bloco-tabela th:nth-child(5), .bloco-tabela td:nth-child(5){ display:none !important; }
 	/* actions column slimmed to keep visible */
-	/* actions column kept narrow and visible (moved to first column) */
-	.bloco-tabela th:first-child, .bloco-tabela td:first-child{ width:68px; min-width:64px; text-align:left; padding:0 6px; }
+	/* actions column kept narrow and visible (moved to last column) */
+	.bloco-tabela th:last-child, .bloco-tabela td:last-child{ width:92px; min-width:80px; text-align:left; padding:0 6px; }
 	.fornecedor-nome{ max-width:80px !important; }
 	.acoes-linha{ white-space:nowrap; gap:6px; }
 	/* make action buttons more compact on small screens */
@@ -732,7 +732,15 @@ cursor:default;
 	/* reduce table cell padding to avoid overflow */
 	th, td { padding:6px 6px !important; }
 	.acoes-dropdown{ position:relative; display:inline-block; }
-	.acoes-dropdown .acoes-dropdown{ position:absolute; left:0; top:100%; }
+	.acoes-dropdown .acoes-dropdown{ position:absolute; right:0; top:100%; }
+
+	/* column widths and alignment for Data / Fornecedor / Total / IVA / Ações */
+	.bloco-tabela th:nth-child(1), .bloco-tabela td:nth-child(1){ min-width:90px; }
+	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ min-width:160px; }
+	.bloco-tabela th.col-total, .bloco-tabela td.col-total-cell, .bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ min-width:120px; }
+	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ min-width:100px; }
+
+	.bloco-tabela th, .bloco-tabela td { text-align:left !important; padding:8px 10px; }
 	.tabela-footer .totals{ white-space:nowrap; }
 }
 </style>
@@ -946,12 +954,11 @@ td.col-total-cell, td:nth-child(3){
 <table>
 <thead>
 <tr>
-<th class="col-acoes">Ações</th>
 <th>Data</th>
 <th>Cliente</th>
 <th class="col-total"><span style="white-space:nowrap">Total</span></th>
 <th>IVA</th>
-<th>Sem IVA</th>
+<th class="col-acoes">Ações</th>
 </tr>
 </thead>
 <tbody id="tabelaDespesas"></tbody>
@@ -979,12 +986,11 @@ td.col-total-cell, td:nth-child(3){
 <table>
 <thead>
 <tr>
-<th class="col-acoes">Ações</th>
 <th>Data</th>
 <th>Fornecedor</th>
 <th class="col-total"><span style="white-space:nowrap">Total</span></th>
 <th>IVA</th>
-<th>Sem IVA</th>
+<th class="col-acoes">Ações</th>
 </tr>
 </thead>
 <tbody id="tabelaReceitas"></tbody>
@@ -1353,6 +1359,10 @@ const fornecedorCelula = construirFornecedorCelula(r.fornecedor)
 const row = document.createElement("tr")
 
 row.innerHTML = `
+<td data-label="Data">${dataCurta}</td>
+<td data-label="${(r.tipo || "").toLowerCase()==="receita" ? "Cliente" : "Fornecedor"}">${fornecedorCelula}</td>
+<td class="col-total-cell" data-label="Total"><span class="nowrap total-value">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
+<td data-label="IVA"><span class="nowrap">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
 <td class="acoes" data-label="Acoes">
 <div class="acoes-linha">
 <button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button>
@@ -1363,16 +1373,10 @@ row.innerHTML = `
     		<button type="button" onclick="apagar(${r.id})" class="btn-apagar">Apag.</button>
     	</div>
 </div>
-<!-- Inline edit/delete visible on desktop; hidden on mobile -->
 <button type="button" onclick="editar(${r.id})" class="btn-editar btn-editar-inline" style="margin-left:6px;display:none">Editar</button>
 <button type="button" onclick="apagar(${r.id})" class="btn-apagar btn-apagar-inline" style="margin-left:6px;display:none">Apag.</button>
 </div>
 </td>
-<td data-label="Data">${dataCurta}</td>
-<td data-label="${(r.tipo || "").toLowerCase()==="receita" ? "Cliente" : "Fornecedor"}">${fornecedorCelula}</td>
-<td class="col-total-cell" data-label="Total"><span class="nowrap total-value">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
-<td data-label="IVA"><span class="nowrap">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
-<td data-label="Sem IVA"><span class="nowrap">${valorSemIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
 `
 
 if((r.tipo || "").toLowerCase()==="receita"){
