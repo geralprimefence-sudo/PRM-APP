@@ -752,10 +752,17 @@ cursor:default;
 	.acoes-dropdown .acoes-dropdown{ position:absolute; right:0; top:100%; }
 
 	/* column widths and alignment for Data / Fornecedor / Total / IVA / Ações */
+.bloco-tabela th, .bloco-tabela td {
+	border-right: 2px solid #0b74de !important;
+	box-shadow: 1px 0 0 #0b74de !important;
+}
+.bloco-tabela th:last-child, .bloco-tabela td:last-child {
+	border-right: none !important;
+}
 
 	.bloco-tabela th:nth-child(1), .bloco-tabela td:nth-child(1){ min-width:60px; }
-	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ min-width:70px; max-width:100px; }
-	.bloco-tabela th.col-total, .bloco-tabela td.col-total-cell, .bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ min-width:90px; max-width:130px; padding-left:0; }
+	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ min-width:40px; max-width:50px; padding-right:0; }
+	.bloco-tabela th.col-total, .bloco-tabela td.col-total-cell, .bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ min-width:40px; max-width:50px; padding-left:0; }
 	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ min-width:60px; max-width:80px; padding-left:0; }
 	.bloco-tabela th:last-child, .bloco-tabela td:last-child{ width:70px; min-width:60px; padding-left:0; }
 
@@ -992,57 +999,60 @@ td.col-total-cell, td:nth-child(3){
 
 <div class="tabelas-grid">
 
-<div class="bloco-tabela" id="blocoDespesas">
-<h3>Despesas</h3>
-<table class="reusable-tabela">
-<colgroup>
-	<col class="data-col">
-	<col class="fornecedor-col">
-	<col class="total-col">
-	<col class="iva-col">
-	<col class="acoes-col">
-</colgroup>
-<thead>
-<tr>
-<th>Data</th>
-<th>Cliente</th>
-<th class="col-total"><span style="white-space:nowrap">Total</span></th>
-<th>IVA</th>
-<th class="col-acoes">Ações</th>
-</tr>
-</thead>
-<tbody id="tabelaDespesas"></tbody>
-
-</table>
-</div>
-
-<div class="bloco-tabela" id="blocoReceitas">
-<h3>Receitas</h3>
-<table class="reusable-tabela">
-<colgroup>
-	<col class="data-col">
-	<col class="fornecedor-col">
-	<col class="total-col">
-	<col class="iva-col">
-	<col class="acoes-col">
-</colgroup>
-<thead>
-<tr>
-<th>Data</th>
-<th>Fornecedor</th>
-<th class="col-total"><span style="white-space:nowrap">Total</span></th>
-<th>IVA</th>
-<th class="col-acoes">Ações</th>
-</tr>
-</thead>
-<tbody id="tabelaReceitas"></tbody>
-
-</table>
-</div>
-
-</div>
-
-
+  <div class="bloco-tabela" id="blocoReceitas">
+    <h3>Receitas</h3>
+    <table class="reusable-tabela">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Cliente</th>
+          <th>Valor</th>
+          <th>IVA</th>
+          <th>Ações</th>
+        </tr>
+        <tr>
+          <td colspan="4"></td>
+          <td style="text-align:left">
+            <div style="display:flex;gap:8px;">
+              <button class="btn-ver">Ver</button>
+              <button class="btn-editar">Editar</button>
+              <button class="btn-apagar">Apagar</button>
+            </div>
+          </td>
+        </tr>
+      </thead>
+      <tbody id="tabelaReceitas">
+        <!-- Linhas de receitas geradas dinamicamente -->
+      </tbody>
+    </table>
+  </div>
+  <div class="bloco-tabela" id="blocoDespesas">
+    <h3>Despesas</h3>
+    <table class="reusable-tabela">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Fornecedor</th>
+          <th>Valor</th>
+          <th>IVA</th>
+          <th>Ações</th>
+        </tr>
+        <tr>
+          <td colspan="4"></td>
+          <td style="text-align:left">
+            <div style="display:flex;gap:8px;">
+              <button class="btn-ver">Ver</button>
+              <button class="btn-editar">Editar</button>
+              <button class="btn-apagar">Apagar</button>
+            </div>
+          </td>
+        </tr>
+      </thead>
+      <tbody id="tabelaDespesas">
+        <!-- Linhas de despesas geradas dinamicamente -->
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <div id="editModal" class="edit-modal" aria-hidden="true">
@@ -1391,8 +1401,8 @@ row.dataset.registo = idRegisto
 row.innerHTML = `
 <td data-label="Data">${dataCurta}</td>
 <td data-label="${(r.tipo || "").toLowerCase()==="receita" ? "Cliente" : "Fornecedor"}">${fornecedorCelula}</td>
-<td class="col-total-cell" data-label="Total"><span class="nowrap total-value">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
 <td data-label="IVA"><span class="nowrap">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
+<td class="col-total-cell" data-label="Total"><span class="nowrap total-value">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
 <td class="acoes" data-label="Acoes">
 <div class="acoes-linha">
 <button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button>
