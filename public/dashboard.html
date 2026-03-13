@@ -331,7 +331,7 @@ gap:16px;
 
 /* Utilities for totals and nowrap values */
 .nowrap{white-space:nowrap!important}
-.col-total-cell{min-width:110px;text-align:right}
+.col-total-cell{min-width:180px;text-align:right}
 
 
 .bloco-tabela h3{
@@ -712,8 +712,8 @@ cursor:default;
 	/* tighter column widths to keep actions visible */
 	.bloco-tabela th:nth-child(1), .bloco-tabela td:nth-child(1){ width:72px; min-width:64px; }
 	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ width:88px; min-width:76px; max-width:100px; }
-	/* Total keeps space for large amounts but reduced to allow actions on-screen */
-	.bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ width:120px; min-width:110px; text-align:right; padding-right:6px; }
+	/* Total column enlarged to comfortably fit 9-digit numbers */
+	.bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ width:200px; min-width:180px; text-align:right; padding-right:6px; }
 	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ display:none !important; }
 	.bloco-tabela th:nth-child(5), .bloco-tabela td:nth-child(5){ display:none !important; }
 	/* actions column slimmed to keep visible */
