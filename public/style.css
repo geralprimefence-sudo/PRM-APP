@@ -216,6 +216,13 @@ background:#e74c3c;
 color:white;
 }
 
+/* Reduce number font-size for value columns to avoid button clipping */
+table td:nth-child(3),
+table td:nth-child(4),
+table td:nth-child(5){
+	font-size:13px;
+}
+
 /* RESPONSIVO */
 
 @media(max-width:700px){
@@ -235,6 +242,13 @@ color:white;
 	word-break:break-word;
 	white-space:normal;
 	font-size:10px;
+	}
+
+	/* ensure numbers remain small on narrow screens */
+	table td:nth-child(3),
+	table td:nth-child(4),
+	table td:nth-child(5){
+		font-size:11px;
 	}
 
 	th,
