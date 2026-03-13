@@ -270,19 +270,6 @@ table td:nth-child(5){
     }
 }
 
-/* Prevent 'Total' header and currency symbol from breaking onto a second line */
-th.col-total,
-th.col-total * {
-	white-space: nowrap;
-}
-
-/* Ensure numeric cells keep number and currency symbol together */
-table td:nth-child(3),
-table td:nth-child(4),
-table td:nth-child(5){
-	white-space: nowrap;
-}
-
 	th,
 	td{
 	max-width:90px;
@@ -406,4 +393,15 @@ font-size:20px;
 		font-variant-numeric: tabular-nums;
 		letter-spacing:0.5px;
 	}
+}
+
+/* Prevent header 'Total' and currency symbol from wrapping (keep on one line) */
+th.col-total, th.col-total * {
+	white-space:nowrap !important;
+	word-break:normal !important;
+}
+/* Ensure total column cells don't wrap the currency or split into two lines */
+table td:nth-child(3), table td:nth-child(3) * {
+	white-space:nowrap !important;
+	word-break:normal !important;
 }
