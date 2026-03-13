@@ -350,3 +350,34 @@ font-size:20px;
 	#exportModal > div, #exportModalRel > div { padding: 14px; }
 	#exportModal h3, #exportModalRel h3 { font-size:16px }
 }
+
+/* Mobile: keep the summary cards horizontal and allow wide numbers (up to 9 digits) */
+@media(max-width:700px){
+	.cards{
+		display:flex;
+		flex-wrap:nowrap;
+		gap:12px;
+		overflow-x:auto;
+		padding-bottom:6px;
+	}
+	.card{
+		flex:0 0 auto;
+		min-width:160px;
+		max-width:220px;
+		display:flex;
+		align-items:center;
+		justify-content:space-between;
+	}
+	.card h3{
+		margin:0;
+		font-size:14px;
+		white-space:nowrap;
+		margin-right:8px;
+	}
+	.card h2{
+		margin:0;
+		font-size:18px;
+		white-space:nowrap;
+		font-variant-numeric: tabular-nums;
+	}
+}
