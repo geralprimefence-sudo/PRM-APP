@@ -251,6 +251,17 @@ table td:nth-child(5){
 		font-size:11px;
 	}
 
+	/* keep numeric table cells on one line on mobile */
+	table td:nth-child(3),
+	table td:nth-child(4),
+	table td:nth-child(5){
+		white-space:nowrap;
+		overflow:hidden;
+		text-overflow:ellipsis;
+		font-size:12px;
+		padding-right:6px;
+	}
+
 /* Hide 'Sem IVA' column on desktop (avoid layout/clipping issues) */
 @media(min-width:701px){
     table th:nth-child(5),
@@ -362,22 +373,24 @@ font-size:20px;
 	}
 	.card{
 		flex:0 0 auto;
-		min-width:160px;
-		max-width:220px;
+		/* larger min-width to fit up to 9 digits without wrapping */
+		min-width:260px;
+		max-width:320px;
 		display:flex;
 		align-items:center;
 		justify-content:space-between;
 	}
 	.card h3{
 		margin:0;
-		font-size:14px;
+		font-size:13px;
 		white-space:nowrap;
 		margin-right:8px;
 	}
 	.card h2{
 		margin:0;
-		font-size:18px;
+		font-size:16px;
 		white-space:nowrap;
 		font-variant-numeric: tabular-nums;
+		letter-spacing:0.5px;
 	}
 }
