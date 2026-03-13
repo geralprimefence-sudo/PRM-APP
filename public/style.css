@@ -216,6 +216,36 @@ background:#e74c3c;
 color:white;
 }
 
+/* Actions dropdown container */
+.acoes-linha{
+		position:relative;
+}
+.acoes-dropdown-wrap{
+	position:relative;
+	display:inline-block;
+}
+.acoes-dropdown{
+	position:absolute;
+	right:0;
+	top:36px;
+	background:#1e293b;
+	border:1px solid #334155;
+	border-radius:6px;
+	padding:8px;
+	display:none;
+	z-index:1000;
+	min-width:120px;
+	box-shadow:0 6px 18px rgba(2,6,23,0.6);
+}
+.acoes-dropdown button{
+	display:block;
+	width:100%;
+	text-align:left;
+	padding:6px 8px;
+	margin:0 0 6px 0;
+}
+.acoes-dropdown button:last-child{ margin-bottom:0 }
+
 /* Reduce number font-size for value columns to avoid button clipping */
 table td:nth-child(3),
 table td:nth-child(4),
@@ -393,6 +423,14 @@ font-size:20px;
 		font-variant-numeric: tabular-nums;
 		letter-spacing:0.5px;
 	}
+}
+
+/* Mobile-specific tweaks for actions dropdown (touch-friendly) */
+@media(max-width:700px){
+	.acoes-linha{ display:flex; gap:8px; align-items:center; }
+	.acoes-dropdown{ position:static; right:auto; top:auto; box-shadow:none; border:1px solid rgba(255,255,255,0.03); margin-top:6px; padding:8px; min-width:160px; }
+	.acoes-dropdown button{ padding:10px 12px; font-size:16px; }
+	.btn-acoes{ padding:10px 12px; font-size:15px; }
 }
 
 /* Prevent header 'Total' and currency symbol from wrapping (keep on one line) */
