@@ -61,6 +61,20 @@
 	}
 }
 </style>
+<script>
+// Force reload of style.css in case CDN/browser cached old version
+(function(){
+	try{
+		const links = document.querySelectorAll('link[rel="stylesheet"][href*="style.css"]')
+		links.forEach(l => {
+			const href = l.getAttribute('href')
+			if(href && !href.includes('v=20260313.1')){
+				l.setAttribute('href', 'style.css?v=20260313.1')
+			}
+		})
+	}catch(e){/* ignore */}
+})()
+</script>
 <!DOCTYPE html>
 <html>
 
@@ -1224,11 +1238,16 @@ row.innerHTML = `
 
 <td class="acoes" data-label="Acoes">
 <div class="acoes-linha">
+</button>
 <button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button>
 
-<button title="Editar" aria-label="Editar" onclick="editar(${r.id})" class="btn-editar">Edit</button>
-
-<button title="Apagar" aria-label="Apagar" onclick="apagar(${r.id})" class="btn-apagar">Apag.</button>
+<div class="acoes-dropdown-wrap">
+	<button type="button" class="btn-acoes" onclick="toggleAcoes(${r.id}, event)">Ações ▾</button>
+	<div class="acoes-dropdown" id="acoes-${r.id}" aria-hidden="true">
+		<button type="button" onclick="editar(${r.id})" class="btn-editar">Editar</button>
+		<button type="button" onclick="apagar(${r.id})" class="btn-apagar">Apag.</button>
+	</div>
+</div>
 </div>
 </td>
 `
@@ -1333,6 +1352,24 @@ function submitExportFromModal(){
 	closeExportModal()
 	exportRegistos(format, tipo, start, end)
 }
+
+// Actions dropdown handling
+function closeAllAcoesMenus(){
+	document.querySelectorAll('.acoes-dropdown').forEach(el=> el.style.display='none')
+}
+
+function toggleAcoes(id, ev){
+	if(ev) ev.stopPropagation()
+	const el = document.getElementById('acoes-' + id)
+	if(!el) return
+	const isOpen = el.style.display === 'block'
+	closeAllAcoesMenus()
+	el.style.display = isOpen ? 'none' : 'block'
+}
+
+document.addEventListener('click', ()=>{
+	closeAllAcoesMenus()
+})
 
 function dataParaInputLocal(dataBruta){
 
