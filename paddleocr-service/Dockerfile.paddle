@@ -13,8 +13,11 @@ COPY requirements.txt ./
 RUN pip install --upgrade pip setuptools wheel
 
 # Install PaddlePaddle (CPU) - pin a tested version; adjust if needed for your environment
-RUN pip install "paddlepaddle==2.6.3" -f https://www.paddlepaddle.org.cn/whl/mkl/avx/stable.html || \
-    (echo "Warning: paddlepaddle install failed; check compatibility" && exit 1)
+# Note: CI runners often build multi-arch images. If build uses arm64 or an Alpine base,
+# the manylinux wheels on the Paddle index may not be available. Prefer an amd64/glibc
+# base image (python:3.10-slim) or force platform linux/amd64 on buildx.
+RUN pip install "paddlepaddle==2.6.2" -f https://www.paddlepaddle.org.cn/whl/mkl/avx/stable.html || \
+    (echo "Warning: paddlepaddle install failed; check compatibility (architecture/Python)" && exit 1)
 
 # Install other python deps
 RUN pip install -r requirements.txt
