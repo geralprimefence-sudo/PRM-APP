@@ -778,22 +778,29 @@ cursor:default;
 		<button type="button" id="docButton" class="auto-upload-btn btn-documento">Doc/PDF</button>
 		<input id="docInput" class="auto-upload-input" type="file" name="file" accept="application/pdf" required aria-hidden="true">
   </form>
-  <button type="button" class="auto-upload-btn btn-docs" style="margin-left:auto; background:#64748b; color:#fff;" onclick="abrirDocs()">Docs</button>
-	<button type="button" class="auto-upload-btn" style="background:#334155;color:#fff;margin-left:8px;" onclick="openExportModal()">Exportar...</button>
+		<button type="button" class="auto-upload-btn btn-docs" style="margin-left:auto; background:#0b74de; color:#fff;" onclick="abrirDocs()">Docs</button>
 		<button type="button" class="auto-upload-btn" style="background:#0b74de;color:#fff;margin-left:8px;" onclick="openExportModal()">Downloads</button>
-	<button type="button" class="auto-upload-btn" style="background:#111827;color:#fff;margin-left:8px;" onclick="exportRegistos('pdf')">Exportar PDF</button>
-	<button type="button" class="auto-upload-btn" style="background:#0f172a;color:#fff;margin-left:6px;" onclick="exportRegistos('csv')">Exportar Excel</button>
+
+	<!-- Docs modal -->
+	<div id="docsModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:10000;">
+		<div style="background:#fff;padding:16px;border-radius:8px;max-width:420px;margin:40px auto;">
+			<h3>Guardar Documentos</h3>
+			<label style="display:block;margin-bottom:6px;">Nome do Documento
+				<input id="docsName" type="text" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:4px;" />
+			</label>
+			<label style="display:block;margin-bottom:6px;">Data
+				<input id="docsDate" type="date" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:4px;" />
+			</label>
+			<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+				<button onclick="closeDocsModal()" style="padding:6px 12px;border-radius:6px;">Cancelar</button>
+				<button onclick="submitDocsForm()" style="background:#0b74de;color:#fff;padding:6px 12px;border-radius:6px;">Guardar</button>
+			</div>
+			<div id="docsMsg" style="margin-top:8px;color:green;display:none"></div>
+		</div>
+	</div>
 </div>
 
-<div class="card" style="margin-top:16px;">
-<h3>Exemplos de Export</h3>
-<div style="display:flex;flex-direction:column;gap:6px;">
-	<a href="/exports/export-receitas-range.pdf" target="_blank">Receitas (2026-02-01 → 2026-03-12) — PDF</a>
-	<a href="/exports/export-receitas-range.xlsx" target="_blank">Receitas (2026-02-01 → 2026-03-12) — XLSX</a>
-	<a href="/exports/export-despesas-range.pdf" target="_blank">Despesas (2026-02-01 → 2026-03-12) — PDF</a>
-	<a href="/exports/export-despesas-range.xlsx" target="_blank">Despesas (2026-02-01 → 2026-03-12) — XLSX</a>
-</div>
-</div>
+<!-- Removido: lista de links explícitos de export para evitar mostrar links longos à esquerda do browser -->
 
 <p class="upload-hint">Foto (Scan) abre a camara com moldura para focar o documento. Documento/PDF abre apenas ficheiros PDF.</p>
 
@@ -937,7 +944,57 @@ window.location.href = "/capturar-foto"
 }
 
 function abrirDocs() {
-  alert('Funcionalidade de gestão de documentos importantes (Docs) em desenvolvimento.');
+	try{
+		const modal = document.getElementById('docsModal')
+		if(modal){
+			// reset form state
+			const name = document.getElementById('docsName')
+			const date = document.getElementById('docsDate')
+			const msg = document.getElementById('docsMsg')
+			if(name) name.value = ''
+			if(date) date.value = ''
+			if(msg){ msg.style.display = 'none'; msg.textContent = '' }
+			modal.style.display = 'flex'
+		}else{
+			alert('Modal não encontrado')
+		}
+	}catch(e){
+		console.error('abrirDocs error', e)
+	}
+}
+
+function closeDocsModal(){
+	const modal = document.getElementById('docsModal')
+	if(modal) modal.style.display = 'none'
+}
+
+async function submitDocsForm(){
+	try{
+		const name = document.getElementById('docsName')?.value || ''
+		const date = document.getElementById('docsDate')?.value || ''
+		const msg = document.getElementById('docsMsg')
+		if(!name){
+			if(msg){ msg.style.display='block'; msg.style.color='red'; msg.textContent='Nome obrigatório' }
+			return
+		}
+		const body = { name, date }
+		const res = await fetch('/api/save-doc', {
+			method:'POST',
+			headers:{'Content-Type':'application/json'},
+			body: JSON.stringify(body)
+		})
+		const j = await res.json()
+		if(!res.ok){
+			if(msg){ msg.style.display='block'; msg.style.color='red'; msg.textContent = j.erro || 'Erro ao guardar' }
+			return
+		}
+		if(msg){ msg.style.display='block'; msg.style.color='green'; msg.textContent = 'Guardado' }
+		setTimeout(()=>{ closeDocsModal() },800)
+	}catch(err){
+		console.error('submitDocsForm',err)
+		const msg = document.getElementById('docsMsg')
+		if(msg){ msg.style.display='block'; msg.style.color='red'; msg.textContent='Erro ao guardar' }
+	}
 }
 
 document.getElementById("docInput").addEventListener("change",(e)=>{
