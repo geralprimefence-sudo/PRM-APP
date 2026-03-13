@@ -27,8 +27,7 @@
 		grid-template-columns: 1fr !important;
 	}
 }
-/* Ensure 'Sem IVA' column hidden on desktop too (strong rule to override cached CSS) */
-/* removed rule that hid the 5th column on desktop */
+/* 'Sem IVA' column removed from UI */
 </style>
 <style>
 /* HIDE: remove footer totals block from page (keeps HTML for easy revert) */
@@ -326,6 +325,8 @@ display:grid;
 grid-template-columns:1fr 1fr;
 gap:16px;
 }
+/* increase grid gap for more uniform spacing between tables */
+.tabelas-grid{ gap:20px; }
 
 /* Utilities for totals and nowrap values */
 .nowrap{white-space:nowrap!important}
@@ -376,6 +377,23 @@ box-shadow:var(--shadow);
 border-radius:12px;
 overflow:hidden;
 }
+
+/* Reusable unified table styles — keep existing colours, font and sizes (inherit) */
+.reusable-tabela{
+	width:100%;
+	table-layout:fixed;
+	border-collapse:separate;
+	border-spacing:0;
+	background:var(--surface);
+	box-shadow:var(--shadow);
+	border-radius:12px;
+	overflow:hidden;
+	font-family:inherit;
+	font-size:inherit;
+}
+.reusable-tabela th, .reusable-tabela td{ padding:10px 8px; border-bottom:1px solid var(--line); text-align:left }
+.reusable-tabela thead th{ background:#f9fafb; font-size:13px; text-transform:uppercase; color:#667085 }
+.reusable-tabela tbody tr:last-child td{ border-bottom:none }
 
 th,td{
 padding:10px 8px;
@@ -723,33 +741,52 @@ cursor:default;
 	.acoes button{padding:3px 6px;font-size:11px;min-width:30px}
 	.acoes .btn-ver{padding:3px 6px}
 
+	/* Force show action buttons on mobile (fix missing buttons issue) */
+	.acoes .btn-acoes, .acoes .btn-ver, .acoes .btn-editar, .acoes .btn-apagar {
+		display:inline-block !important;
+		visibility:visible !important;
+		opacity:1 !important;
+	}
+	.acoes-dropdown-wrap{ display:inline-block !important }
+
 	/* reduce table cell padding to avoid overflow */
 	th, td { padding:6px 6px !important; }
 	.acoes-dropdown{ position:relative; display:inline-block; }
 	.acoes-dropdown .acoes-dropdown{ position:absolute; right:0; top:100%; }
 
 	/* column widths and alignment for Data / Fornecedor / Total / IVA / Ações */
-	.bloco-tabela th:nth-child(1), .bloco-tabela td:nth-child(1){ min-width:80px; }
-	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ min-width:150px; }
+	.bloco-tabela th:nth-child(1), .bloco-tabela td:nth-child(1){ min-width:72px; }
+	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ min-width:140px; }
 	.bloco-tabela th.col-total, .bloco-tabela td.col-total-cell, .bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ min-width:100px; max-width:140px; }
-	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ min-width:70px; max-width:100px; }
-	.bloco-tabela th:last-child, .bloco-tabela td:last-child{ width:110px; min-width:90px; }
+	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ min-width:78px; max-width:110px; padding-left:6px; }
+	.bloco-tabela th:last-child, .bloco-tabela td:last-child{ width:100px; min-width:88px; padding-left:6px; }
 
 	/* reduce padding to tighten spacing between columns */
 	.bloco-tabela th, .bloco-tabela td { text-align:left !important; padding:6px 8px; }
 
 	/* Use fixed table layout with explicit column widths to control spacing */
 	.bloco-tabela table { table-layout: fixed; width:100%; }
-	.bloco-tabela col.data-col{ width:15%; }
-	.bloco-tabela col.fornecedor-col{ width:35%; }
+	/* shifted widths so IVA and Ações sit slightly more left inside layout */
+	.bloco-tabela col.data-col{ width:12%; }
+	.bloco-tabela col.fornecedor-col{ width:36%; }
 	.bloco-tabela col.total-col{ width:18%; }
-	.bloco-tabela col.iva-col{ width:12%; }
+	.bloco-tabela col.iva-col{ width:14%; }
 	.bloco-tabela col.acoes-col{ width:20%; }
 
 	/* ensure values don't overflow */
 	.bloco-tabela .nowrap{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 	.tabela-footer .totals{ white-space:nowrap; }
 }
+
+/* Ensure last column content sits slightly left and has consistent padding */
+.bloco-tabela th:last-child, .bloco-tabela td:last-child{
+    text-align:left !important;
+    padding-left:8px !important;
+    padding-right:8px !important;
+}
+
+/* small right padding to keep actions inside the image/layout boundaries */
+.bloco-tabela{ padding-right:6px }
 </style>
 	<style>
 	/* Desktop: hide the compact dropdown and show inline edit/delete buttons */
@@ -958,7 +995,7 @@ td.col-total-cell, td:nth-child(3){
 
 <div class="bloco-tabela" id="blocoDespesas">
 <h3>Despesas</h3>
-<table>
+<table class="reusable-tabela">
 <colgroup>
 	<col class="data-col">
 	<col class="fornecedor-col">
@@ -978,16 +1015,13 @@ td.col-total-cell, td:nth-child(3){
 <tbody id="tabelaDespesas"></tbody>
 <tfoot>
 <tr class="totals-row">
-	<td class="totals-cell" colspan="1"></td>
 	<td colspan="4"></td>
 	<td class="totals-cell">
 		<div class="totals-inline">
 			<span class="label">Total:</span>
 			<span class="value" id="totalsDespesas_total">0,00 €</span>
-			<span class="label">IVA:</span>
-			<span class="value" id="totalsDespesas_iva">0,00 €</span>
-			<span class="label">Sem IVA:</span>
-			<span class="value" id="totalsDespesas_semiva">0,00 €</span>
+				<span class="label">IVA:</span>
+				<span class="value" id="totalsDespesas_iva">0,00 €</span>
 		</div>
 	</td>
 </tr>
@@ -997,7 +1031,7 @@ td.col-total-cell, td:nth-child(3){
 
 <div class="bloco-tabela" id="blocoReceitas">
 <h3>Receitas</h3>
-<table>
+<table class="reusable-tabela">
 <colgroup>
 	<col class="data-col">
 	<col class="fornecedor-col">
@@ -1017,16 +1051,13 @@ td.col-total-cell, td:nth-child(3){
 <tbody id="tabelaReceitas"></tbody>
 <tfoot>
 <tr class="totals-row">
-	<td class="totals-cell" colspan="1"></td>
 	<td colspan="4"></td>
 	<td class="totals-cell">
 		<div class="totals-inline">
 			<span class="label">Total:</span>
 			<span class="value" id="totalsReceitas_total">0,00 €</span>
-			<span class="label">IVA:</span>
-			<span class="value" id="totalsReceitas_iva">0,00 €</span>
-			<span class="label">Sem IVA:</span>
-			<span class="value" id="totalsReceitas_semiva">0,00 €</span>
+				<span class="label">IVA:</span>
+				<span class="value" id="totalsReceitas_iva">0,00 €</span>
 		</div>
 	</td>
 </tr>
@@ -1105,7 +1136,7 @@ document.querySelectorAll(".btn-tipo-mobile").forEach((b)=> b.classList.remove("
 if(botao) botao.classList.add("ativo")
 
 aplicarVistaListas()
-	atualizarTotaisTabelas(registos)
+
 
 }
 
@@ -1167,11 +1198,15 @@ async function submitDocsForm(){
 	}
 }
 
-document.getElementById("docInput").addEventListener("change",(e)=>{
-if(e.target.files && e.target.files.length){
-document.getElementById("formDoc").submit()
+const __docInput_el = document.getElementById("docInput")
+if(__docInput_el){
+	__docInput_el.addEventListener("change",(e)=>{
+		if(e.target.files && e.target.files.length){
+			const __form = document.getElementById("formDoc")
+			if(__form) __form.submit()
+		}
+	})
 }
-})
 
 // Support safer file selection UX: button triggers the hidden file input.
 const docButton = document.getElementById('docButton')
@@ -1262,7 +1297,6 @@ if(!termo) return true
 const fornecedor = String(registo.fornecedor || "").toLowerCase()
 const valorTotal = Number(registo.valor_total ?? registo.valor ?? 0).toLocaleString("pt-PT",{minimumFractionDigits:2}).toLowerCase()
 const valorIva = Number(registo.valor_iva ?? 0).toLocaleString("pt-PT",{minimumFractionDigits:2}).toLowerCase()
-const valorSemIva = Number(registo.valor_sem_iva ?? 0).toLocaleString("pt-PT",{minimumFractionDigits:2}).toLowerCase()
 const data = formatarData(registo.data).toLowerCase()
 
 // Support month names in Portuguese (mes por extenso)
@@ -1274,7 +1308,7 @@ let monthName = ''
 const parsed = parseDataRegisto(registo.data)
 if(parsed){ monthName = monthNames[parsed.getMonth()] }
 
-const haystack = `${fornecedor} ${valorTotal} ${valorIva} ${valorSemIva} ${data} ${monthName}`
+const haystack = `${fornecedor} ${valorTotal} ${valorIva} ${data} ${monthName}`
 return haystack.includes(termo)
 
 }
@@ -1366,7 +1400,6 @@ tabelaDespesas.innerHTML = ""
 registos.forEach(r=>{
 
 const dataCurta = formatarData(r.data)
-const valorSemIva = Number(r.valor_sem_iva ?? 0)
 const valorIva = Number(r.valor_iva ?? 0)
 const valorTotal = Number(r.valor_total ?? r.valor ?? 0)
 const idRegisto = Number(r.id || 0)
@@ -1378,6 +1411,7 @@ const attrsVer = `onclick="verFatura(${idRegisto})"`
 const fornecedorCelula = construirFornecedorCelula(r.fornecedor)
 
 const row = document.createElement("tr")
+row.dataset.registo = idRegisto
 
 row.innerHTML = `
 <td data-label="Data">${dataCurta}</td>
@@ -1418,6 +1452,11 @@ tabelaDespesas.innerHTML = `<tr class="linha-vazia"><td data-label="" colspan="6
 
 aplicarVistaListas()
 
+// Fallback: if for any reason the actions cell was not populated, fill it now
+try{ preencherAcoesFallback() }catch(e){ console.warn('preencherAcoesFallback error', e) }
+	// update totals for the current rendered set
+	try{ atualizarTotaisTabelas(registos) }catch(e){ console.warn('atualizarTotaisTabelas render error', e) }
+}
 }
 
 function atualizarTotaisTabelas(registos){
@@ -1430,11 +1469,9 @@ function atualizarTotaisTabelas(registos){
 
 		const totalReceitas = sum(receitas,'valor_total')
 		const ivaReceitas = sum(receitas,'valor_iva')
-		const semIvaReceitas = sum(receitas,'valor_sem_iva')
 
 		const totalDespesas = sum(despesas,'valor_total')
 		const ivaDespesas = sum(despesas,'valor_iva')
-		const semIvaDespesas = sum(despesas,'valor_sem_iva')
 
 		const fmt = v => Number(v||0).toLocaleString('pt-PT',{minimumFractionDigits:2}) + '\u00A0€'
 
@@ -1443,13 +1480,38 @@ function atualizarTotaisTabelas(registos){
 		// update footers inside tables
 		set('totalsReceitas_total', totalReceitas)
 		set('totalsReceitas_iva', ivaReceitas)
-		set('totalsReceitas_semiva', semIvaReceitas)
 
 		set('totalsDespesas_total', totalDespesas)
 		set('totalsDespesas_iva', ivaDespesas)
-		set('totalsDespesas_semiva', semIvaDespesas)
 
 	}catch(e){ console.error('atualizarTotaisTabelas error', e) }
+}
+
+function preencherAcoesFallback(){
+	document.querySelectorAll('td.acoes').forEach(td=>{
+		try{
+			if(!td) return
+			if(td.innerHTML && td.innerHTML.trim().length) return
+			const tr = td.closest('tr')
+			const id = tr && tr.dataset && tr.dataset.registo ? Number(tr.dataset.registo) : 0
+			const tituloVer = 'Abrir documento'
+			const attrsVer = id ? `onclick="verFatura(${id})"` : ''
+			td.innerHTML = `
+				<div class="acoes-linha">
+					<button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button>
+					<div class="acoes-dropdown-wrap">
+						<button type="button" class="btn-acoes" onclick="toggleAcoes(${id}, event)">Ações ▾</button>
+						<div class="acoes-dropdown" id="acoes-${id}" aria-hidden="true">
+							<button type="button" onclick="editar(${id})" class="btn-editar">Editar</button>
+							<button type="button" onclick="apagar(${id})" class="btn-apagar">Apag.</button>
+						</div>
+					</div>
+					<button type="button" onclick="editar(${id})" class="btn-editar btn-editar-inline" style="margin-left:6px;display:none">Editar</button>
+					<button type="button" onclick="apagar(${id})" class="btn-apagar btn-apagar-inline" style="margin-left:6px;display:none">Apag.</button>
+				</div>
+			`
+		}catch(e){ console.warn('preencherAcoesFallback cell error', e) }
+	})
 }
 
 
