@@ -25,7 +25,7 @@ jobs:
       - name: Build and push image to GHCR
         run: |
           IMAGE=ghcr.io/${{ github.repository_owner }}/faturas-ocr:latest
-          docker build -f paddleocr-service/Dockerfile -t $IMAGE .
+          docker build -f paddleocr-service/Dockerfile -t $IMAGE paddleocr-service
           docker push $IMAGE
 
       - name: Trigger Render deploy
