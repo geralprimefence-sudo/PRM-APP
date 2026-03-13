@@ -66,17 +66,19 @@
 // Force reload of style.css in case CDN/browser cached old version
 (function(){
 	try{
-		const links = document.querySelectorAll('link[rel="stylesheet"][href*="style.css"]')
-		links.forEach(l => {
-			const href = l.getAttribute('href')
-			if(href && !href.includes('v=20260313.1')){
-				l.setAttribute('href', 'style.css?v=20260313.1')
-			}
-		})
-	}catch(e){/* ignore */}
-})()
-</script>
 <!DOCTYPE html>
+
+	/* Totals layout: desktop shows totals aligned left next to "Total"; hide on small screens */
+	@media (min-width: 821px) {
+		.tabela-footer, .totals-inline, .totals-cell { display: flex !important; }
+		.tabela-footer{ display:flex; justify-content:flex-start; margin-top:10px; padding:0; }
+		.totals-inline{ gap:10px; align-items:center; justify-content:flex-start; background:var(--surface-soft); padding:6px 10px; border-radius:8px; border:1px solid var(--line); }
+		.totals-inline .label{ font-weight:700; color:var(--muted); font-size:13px; text-align:left; margin-right:4px; }
+		.totals-inline .value{ font-weight:800; color:var(--text); font-size:14px; text-align:left; white-space:nowrap; }
+	}
+	@media (max-width: 820px){
+		.tabela-footer, .totals-inline, .totals-cell { display: none !important; }
+	}
 <html>
 
 <head>
@@ -957,7 +959,7 @@ td.col-total-cell, td:nth-child(3){
 <tbody id="tabelaReceitas"></tbody>
 <tfoot>
 <tr class="totals-row">
-	<td colspan="5"></td>
+	<td colspan="2"></td>
 	<td class="totals-cell">
 		<div class="totals-inline">
 			<span class="label">Total:</span>
@@ -968,6 +970,7 @@ td.col-total-cell, td:nth-child(3){
 			<span class="value" id="totalsReceitas_semiva">0,00 €</span>
 		</div>
 	</td>
+	<td colspan="3"></td>
 </tr>
 </tfoot>
 </table>
@@ -989,7 +992,7 @@ td.col-total-cell, td:nth-child(3){
 <tbody id="tabelaDespesas"></tbody>
 <tfoot>
 <tr class="totals-row">
-	<td colspan="5"></td>
+	<td colspan="2"></td>
 	<td class="totals-cell">
 		<div class="totals-inline">
 			<span class="label">Total:</span>
@@ -1000,6 +1003,7 @@ td.col-total-cell, td:nth-child(3){
 			<span class="value" id="totalsDespesas_semiva">0,00 €</span>
 		</div>
 	</td>
+	<td colspan="3"></td>
 </tr>
 </tfoot>
 </table>
@@ -1075,7 +1079,9 @@ tipoMobileAtual = tipo
 document.querySelectorAll(".btn-tipo-mobile").forEach((b)=> b.classList.remove("ativo"))
 if(botao) botao.classList.add("ativo")
 
-aplicarVistaListas()
+	aplicarVistaListas()
+	// Atualiza os totais na secção de rodapé das tabelas
+	try{ atualizarTotaisTabelas(registos) }catch(e){ console.error('atualizarTotaisTabelas call failed', e) }
 	atualizarTotaisTabelas(registos)
 
 }
