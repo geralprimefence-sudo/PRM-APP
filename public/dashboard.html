@@ -756,6 +756,20 @@ cursor:default;
 }
 </style>
 <style>
+/* Ensure Total header and column values are right-aligned and visually aligned */
+th.col-total, th.col-total span, th:nth-child(3){
+	text-align:right !important;
+	padding-right:10px !important;
+}
+td.col-total-cell, td:nth-child(3){
+	text-align:right !important;
+	padding-right:10px !important;
+}
+/* Footer totals cell aligns its inline block to the right */
+.totals-cell{ text-align:right !important; }
+.totals-inline{ display:inline-flex; align-items:center; justify-content:flex-end }
+</style>
+<style>
 /* Totals placed inside table footer cell (aligned under Ações) */
 .totals-cell{background:transparent;padding:10px 12px;border-bottom:none}
 .totals-inline{display:inline-flex;gap:10px;align-items:center;background:var(--surface-soft);padding:6px 10px;border-radius:8px;border:1px solid var(--line)}
