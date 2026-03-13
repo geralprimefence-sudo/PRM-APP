@@ -81,6 +81,16 @@
 
 <head>
 
+	<div class="tabela-footer" id="footerReceitas" aria-hidden="false">
+		<div class="totals" id="totalsReceitas">
+			<span class="label">Total:</span>
+			<span class="value" id="totalsReceitas_total">0,00 €</span>
+			<span class="label">IVA:</span>
+			<span class="value" id="totalsReceitas_iva">0,00 €</span>
+			<span class="label">Sem IVA:</span>
+			<span class="value" id="totalsReceitas_semiva">0,00 €</span>
+		</div>
+	</div>
 <meta charset="UTF-8">
 <title>PRM Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -98,6 +108,16 @@
 --primary-strong:#1d4ed8;
 --danger:#ef4444;
 --shadow:0 6px 16px rgba(16,24,40,0.08);
+	<div class="tabela-footer" id="footerDespesas" aria-hidden="false">
+		<div class="totals" id="totalsDespesas">
+			<span class="label">Total:</span>
+			<span class="value" id="totalsDespesas_total">0,00 €</span>
+			<span class="label">IVA:</span>
+			<span class="value" id="totalsDespesas_iva">0,00 €</span>
+			<span class="label">Sem IVA:</span>
+			<span class="value" id="totalsDespesas_semiva">0,00 €</span>
+		</div>
+	</div>
 }
 
 *{
@@ -695,6 +715,17 @@ cursor:default;
 
 </style>
 <style>
+/* Footer totals below tables, aligned to the right (below Ações column) */
+.tabela-footer{display:flex;justify-content:flex-end;margin-top:10px}
+.tabela-footer .totals{display:flex;gap:12px;align-items:center;background:var(--surface-soft);padding:8px 12px;border-radius:10px;border:1px solid var(--line);box-shadow:none}
+.tabela-footer .totals .label{font-weight:700;color:var(--muted);font-size:13px}
+.tabela-footer .totals .value{font-weight:800;color:var(--text);font-size:14px}
+@media(max-width:820px){
+	.tabela-footer{overflow-x:auto;padding-right:6px}
+	.tabela-footer .totals{min-width:320px}
+}
+</style>
+<style>
 @media (max-width: 820px) {
 	th:nth-child(4), th:nth-child(5), td:nth-child(4), td:nth-child(5) {
 		display: none !important;
@@ -957,6 +988,7 @@ document.querySelectorAll(".btn-tipo-mobile").forEach((b)=> b.classList.remove("
 if(botao) botao.classList.add("ativo")
 
 aplicarVistaListas()
+	atualizarTotaisTabelas(registos)
 
 }
 
@@ -1271,6 +1303,37 @@ tabelaDespesas.innerHTML = `<tr class="linha-vazia"><td data-label="" colspan="6
 
 aplicarVistaListas()
 
+}
+
+function atualizarTotaisTabelas(registos){
+	try{
+		// registos já está filtrado por período/janela/pesquisa e ordenado
+		const receitas = registos.filter(r => (r.tipo || '').toLowerCase() === 'receita')
+		const despesas = registos.filter(r => (r.tipo || '').toLowerCase() !== 'receita')
+
+		const sum = (lista, campo) => lista.reduce((acc,r)=> acc + Number(r[campo] ?? (campo==='valor_total' ? r.valor : 0) ), 0)
+
+		const totalReceitas = sum(receitas,'valor_total')
+		const ivaReceitas = sum(receitas,'valor_iva')
+		const semIvaReceitas = sum(receitas,'valor_sem_iva')
+
+		const totalDespesas = sum(despesas,'valor_total')
+		const ivaDespesas = sum(despesas,'valor_iva')
+		const semIvaDespesas = sum(despesas,'valor_sem_iva')
+
+		const fmt = v => Number(v||0).toLocaleString('pt-PT',{minimumFractionDigits:2}) + '\u00A0€'
+
+		const set = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = fmt(val) }
+
+		set('totalsReceitas_total', totalReceitas)
+		set('totalsReceitas_iva', ivaReceitas)
+		set('totalsReceitas_semiva', semIvaReceitas)
+
+		set('totalsDespesas_total', totalDespesas)
+		set('totalsDespesas_iva', ivaDespesas)
+		set('totalsDespesas_semiva', semIvaDespesas)
+
+	}catch(e){ console.error('atualizarTotaisTabelas error', e) }
 }
 
 
