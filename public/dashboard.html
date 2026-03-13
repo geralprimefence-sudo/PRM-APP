@@ -721,8 +721,8 @@ cursor:default;
 	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ display:none !important; }
 	.bloco-tabela th:nth-child(5), .bloco-tabela td:nth-child(5){ display:none !important; }
 	/* actions column slimmed to keep visible */
-	/* actions column kept narrow and visible */
-	.bloco-tabela th:nth-child(6), .bloco-tabela td:nth-child(6){ width:68px; min-width:64px; text-align:right; padding:0 6px; }
+	/* actions column kept narrow and visible (moved to first column) */
+	.bloco-tabela th:first-child, .bloco-tabela td:first-child{ width:68px; min-width:64px; text-align:left; padding:0 6px; }
 	.fornecedor-nome{ max-width:80px !important; }
 	.acoes-linha{ white-space:nowrap; gap:6px; }
 	/* make action buttons more compact on small screens */
@@ -732,7 +732,7 @@ cursor:default;
 	/* reduce table cell padding to avoid overflow */
 	th, td { padding:6px 6px !important; }
 	.acoes-dropdown{ position:relative; display:inline-block; }
-	.acoes-dropdown .acoes-dropdown{ position:absolute; right:0; top:100%; }
+	.acoes-dropdown .acoes-dropdown{ position:absolute; left:0; top:100%; }
 	.tabela-footer .totals{ white-space:nowrap; }
 }
 </style>
@@ -941,55 +941,24 @@ td.col-total-cell, td:nth-child(3){
 
 <div class="tabelas-grid">
 
-<div class="bloco-tabela" id="blocoReceitas">
-<h3>Receitas</h3>
-<table>
-<thead>
-<tr>
-<th>Data</th>
-<th>Fornecedor</th>
-<th class="col-total"><span style="white-space:nowrap">Total</span></th>
-<th>IVA</th>
-<th>Sem IVA</th>
-<th class="col-acoes">Ações</th>
-</tr>
-</thead>
-<tbody id="tabelaReceitas"></tbody>
-<tfoot>
-<tr class="totals-row">
-	<td colspan="5"></td>
-	<td class="totals-cell">
-		<div class="totals-inline">
-			<span class="label">Total:</span>
-			<span class="value" id="totalsReceitas_total">0,00 €</span>
-			<span class="label">IVA:</span>
-			<span class="value" id="totalsReceitas_iva">0,00 €</span>
-			<span class="label">Sem IVA:</span>
-			<span class="value" id="totalsReceitas_semiva">0,00 €</span>
-		</div>
-	</td>
-</tr>
-</tfoot>
-</table>
-</div>
-
 <div class="bloco-tabela" id="blocoDespesas">
 <h3>Despesas</h3>
 <table>
 <thead>
 <tr>
+<th class="col-acoes">Ações</th>
 <th>Data</th>
 <th>Cliente</th>
 <th class="col-total"><span style="white-space:nowrap">Total</span></th>
 <th>IVA</th>
 <th>Sem IVA</th>
-<th class="col-acoes">Ações</th>
 </tr>
 </thead>
 <tbody id="tabelaDespesas"></tbody>
 <tfoot>
 <tr class="totals-row">
-	<td colspan="5"></td>
+	<td class="totals-cell" colspan="1"></td>
+	<td colspan="4"></td>
 	<td class="totals-cell">
 		<div class="totals-inline">
 			<span class="label">Total:</span>
@@ -998,6 +967,39 @@ td.col-total-cell, td:nth-child(3){
 			<span class="value" id="totalsDespesas_iva">0,00 €</span>
 			<span class="label">Sem IVA:</span>
 			<span class="value" id="totalsDespesas_semiva">0,00 €</span>
+		</div>
+	</td>
+</tr>
+</tfoot>
+</table>
+</div>
+
+<div class="bloco-tabela" id="blocoReceitas">
+<h3>Receitas</h3>
+<table>
+<thead>
+<tr>
+<th class="col-acoes">Ações</th>
+<th>Data</th>
+<th>Fornecedor</th>
+<th class="col-total"><span style="white-space:nowrap">Total</span></th>
+<th>IVA</th>
+<th>Sem IVA</th>
+</tr>
+</thead>
+<tbody id="tabelaReceitas"></tbody>
+<tfoot>
+<tr class="totals-row">
+	<td class="totals-cell" colspan="1"></td>
+	<td colspan="4"></td>
+	<td class="totals-cell">
+		<div class="totals-inline">
+			<span class="label">Total:</span>
+			<span class="value" id="totalsReceitas_total">0,00 €</span>
+			<span class="label">IVA:</span>
+			<span class="value" id="totalsReceitas_iva">0,00 €</span>
+			<span class="label">Sem IVA:</span>
+			<span class="value" id="totalsReceitas_semiva">0,00 €</span>
 		</div>
 	</td>
 </tr>
@@ -1351,17 +1353,9 @@ const fornecedorCelula = construirFornecedorCelula(r.fornecedor)
 const row = document.createElement("tr")
 
 row.innerHTML = `
-<td data-label="Data">${dataCurta}</td>
-<td data-label="${(r.tipo || "").toLowerCase()==="receita" ? "Cliente" : "Fornecedor"}">${fornecedorCelula}</td>
-<td class="col-total-cell" data-label="Total"><span class="nowrap total-value">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
-<td data-label="IVA"><span class="nowrap">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
-<td data-label="Sem IVA"><span class="nowrap">${valorSemIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
-
 <td class="acoes" data-label="Acoes">
 <div class="acoes-linha">
-</button>
 <button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button>
-
 <div class="acoes-dropdown-wrap">
     	<button type="button" class="btn-acoes" onclick="toggleAcoes(${r.id}, event)">Ações ▾</button>
     	<div class="acoes-dropdown" id="acoes-${r.id}" aria-hidden="true">
@@ -1374,6 +1368,11 @@ row.innerHTML = `
 <button type="button" onclick="apagar(${r.id})" class="btn-apagar btn-apagar-inline" style="margin-left:6px;display:none">Apag.</button>
 </div>
 </td>
+<td data-label="Data">${dataCurta}</td>
+<td data-label="${(r.tipo || "").toLowerCase()==="receita" ? "Cliente" : "Fornecedor"}">${fornecedorCelula}</td>
+<td class="col-total-cell" data-label="Total"><span class="nowrap total-value">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
+<td data-label="IVA"><span class="nowrap">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
+<td data-label="Sem IVA"><span class="nowrap">${valorSemIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
 `
 
 if((r.tipo || "").toLowerCase()==="receita"){
