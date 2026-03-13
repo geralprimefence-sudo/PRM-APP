@@ -270,6 +270,19 @@ table td:nth-child(5){
     }
 }
 
+/* Prevent 'Total' header and currency symbol from breaking onto a second line */
+th.col-total,
+th.col-total * {
+	white-space: nowrap;
+}
+
+/* Ensure numeric cells keep number and currency symbol together */
+table td:nth-child(3),
+table td:nth-child(4),
+table td:nth-child(5){
+	white-space: nowrap;
+}
+
 	th,
 	td{
 	max-width:90px;
