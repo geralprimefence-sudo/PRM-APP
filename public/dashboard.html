@@ -732,6 +732,18 @@ cursor:default;
 	.tabela-footer .totals{ white-space:nowrap; }
 }
 </style>
+	<style>
+	/* Desktop: hide the compact dropdown and show inline edit/delete buttons */
+	@media (min-width: 821px) {
+		.acoes-dropdown-wrap { display: none !important; }
+		.btn-editar-inline, .btn-apagar-inline { display: inline-block !important; }
+	}
+	/* Mobile: hide the inline edit/delete duplicates */
+	@media (max-width: 820px) {
+		.btn-editar-inline, .btn-apagar-inline { display: none !important; }
+		.acoes-dropdown-wrap { display: inline-block !important; }
+	}
+	</style>
 <style>
 /* Footer totals below tables, aligned to the right (below Ações column) */
 .tabela-footer{display:flex;justify-content:flex-end;margin-top:10px}
@@ -1337,12 +1349,15 @@ row.innerHTML = `
 <button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button>
 
 <div class="acoes-dropdown-wrap">
-	<button type="button" class="btn-acoes" onclick="toggleAcoes(${r.id}, event)">Ações ▾</button>
-	<div class="acoes-dropdown" id="acoes-${r.id}" aria-hidden="true">
-		<button type="button" onclick="editar(${r.id})" class="btn-editar">Editar</button>
-		<button type="button" onclick="apagar(${r.id})" class="btn-apagar">Apag.</button>
-	</div>
+    	<button type="button" class="btn-acoes" onclick="toggleAcoes(${r.id}, event)">Ações ▾</button>
+    	<div class="acoes-dropdown" id="acoes-${r.id}" aria-hidden="true">
+    		<button type="button" onclick="editar(${r.id})" class="btn-editar">Editar</button>
+    		<button type="button" onclick="apagar(${r.id})" class="btn-apagar">Apag.</button>
+    	</div>
 </div>
+<!-- Inline edit/delete visible on desktop; hidden on mobile -->
+<button type="button" onclick="editar(${r.id})" class="btn-editar btn-editar-inline" style="margin-left:6px;display:none">Editar</button>
+<button type="button" onclick="apagar(${r.id})" class="btn-apagar btn-apagar-inline" style="margin-left:6px;display:none">Apag.</button>
 </div>
 </td>
 `
