@@ -67,7 +67,7 @@
 		links.forEach(l => {
 			const href = l.getAttribute('href')
 			if(href && !href.includes('v=20260313.1')){
-				l.setAttribute('href', 'style.css?v=20260313.1')
+				l.setAttribute('href', 'style.css?v=20260313.2')
 			}
 		})
 	}catch(e){/* ignore */}
@@ -1454,9 +1454,8 @@ aplicarVistaListas()
 
 // Fallback: if for any reason the actions cell was not populated, fill it now
 try{ preencherAcoesFallback() }catch(e){ console.warn('preencherAcoesFallback error', e) }
-	// update totals for the current rendered set
-	try{ atualizarTotaisTabelas(registos) }catch(e){ console.warn('atualizarTotaisTabelas render error', e) }
-}
+// update totals for the current rendered set
+try{ atualizarTotaisTabelas(registos) }catch(e){ console.warn('atualizarTotaisTabelas render error', e) }
 }
 
 function atualizarTotaisTabelas(registos){
