@@ -22,19 +22,13 @@
 		text-align: right !important;
 		padding-right: 10px !important;
 	}
-	th:nth-child(4), th:nth-child(5), td:nth-child(4), td:nth-child(5) {
-		display: none !important;
-	}
+	/* previously hid IVA/Ações on narrow viewports; removed so IVA and Ações remain visible */
 	.tabelas-grid {
 		grid-template-columns: 1fr !important;
 	}
 }
 /* Ensure 'Sem IVA' column hidden on desktop too (strong rule to override cached CSS) */
-@media (min-width:701px){
-    th:nth-child(5), td:nth-child(5){
-        display:none !important;
-    }
-}
+/* removed rule that hid the 5th column on desktop */
 </style>
 <style>
 /* HIDE: remove footer totals block from page (keeps HTML for easy revert) */
