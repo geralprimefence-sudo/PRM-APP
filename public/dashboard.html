@@ -744,6 +744,14 @@ cursor:default;
 	/* reduce padding to tighten spacing between columns */
 	.bloco-tabela th, .bloco-tabela td { text-align:left !important; padding:6px 8px; }
 
+	/* Use fixed table layout with explicit column widths to control spacing */
+	.bloco-tabela table { table-layout: fixed; width:100%; }
+	.bloco-tabela col.data-col{ width:15%; }
+	.bloco-tabela col.fornecedor-col{ width:35%; }
+	.bloco-tabela col.total-col{ width:18%; }
+	.bloco-tabela col.iva-col{ width:12%; }
+	.bloco-tabela col.acoes-col{ width:20%; }
+
 	/* ensure values don't overflow */
 	.bloco-tabela .nowrap{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 	.tabela-footer .totals{ white-space:nowrap; }
@@ -957,6 +965,13 @@ td.col-total-cell, td:nth-child(3){
 <div class="bloco-tabela" id="blocoDespesas">
 <h3>Despesas</h3>
 <table>
+<colgroup>
+	<col class="data-col">
+	<col class="fornecedor-col">
+	<col class="total-col">
+	<col class="iva-col">
+	<col class="acoes-col">
+</colgroup>
 <thead>
 <tr>
 <th>Data</th>
@@ -989,6 +1004,13 @@ td.col-total-cell, td:nth-child(3){
 <div class="bloco-tabela" id="blocoReceitas">
 <h3>Receitas</h3>
 <table>
+<colgroup>
+	<col class="data-col">
+	<col class="fornecedor-col">
+	<col class="total-col">
+	<col class="iva-col">
+	<col class="acoes-col">
+</colgroup>
 <thead>
 <tr>
 <th>Data</th>
