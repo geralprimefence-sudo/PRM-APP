@@ -737,12 +737,12 @@ cursor:default;
 
 <div class="card">
 <h3>Receitas</h3>
-<h2 id="receitas">0 €</h2>
+<h2 id="receitas">0&nbsp;€</h2>
 </div>
 
 <div class="card">
 <h3>Despesas</h3>
-<h2 id="despesas">0 €</h2>
+<h2 id="despesas">0&nbsp;€</h2>
 </div>
 
 <!-- Export modal -->
@@ -777,12 +777,12 @@ cursor:default;
 
 <div class="card">
 <h3>Saldo</h3>
-<h2 id="saldo">0 €</h2>
+<h2 id="saldo">0&nbsp;€</h2>
 </div>
 
 <div class="card">
 <h3>IVA</h3>
-<h2 id="iva">0 €</h2>
+<h2 id="iva">0&nbsp;€</h2>
 </div>
 
 </div>
@@ -859,7 +859,7 @@ cursor:default;
 <tr>
 <th>Data</th>
 <th>Fornecedor</th>
-<th class="col-total">Total</th>
+<th class="col-total"><span style="white-space:nowrap">Total</span></th>
 <th>IVA</th>
 <th>Sem IVA</th>
 <th class="col-acoes">Ações</th>
@@ -876,7 +876,7 @@ cursor:default;
 <tr>
 <th>Data</th>
 <th>Cliente</th>
-<th class="col-total">Total</th>
+<th class="col-total"><span style="white-space:nowrap">Total</span></th>
 <th>IVA</th>
 <th>Sem IVA</th>
 <th class="col-acoes">Ações</th>
@@ -1172,18 +1172,18 @@ const ivaPago = registos
 
 const saldoIva = ivaRecebido - ivaPago
 
-document.getElementById("receitas").innerText =
-Number(receitas).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
+	document.getElementById("receitas").innerText =
+Number(receitas).toLocaleString('pt-PT',{minimumFractionDigits:2}) + "\u00A0€"
 
-document.getElementById("despesas").innerText =
-Number(despesas).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
+	document.getElementById("despesas").innerText =
+Number(despesas).toLocaleString('pt-PT',{minimumFractionDigits:2}) + "\u00A0€"
 
-document.getElementById("saldo").innerText =
-Number(saldo).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
+	document.getElementById("saldo").innerText =
+Number(saldo).toLocaleString('pt-PT',{minimumFractionDigits:2}) + "\u00A0€"
 
 const prefixoIva = saldoIva < 0 ? "-" : ""
-document.getElementById("iva").innerText =
-prefixoIva + Math.abs(Number(saldoIva)).toLocaleString('pt-PT',{minimumFractionDigits:2}) + " €"
+	document.getElementById("iva").innerText =
+prefixoIva + Math.abs(Number(saldoIva)).toLocaleString('pt-PT',{minimumFractionDigits:2}) + "\u00A0€"
 
 }
 
