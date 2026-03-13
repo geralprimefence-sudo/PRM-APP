@@ -736,6 +736,20 @@ cursor:default;
 }
 </style>
 <style>
+/* Totals placed inside table footer cell (aligned under Ações) */
+.totals-cell{background:transparent;padding:10px 12px;border-bottom:none}
+.totals-inline{display:inline-flex;gap:10px;align-items:center;background:var(--surface-soft);padding:6px 10px;border-radius:8px;border:1px solid var(--line)}
+.totals-inline .label{font-weight:700;color:var(--muted);font-size:13px}
+.totals-inline .value{font-weight:800;color:var(--text);font-size:14px}
+@media(max-width:820px){
+  .totals-inline{min-width:220px;overflow:hidden}
+}
+
+/* Ensure actions column visible and compact */
+.col-acoes{width:92px;min-width:92px}
+.acoes button{padding:4px 6px;font-size:11px}
+</style>
+<style>
 @media (max-width: 820px) {
 	th:nth-child(4), th:nth-child(5), td:nth-child(4), td:nth-child(5) {
 		display: none !important;
@@ -907,6 +921,21 @@ cursor:default;
 </tr>
 </thead>
 <tbody id="tabelaReceitas"></tbody>
+<tfoot>
+<tr class="totals-row">
+	<td colspan="5"></td>
+	<td class="totals-cell">
+		<div class="totals-inline">
+			<span class="label">Total:</span>
+			<span class="value" id="totalsReceitas_total">0,00 €</span>
+			<span class="label">IVA:</span>
+			<span class="value" id="totalsReceitas_iva">0,00 €</span>
+			<span class="label">Sem IVA:</span>
+			<span class="value" id="totalsReceitas_semiva">0,00 €</span>
+		</div>
+	</td>
+</tr>
+</tfoot>
 </table>
 </div>
 
@@ -924,6 +953,21 @@ cursor:default;
 </tr>
 </thead>
 <tbody id="tabelaDespesas"></tbody>
+<tfoot>
+<tr class="totals-row">
+	<td colspan="5"></td>
+	<td class="totals-cell">
+		<div class="totals-inline">
+			<span class="label">Total:</span>
+			<span class="value" id="totalsDespesas_total">0,00 €</span>
+			<span class="label">IVA:</span>
+			<span class="value" id="totalsDespesas_iva">0,00 €</span>
+			<span class="label">Sem IVA:</span>
+			<span class="value" id="totalsDespesas_semiva">0,00 €</span>
+		</div>
+	</td>
+</tr>
+</tfoot>
 </table>
 </div>
 
@@ -1335,6 +1379,7 @@ function atualizarTotaisTabelas(registos){
 
 		const set = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = fmt(val) }
 
+		// update footers inside tables
 		set('totalsReceitas_total', totalReceitas)
 		set('totalsReceitas_iva', ivaReceitas)
 		set('totalsReceitas_semiva', semIvaReceitas)
