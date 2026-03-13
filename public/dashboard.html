@@ -709,19 +709,24 @@ cursor:default;
 		overflow:hidden !important;
 		text-overflow:ellipsis !important;
 	}
-	.bloco-tabela th:nth-child(1), .bloco-tabela td:nth-child(1){ width:90px; min-width:80px; }
-	/* tighten supplier/client column and give Total more room for 9 digits */
-	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ width:100px; min-width:90px; max-width:120px; }
-	.bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ width:160px; min-width:140px; text-align:right; padding-right:6px; }
+	/* tighter column widths to keep actions visible */
+	.bloco-tabela th:nth-child(1), .bloco-tabela td:nth-child(1){ width:72px; min-width:64px; }
+	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ width:88px; min-width:76px; max-width:100px; }
+	/* Total keeps space for large amounts but reduced to allow actions on-screen */
+	.bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ width:120px; min-width:110px; text-align:right; padding-right:6px; }
 	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ display:none !important; }
 	.bloco-tabela th:nth-child(5), .bloco-tabela td:nth-child(5){ display:none !important; }
 	/* actions column slimmed to keep visible */
-	.bloco-tabela th:nth-child(6), .bloco-tabela td:nth-child(6){ width:84px; min-width:80px; text-align:right; padding-right:6px; }
-	.fornecedor-nome{ max-width:96px !important; }
+	/* actions column kept narrow and visible */
+	.bloco-tabela th:nth-child(6), .bloco-tabela td:nth-child(6){ width:68px; min-width:64px; text-align:right; padding:0 6px; }
+	.fornecedor-nome{ max-width:80px !important; }
 	.acoes-linha{ white-space:nowrap; gap:6px; }
 	/* make action buttons more compact on small screens */
-	.acoes button{padding:3px 6px;font-size:11px;min-width:34px}
-	.acoes .btn-ver{padding:3px 8px}
+	.acoes button{padding:3px 6px;font-size:11px;min-width:30px}
+	.acoes .btn-ver{padding:3px 6px}
+
+	/* reduce table cell padding to avoid overflow */
+	th, td { padding:6px 6px !important; }
 	.acoes-dropdown{ position:relative; display:inline-block; }
 	.acoes-dropdown .acoes-dropdown{ position:absolute; right:0; top:100%; }
 	.tabela-footer .totals{ white-space:nowrap; }
