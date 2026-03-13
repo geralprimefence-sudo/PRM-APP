@@ -37,6 +37,10 @@
 }
 </style>
 <style>
+/* HIDE: remove footer totals block from page (keeps HTML for easy revert) */
+.tabela-footer, .totals-row, .totals-inline, .totals-cell { display: none !important; }
+</style>
+<style>
 @media (max-width: 820px) {
 	header {
 		flex-direction: row !important;
@@ -750,10 +754,8 @@ cursor:default;
 .tabela-footer .totals{display:flex;gap:12px;align-items:center;background:var(--surface-soft);padding:8px 12px;border-radius:10px;border:1px solid var(--line);box-shadow:none}
 .tabela-footer .totals .label{font-weight:700;color:var(--muted);font-size:13px}
 .tabela-footer .totals .value{font-weight:800;color:var(--text);font-size:14px}
-@media(max-width:820px){
-	.tabela-footer{overflow-x:auto;padding-right:6px}
-	.tabela-footer .totals{min-width:260px}
-}
+.tabela-footer .totals{min-width:260px}
+.tabela-footer{overflow-x:auto;padding-right:6px}
 </style>
 <style>
 /* Ensure Total header and column values are right-aligned and visually aligned */
@@ -775,9 +777,7 @@ td.col-total-cell, td:nth-child(3){
 .totals-inline{display:inline-flex;gap:10px;align-items:center;background:var(--surface-soft);padding:6px 10px;border-radius:8px;border:1px solid var(--line)}
 .totals-inline .label{font-weight:700;color:var(--muted);font-size:13px}
 .totals-inline .value{font-weight:800;color:var(--text);font-size:14px}
-@media(max-width:820px){
-  .totals-inline{min-width:220px;overflow:hidden}
-}
+.totals-inline{min-width:220px;overflow:hidden}
 
 /* Ensure actions column visible and compact */
 .col-acoes{width:92px;min-width:92px}
