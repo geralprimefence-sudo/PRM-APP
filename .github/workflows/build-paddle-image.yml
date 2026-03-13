@@ -33,6 +33,8 @@ jobs:
       with:
         context: ./paddleocr-service
         file: ./paddleocr-service/Dockerfile.paddle
+        # Force build for amd64 to ensure prebuilt manylinux wheels are available
+        platforms: linux/amd64
         push: true
         tags: ghcr.io/${{ github.repository_owner }}/paddleocr-service:staging
         cache-from: type=gha
