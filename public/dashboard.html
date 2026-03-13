@@ -2,14 +2,11 @@
 @media (max-width: 820px) {
 	th, td {
 		white-space: nowrap !important;
-		word-break: normal !important;
-		min-width: 60px !important;
-		max-width: 120px !important;
-		font-size: 13px !important;
-		padding: 7px 4px !important;
+		min-width: 40px !important;
+		max-width: 80px !important;
+		font-size: 12px !important;
+		padding: 2px 2px !important;
 		text-align: left !important;
-		writing-mode: initial !important;
-		text-orientation: initial !important;
 		overflow-x: auto !important;
 	}
 	th, td {
@@ -17,10 +14,10 @@
 		hyphens: none !important;
 	}
 	th:nth-child(3), td:nth-child(3) {
-		min-width: 80px !important;
-		max-width: 140px !important;
+		min-width: 60px !important;
+		max-width: 80px !important;
 		text-align: right !important;
-		padding-right: 10px !important;
+		padding-right: 4px !important;
 	}
 	/* previously hid IVA/Ações on narrow viewports; removed so IVA and Ações remain visible */
 	.tabelas-grid {
@@ -31,7 +28,7 @@
 </style>
 <style>
 /* HIDE: remove footer totals block from page (keeps HTML for easy revert) */
-.tabela-footer, .totals-row, .totals-inline, .totals-cell { display: none !important; }
+
 </style>
 <style>
 @media (max-width: 820px) {
@@ -729,12 +726,12 @@ cursor:default;
 	.bloco-tabela th:nth-child(1), .bloco-tabela td:nth-child(1){ width:72px; min-width:64px; }
 	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ width:88px; min-width:76px; max-width:100px; }
 	/* Total column enlarged to comfortably fit 9-digit numbers */
-	.bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ width:200px; min-width:180px; text-align:right; padding-right:6px; }
+	.bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ width:120px; min-width:90px; text-align:right; padding-right:2px; }
 	/* keep IVA visible on small screens but allow other columns to compress; do not hide actions */
-	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ /* IVA */ }
+	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ min-width:60px; max-width:80px; padding-left:2px; text-align:left; }
 	/* actions column slimmed to keep visible */
 	/* actions column kept narrow and visible (moved to last column) */
-	.bloco-tabela th:last-child, .bloco-tabela td:last-child{ width:92px; min-width:80px; text-align:left; padding:0 6px; }
+	.bloco-tabela th:last-child, .bloco-tabela td:last-child{ width:70px; min-width:60px; text-align:left; padding:0 2px; }
 	.fornecedor-nome{ max-width:80px !important; }
 	.acoes-linha{ white-space:nowrap; gap:6px; }
 	/* make action buttons more compact on small screens */
@@ -755,23 +752,24 @@ cursor:default;
 	.acoes-dropdown .acoes-dropdown{ position:absolute; right:0; top:100%; }
 
 	/* column widths and alignment for Data / Fornecedor / Total / IVA / Ações */
-	.bloco-tabela th:nth-child(1), .bloco-tabela td:nth-child(1){ min-width:72px; }
-	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ min-width:140px; }
-	.bloco-tabela th.col-total, .bloco-tabela td.col-total-cell, .bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ min-width:100px; max-width:140px; }
-	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ min-width:78px; max-width:110px; padding-left:6px; }
-	.bloco-tabela th:last-child, .bloco-tabela td:last-child{ width:100px; min-width:88px; padding-left:6px; }
+
+	.bloco-tabela th:nth-child(1), .bloco-tabela td:nth-child(1){ min-width:60px; }
+	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ min-width:70px; max-width:100px; }
+	.bloco-tabela th.col-total, .bloco-tabela td.col-total-cell, .bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ min-width:90px; max-width:130px; padding-left:0; }
+	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ min-width:60px; max-width:80px; padding-left:0; }
+	.bloco-tabela th:last-child, .bloco-tabela td:last-child{ width:70px; min-width:60px; padding-left:0; }
 
 	/* reduce padding to tighten spacing between columns */
-	.bloco-tabela th, .bloco-tabela td { text-align:left !important; padding:6px 8px; }
+	.bloco-tabela th, .bloco-tabela td { text-align:left !important; padding:4px 4px; }
 
 	/* Use fixed table layout with explicit column widths to control spacing */
 	.bloco-tabela table { table-layout: fixed; width:100%; }
 	/* shifted widths so IVA and Ações sit slightly more left inside layout */
-	.bloco-tabela col.data-col{ width:12%; }
-	.bloco-tabela col.fornecedor-col{ width:36%; }
-	.bloco-tabela col.total-col{ width:18%; }
-	.bloco-tabela col.iva-col{ width:14%; }
-	.bloco-tabela col.acoes-col{ width:20%; }
+	.bloco-tabela col.data-col{ width:10%; }
+	.bloco-tabela col.fornecedor-col{ width:20%; }
+	.bloco-tabela col.total-col{ width:22%; }
+	.bloco-tabela col.iva-col{ width:12%; }
+	.bloco-tabela col.acoes-col{ width:14%; }
 
 	/* ensure values don't overflow */
 	.bloco-tabela .nowrap{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -837,7 +835,8 @@ td.col-total-cell, td:nth-child(3){
 </style>
 <style>
 @media (max-width: 820px) {
-	th:nth-child(4), th:nth-child(5), td:nth-child(4), td:nth-child(5) {
+	/* Hide only the IVA column on small screens; keep the Ações column visible */
+	th:nth-child(4), td:nth-child(4) {
 		display: none !important;
 	}
 	.tabelas-grid {
@@ -1013,19 +1012,7 @@ td.col-total-cell, td:nth-child(3){
 </tr>
 </thead>
 <tbody id="tabelaDespesas"></tbody>
-<tfoot>
-<tr class="totals-row">
-	<td colspan="4"></td>
-	<td class="totals-cell">
-		<div class="totals-inline">
-			<span class="label">Total:</span>
-			<span class="value" id="totalsDespesas_total">0,00 €</span>
-				<span class="label">IVA:</span>
-				<span class="value" id="totalsDespesas_iva">0,00 €</span>
-		</div>
-	</td>
-</tr>
-</tfoot>
+
 </table>
 </div>
 
@@ -1049,19 +1036,7 @@ td.col-total-cell, td:nth-child(3){
 </tr>
 </thead>
 <tbody id="tabelaReceitas"></tbody>
-<tfoot>
-<tr class="totals-row">
-	<td colspan="4"></td>
-	<td class="totals-cell">
-		<div class="totals-inline">
-			<span class="label">Total:</span>
-			<span class="value" id="totalsReceitas_total">0,00 €</span>
-				<span class="label">IVA:</span>
-				<span class="value" id="totalsReceitas_iva">0,00 €</span>
-		</div>
-	</td>
-</tr>
-</tfoot>
+
 </table>
 </div>
 
@@ -1461,7 +1436,6 @@ try{ atualizarTotaisTabelas(registos) }catch(e){ console.warn('atualizarTotaisTa
 function atualizarTotaisTabelas(registos){
 	try{
 		// registos já está filtrado por período/janela/pesquisa e ordenado
-		const receitas = registos.filter(r => (r.tipo || '').toLowerCase() === 'receita')
 		const despesas = registos.filter(r => (r.tipo || '').toLowerCase() !== 'receita')
 
 		const sum = (lista, campo) => lista.reduce((acc,r)=> acc + Number(r[campo] ?? (campo==='valor_total' ? r.valor : 0) ), 0)
@@ -1479,7 +1453,8 @@ function atualizarTotaisTabelas(registos){
 		// update footers inside tables
 		set('totalsReceitas_total', totalReceitas)
 		set('totalsReceitas_iva', ivaReceitas)
-
+		set('totalsDespesas_total', totalDespesas)
+		set('totalsDespesas_iva', ivaDespesas)
 		set('totalsDespesas_total', totalDespesas)
 		set('totalsDespesas_iva', ivaDespesas)
 

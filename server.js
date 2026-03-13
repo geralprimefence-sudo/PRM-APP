@@ -67,6 +67,39 @@ app.use((err, req, res, next) => {
 				stack: err.stack,
 				rawBody: req && req.rawBody ? req.rawBody : null
 			})
+
+			// Tentar fallback: converter corpos no formato {key:val,key2:val2}
+			try{
+				const raw = req && req.rawBody ? String(req.rawBody).trim() : ''
+				if(raw && raw.startsWith('{') && raw.endsWith('}')){
+					// Primeiro tenta JSON normal
+					try{
+						req.body = JSON.parse(raw)
+						return next()
+					}catch(_){ }
+
+					// Remover chaves e dividir por vírgulas, depois pares por ':'
+					const content = raw.slice(1,-1).trim()
+					const parts = content.length ? content.split(/\s*,\s*/) : []
+					const obj = {}
+					for(const part of parts){
+						const kv = part.split(/\s*:\s*/)
+						if(kv.length < 2) continue
+						let k = kv.shift().trim().replace(/^['"]|['"]$/g,'')
+						let v = kv.join(":").trim().replace(/^['"]|['"]$/g,'')
+						obj[k] = v
+					}
+					// Se obteve pelo menos uma chave, usa como body e continua
+					if(Object.keys(obj).length){
+						req.body = obj
+						console.warn('Parsed fallback body from malformed JSON', obj)
+						return next()
+					}
+				}
+			}catch(fallbackErr){
+				console.error('Fallback body parse failed', fallbackErr)
+			}
+
 			return res.status(400).json({ ok: false, erro: 'JSON mal formado' })
 		}
 	}catch(_){ }
