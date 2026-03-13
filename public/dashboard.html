@@ -724,14 +724,13 @@ cursor:default;
 	}
 	/* tighter column widths to keep actions visible */
 	.bloco-tabela th:nth-child(1), .bloco-tabela td:nth-child(1){ width:72px; min-width:64px; }
-	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ width:88px; min-width:76px; max-width:100px; }
-	/* Total column enlarged to comfortably fit 9-digit numbers */
-	.bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ width:120px; min-width:90px; text-align:right; padding-right:2px; }
+	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ width:70px; min-width:50px; max-width:80px; padding-right:2px; }
+	.bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ width:90px; min-width:60px; max-width:90px; text-align:right; padding-right:2px; }
 	/* keep IVA visible on small screens but allow other columns to compress; do not hide actions */
 	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ min-width:60px; max-width:80px; padding-left:2px; text-align:left; }
 	/* actions column slimmed to keep visible */
 	/* actions column kept narrow and visible (moved to last column) */
-	.bloco-tabela th:last-child, .bloco-tabela td:last-child{ width:70px; min-width:60px; text-align:left; padding:0 2px; }
+	.bloco-tabela th:last-child, .bloco-tabela td:last-child{ width:90px; min-width:70px; text-align:left; padding:4px 8px; box-sizing:border-box; }
 	.fornecedor-nome{ max-width:80px !important; }
 	.acoes-linha{ white-space:nowrap; gap:6px; }
 	/* make action buttons more compact on small screens */
@@ -985,7 +984,6 @@ td.col-total-cell, td:nth-child(3){
 		<button type="button" class="btn-curto" onclick="selecionarJanelaDias(1, this)">Hoje</button>
 		<button type="button" class="btn-curto" onclick="selecionarJanelaDias(14, this)">14 dias</button>
 		<button type="button" class="btn-periodo ativo" onclick="selecionarPeriodo('mes', this)">Mes</button>
-		<button type="button" class="btn-periodo" onclick="selecionarPeriodo('trimestre', this)">Trimestre</button>
 		<button type="button" class="btn-periodo" onclick="selecionarPeriodo('ano', this)">Ano</button>
 	</div>
 
@@ -1010,16 +1008,6 @@ td.col-total-cell, td:nth-child(3){
           <th>IVA</th>
           <th>Ações</th>
         </tr>
-        <tr>
-          <td colspan="4"></td>
-          <td style="text-align:left">
-            <div style="display:flex;gap:8px;">
-              <button class="btn-ver">Ver</button>
-              <button class="btn-editar">Editar</button>
-              <button class="btn-apagar">Apagar</button>
-            </div>
-          </td>
-        </tr>
       </thead>
       <tbody id="tabelaReceitas">
         <!-- Linhas de receitas geradas dinamicamente -->
@@ -1036,16 +1024,6 @@ td.col-total-cell, td:nth-child(3){
           <th>Valor</th>
           <th>IVA</th>
           <th>Ações</th>
-        </tr>
-        <tr>
-          <td colspan="4"></td>
-          <td style="text-align:left">
-            <div style="display:flex;gap:8px;">
-              <button class="btn-ver">Ver</button>
-              <button class="btn-editar">Editar</button>
-              <button class="btn-apagar">Apagar</button>
-            </div>
-          </td>
         </tr>
       </thead>
       <tbody id="tabelaDespesas">
@@ -1385,8 +1363,8 @@ tabelaDespesas.innerHTML = ""
 registos.forEach(r=>{
 
 const dataCurta = formatarData(r.data)
-const valorIva = Number(r.valor_iva ?? 0)
 const valorTotal = Number(r.valor_total ?? r.valor ?? 0)
+const valorIva = Number(r.valor_iva ?? 0)
 const idRegisto = Number(r.id || 0)
 const documentoDisponivel = r.documentoDisponivel !== false
 const tituloVer = documentoDisponivel
@@ -1398,11 +1376,20 @@ const fornecedorCelula = construirFornecedorCelula(r.fornecedor)
 const row = document.createElement("tr")
 row.dataset.registo = idRegisto
 
+let totalStr = valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2}) + '\u00A0€';
+let totalShort = totalStr;
+let showTooltip = false;
+if (valorTotal >= 1000000) {
+	totalShort = '(' + totalStr.slice(0, 6) + '...)';
+	showTooltip = true;
+}
 row.innerHTML = `
 <td data-label="Data">${dataCurta}</td>
 <td data-label="${(r.tipo || "").toLowerCase()==="receita" ? "Cliente" : "Fornecedor"}">${fornecedorCelula}</td>
+<td class="col-total-cell" data-label="Total">
+	<span class="nowrap total-value" ${showTooltip ? `title='${totalStr}' ontouchstart='this.innerText="${totalStr}"' onmouseover='this.innerText="${totalStr}"' onmouseout='this.innerText="${totalShort}"'` : ''}>${totalShort}</span>
+</td>
 <td data-label="IVA"><span class="nowrap">${valorIva.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
-<td class="col-total-cell" data-label="Total"><span class="nowrap total-value">${valorTotal.toLocaleString('pt-PT',{minimumFractionDigits:2})}\u00A0€</span></td>
 <td class="acoes" data-label="Acoes">
 <div class="acoes-linha">
 <button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button>
