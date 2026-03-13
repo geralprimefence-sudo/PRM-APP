@@ -710,15 +710,18 @@ cursor:default;
 		text-overflow:ellipsis !important;
 	}
 	.bloco-tabela th:nth-child(1), .bloco-tabela td:nth-child(1){ width:90px; min-width:80px; }
-	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ width:140px; min-width:120px; }
-	.bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ width:110px; min-width:90px; text-align:right; padding-right:6px; }
+	/* tighten supplier/client column and give Total more room for 9 digits */
+	.bloco-tabela th:nth-child(2), .bloco-tabela td:nth-child(2){ width:100px; min-width:90px; max-width:120px; }
+	.bloco-tabela th:nth-child(3), .bloco-tabela td:nth-child(3){ width:160px; min-width:140px; text-align:right; padding-right:6px; }
 	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ display:none !important; }
 	.bloco-tabela th:nth-child(5), .bloco-tabela td:nth-child(5){ display:none !important; }
-	.bloco-tabela th:nth-child(6), .bloco-tabela td:nth-child(6){ width:120px; min-width:110px; text-align:right; }
-	.fornecedor-nome{ max-width:120px !important; }
+	/* actions column slimmed to keep visible */
+	.bloco-tabela th:nth-child(6), .bloco-tabela td:nth-child(6){ width:84px; min-width:80px; text-align:right; padding-right:6px; }
+	.fornecedor-nome{ max-width:96px !important; }
 	.acoes-linha{ white-space:nowrap; gap:6px; }
 	/* make action buttons more compact on small screens */
-	.acoes button{padding:4px 6px;font-size:11px}
+	.acoes button{padding:3px 6px;font-size:11px;min-width:34px}
+	.acoes .btn-ver{padding:3px 8px}
 	.acoes-dropdown{ position:relative; display:inline-block; }
 	.acoes-dropdown .acoes-dropdown{ position:absolute; right:0; top:100%; }
 	.tabela-footer .totals{ white-space:nowrap; }
@@ -732,7 +735,7 @@ cursor:default;
 .tabela-footer .totals .value{font-weight:800;color:var(--text);font-size:14px}
 @media(max-width:820px){
 	.tabela-footer{overflow-x:auto;padding-right:6px}
-	.tabela-footer .totals{min-width:320px}
+	.tabela-footer .totals{min-width:260px}
 }
 </style>
 <style>
