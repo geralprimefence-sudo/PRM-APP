@@ -29,6 +29,12 @@
 		grid-template-columns: 1fr !important;
 	}
 }
+/* Ensure 'Sem IVA' column hidden on desktop too (strong rule to override cached CSS) */
+@media (min-width:701px){
+    th:nth-child(5), td:nth-child(5){
+        display:none !important;
+    }
+}
 <style>
 @media (max-width: 820px) {
 	header {
