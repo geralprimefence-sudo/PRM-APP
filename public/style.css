@@ -251,6 +251,14 @@ table td:nth-child(5){
 		font-size:11px;
 	}
 
+/* Hide 'Sem IVA' column on desktop (avoid layout/clipping issues) */
+@media(min-width:701px){
+    table th:nth-child(5),
+    table td:nth-child(5){
+        display:none;
+    }
+}
+
 	th,
 	td{
 	max-width:90px;
