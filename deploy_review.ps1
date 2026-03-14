@@ -4,7 +4,7 @@
 $RENDER_KEY = "rnd_XTyPWHLxiwqOrpGJCvScVFJgOkyK"
 $SERVICE_ID = "srv-d6jm239drdic73d8mgm0"   # PRM-APP-1
 $BRANCH = "review/ocr-duplicate-fix"
-$BACKUP_OUT = "..\uploads-backup-{0}.zip" -f (Get-Date -Format "yyyyMMdd_HHmmss")
+$BACKUP_OUT = "$env:USERPROFILE\Desktop\backups app\uploads-backup-{0}.zip" -f (Get-Date -Format "yyyyMMdd_HHmmss")
 
 Write-Host "1) Criando backup de uploads para $BACKUP_OUT ..."
 try {

@@ -656,7 +656,7 @@ cursor:default;
 	.bloco-tabela th:nth-child(4), .bloco-tabela td:nth-child(4){ min-width:60px; max-width:80px; padding-left:2px; text-align:left; }
 	/* actions column slimmed to keep visible */
 	/* actions column kept narrow and visible (moved to last column) */
-	.bloco-tabela th:last-child, .bloco-tabela td:last-child{ width:90px; min-width:70px; text-align:left; padding:4px 8px; box-sizing:border-box; }
+	.bloco-tabela th:last-child, .bloco-tabela td:last-child{ width:140px; min-width:120px; max-width:160px; text-align:left; padding:4px 8px; box-sizing:border-box; }
 	.fornecedor-nome{ max-width:80px !important; }
 	.acoes-linha{ white-space:nowrap; gap:6px; }
 	/* make action buttons more compact on small screens */
@@ -739,9 +739,12 @@ cursor:default;
 
 /* Ensure last column content sits slightly left and has consistent padding */
 .bloco-tabela th:last-child, .bloco-tabela td:last-child{
-    text-align:left !important;
-    padding-left:8px !important;
-    padding-right:8px !important;
+	text-align:left !important;
+	padding-left:8px !important;
+	padding-right:8px !important;
+	width:140px !important;
+	min-width:120px !important;
+	max-width:160px !important;
 }
 
 /* small right padding to keep actions inside the image/layout boundaries */
@@ -755,8 +758,8 @@ cursor:default;
 	}
 	/* Mobile: hide the inline edit/delete duplicates */
 	@media (max-width: 820px) {
-		.btn-editar-inline, .btn-apagar-inline { display: none !important; }
-		.acoes-dropdown-wrap { display: inline-block !important; }
+		.btn-editar-inline, .btn-apagar-inline { display: inline-block !important; }
+		.acoes-dropdown-wrap { display: none !important; }
 	}
 	</style>
 <style>
@@ -901,7 +904,7 @@ td.col-total-cell, td:nth-child(3){
 		<input id="docInput" class="auto-upload-input" type="file" name="file" accept="application/pdf" required aria-hidden="true">
 	</form>
 	<button type="button" class="auto-upload-btn btn-docs" style="margin-left:auto; background:#0b74de; color:#fff;" onclick="abrirDocsEscolha()">Docs</button>
-	<button type="button" class="auto-upload-btn" style="background:#0b74de;color:#fff;margin-left:8px;" onclick="openExportModal()">Downloads</button>
+	<button type="button" class="auto-upload-btn" style="background:#ff9800;color:#fff;margin-left:8px;" onclick="openExportModal()">Downloads</button>
 
 	<!-- Modal escolha de pasta DOCS -->
 	<div id="docsEscolhaModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:10001;">
@@ -1620,20 +1623,23 @@ function toggleAcoes(id, ev){
 	closeAllAcoesMenus()
 	el.style.display = isOpen ? 'none' : 'block'
 	if(el.style.display === 'block') {
-		// Alinha dropdown imediatamente abaixo do botão Ações
 		const btn = ev && ev.target ? ev.target : document.querySelector(`.btn-acoes[onclick*='${id}']`)
 		if(btn){
 			const btnRect = btn.getBoundingClientRect()
-			el.style.position = 'absolute'
-			el.style.top = (btn.offsetTop + btn.offsetHeight + 6) + 'px' // 6px de margem
-			el.style.left = btn.offsetLeft + 'px'
+			el.style.position = 'fixed'
+			el.style.top = (btnRect.bottom + 8) + 'px'
+			el.style.left = btnRect.left + 'px'
 			el.style.right = 'auto'
-			el.style.minWidth = btn.offsetWidth + 'px'
+			el.style.minWidth = Math.max(btnRect.width, 120) + 'px'
+			el.style.maxWidth = '90vw'
 			// Corrige se sair do ecrã
 			const dropdownRect = el.getBoundingClientRect()
 			const screenWidth = window.innerWidth || document.documentElement.clientWidth
 			if(dropdownRect.right > screenWidth){
 				el.style.left = (screenWidth - dropdownRect.width - 8) + 'px'
+			}
+			if(dropdownRect.top < 0){
+				el.style.top = (btnRect.bottom + 16) + 'px'
 			}
 		}
 	}
@@ -1882,5 +1888,5 @@ window.addEventListener("resize",aplicarVistaListas)
 
 
 </body>
-}
 </html>
+ </html>
