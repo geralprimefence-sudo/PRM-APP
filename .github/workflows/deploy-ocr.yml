@@ -10,46 +10,46 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-push:
-      runs-on: ubuntu-latest
-      env:
-        RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-        RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
-        FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Log in to GHCR
+      build-and-push:
+        runs-on: ubuntu-latest
         env:
-          CR_PAT: ${{ secrets.CR_PAT }}
-        run: echo $CR_PAT | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+        steps:
+          - uses: actions/checkout@v4
 
-      - name: Build and push image to GHCR (user namespace)
-        run: |
-          IMAGE=ghcr.io/${{ github.actor }}/faturas-ocr:latest
-          echo "Building image $IMAGE"
-          docker build -f paddleocr-service/Dockerfile -t $IMAGE paddleocr-service
-          docker push $IMAGE
+          - name: Set up Docker Buildx
+            uses: docker/setup-buildx-action@v2
 
-      - name: Trigger Render deploy
-        if: ${{ env.RENDER_API_KEY != '' && env.RENDER_SERVICE_ID != '' }}
-        run: |
-          echo "Triggering deploy on Render for service $RENDER_SERVICE_ID"
-          printf '%s' '{"clearCache":false}' > /tmp/payload.json
-          echo "--- payload (utf8) ---"
-          cat /tmp/payload.json
-          echo "--- payload hexdump (first 64 bytes) ---"
-          hexdump -C /tmp/payload.json | sed -n '1,4p' || true
-          echo "--- curling (verbose, trace to /tmp/trace.txt) ---"
-          curl --verbose --trace-ascii /tmp/trace.txt -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
-            -H "Authorization: Bearer $RENDER_API_KEY" \
-            -H "Content-Type: application/json" \
-            -H "Accept: application/json" \
-            --data-binary @/tmp/payload.json -o /tmp/response.json -w "\nHTTPSTATUS:%{http_code}\n" || true
-          echo "--- response ---"
-          cat /tmp/response.json || true
-          echo "--- trace (first 200 lines) ---"
-          sed -n '1,200p' /tmp/trace.txt || true
+          - name: Log in to GHCR
+            env:
+              CR_PAT: ${{ secrets.CR_PAT }}
+            run: echo $CR_PAT | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+          - name: Build and push image to GHCR (user namespace)
+            run: |
+              IMAGE=ghcr.io/${{ github.actor }}/faturas-ocr:latest
+              echo "Building image $IMAGE"
+              docker build -f paddleocr-service/Dockerfile -t $IMAGE paddleocr-service
+              docker push $IMAGE
+
+          - name: Trigger Render deploy
+            if: ${{ env.RENDER_API_KEY != '' && env.RENDER_SERVICE_ID != '' }}
+            run: |
+              echo "Triggering deploy on Render for service $RENDER_SERVICE_ID"
+              printf '%s' '{"clearCache":false}' > /tmp/payload.json
+              echo "--- payload (utf8) ---"
+              cat /tmp/payload.json
+              echo "--- payload hexdump (first 64 bytes) ---"
+              hexdump -C /tmp/payload.json | sed -n '1,4p' || true
+              echo "--- curling (verbose, trace to /tmp/trace.txt) ---"
+              curl --verbose --trace-ascii /tmp/trace.txt -X POST "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys" \
+                -H "Authorization: Bearer $RENDER_API_KEY" \
+                -H "Content-Type: application/json" \
+                -H "Accept: application/json" \
+                --data-binary @/tmp/payload.json -o /tmp/response.json -w "\nHTTPSTATUS:%{http_code}\n" || true
+              echo "--- response ---"
+              cat /tmp/response.json || true
+              echo "--- trace (first 200 lines) ---"
+              sed -n '1,200p' /tmp/trace.txt || true
