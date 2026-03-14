@@ -122,14 +122,11 @@ flex-direction:column;
 </div>
 
 <div class="actions">
-</div>
-  <button type="submit">Guardar</button>
-  <form id="changeDocForm" action="/upload" method="POST" enctype="multipart/form-data" style="display:inline-block;">
-    <input id="changeDocInput" type="file" name="file" accept="application/pdf,image/*" style="display:none">
-    <button type="button" id="changeDocBtn" class="btn-sec" style="display:none;">Alterar</button>
-  </form>
-  <button type="button" class="btn-sec" onclick="window.location.href='/capturar-foto'">Voltar</button>
-  <button type="button" id="abrirDocBtn" class="btn-sec" style="display:none;" title="Abrir" aria-label="Abrir">Abrir</button>
+  <div style="display:flex;gap:12px;margin-top:18px;flex-wrap:wrap;justify-content:flex-start;">
+    <button type="submit" class="btn-sec" style="background:#a7f3d0;color:#065f46;min-width:110px;">Guardar</button>
+    <button type="button" class="btn-sec" style="background:#e0e7ff;color:#3730a3;min-width:110px;" onclick="window.location.href='/capturar-foto'">Voltar</button>
+    <button type="button" id="abrirDocBtn" class="btn-sec" style="background:#fbcfe8;color:#831843;min-width:110px;display:none;" title="Abrir" aria-label="Abrir">Abrir</button>
+  </div>
 </div>
 </form>
 </div>
