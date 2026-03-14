@@ -732,8 +732,30 @@ cursor:default;
 
 	/* reduce table cell padding to avoid overflow */
 	th, td { padding:6px 6px !important; }
-	.acoes-dropdown{ position:relative; display:inline-block; }
-	.acoes-dropdown .acoes-dropdown{ position:absolute; right:0; top:100%; }
+	 .acoes-dropdown{ position:relative; display:inline-block; }
+	 .acoes-dropdown .acoes-dropdown{
+		 position:absolute;
+		 left:0;
+		 top:100%;
+		 min-width:100%;
+		 width:100%;
+		 background:#fff;
+		 border-radius:8px;
+		 box-shadow:0 4px 16px rgba(16,24,40,0.12);
+		 z-index:20;
+		 display:block;
+	 }
+	 .acoes-dropdown .btn-editar,
+	 .acoes-dropdown .btn-apagar {
+		 width:100%;
+		 min-width:100%;
+		 box-sizing:border-box;
+		 display:block;
+		 margin:0;
+		 border-radius:8px;
+		 text-align:left;
+		 padding:8px 12px;
+	 }
 
 	/* column widths and alignment for Data / Fornecedor / Total / IVA / Ações */
 		.bloco-tabela th, .bloco-tabela td {

@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 # Script de deploy: backup uploads + trigger deploy no Render
 # Ajusta valores abaixo se necessário
-$RENDER_KEY = "rnd_U70gNZxDXAKvYgNxTYAmHh6AzeE9"
+$RENDER_KEY = "rnd_XTyPWHLxiwqOrpGJCvScVFJgOkyK"
 $SERVICE_ID = "srv-d6jm239drdic73d8mgm0"   # PRM-APP-1
 $BRANCH = "review/ocr-duplicate-fix"
 $BACKUP_OUT = "..\uploads-backup-{0}.zip" -f (Get-Date -Format "yyyyMMdd_HHmmss")
