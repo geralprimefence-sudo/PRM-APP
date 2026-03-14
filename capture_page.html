@@ -139,10 +139,8 @@ function atualizarModoBotoes(){
   modoNormalBtn.classList.toggle("ativo", !modoScan)
   modoScanBtn.setAttribute("aria-pressed", String(modoScan))
   modoNormalBtn.setAttribute("aria-pressed", String(!modoScan))
-  scanFrame.style.display = modoScan ? "block" : "none"
-  msg.textContent = modoScan
-    ? "Modo Scan ativo: envia imagem completa para OCR robusto no servidor."
-    : "Modo Normal ativo: imagem natural com OCR no servidor."
+  scanFrame.style.display = "block" // Mostrar sempre a moldura
+  msg.textContent = "Alinha o recibo na moldura. O recorte automático será aplicado sempre."
 }
 
 function selecionarModo(scan){
@@ -256,13 +254,17 @@ captureBtn.addEventListener("click", async ()=>{
   const fw = video.videoWidth
   const fh = video.videoHeight
 
-  // Evita perda de dados: enviar frame completo e deixar o preprocessamento para o servidor.
-  const sx = 0
-  const sy = 0
-  const sw = fw
-  const sh = fh
+  // Recorte automático: usar a moldura scan-frame para capturar só o recibo (sempre)
+  const frame = scanFrame.getBoundingClientRect()
+  const videoRect = video.getBoundingClientRect()
+  const scaleX = fw / videoRect.width
+  const scaleY = fh / videoRect.height
+  const sx = (frame.left - videoRect.left) * scaleX
+  const sy = (frame.top - videoRect.top) * scaleY
+  const sw = frame.width * scaleX
+  const sh = frame.height * scaleY
 
-  const maxLado = modoScan ? MAX_LADO_OCR : MAX_LADO_NORMAL
+  const maxLado = MAX_LADO_OCR // Usar sempre o máximo do modo scan
   const escala = Math.min(1, maxLado / Math.max(sw, sh))
   const tw = Math.max(1, Math.round(sw * escala))
   const th = Math.max(1, Math.round(sh * escala))
@@ -274,10 +276,9 @@ captureBtn.addEventListener("click", async ()=>{
   definirEstadoProcessamento(true)
   msg.textContent = "A capturar foto..."
 
-  // Yield one frame so UI updates before image processing.
   await new Promise((resolve)=> requestAnimationFrame(resolve))
 
-  ctx.drawImage(video,sx,sy,sw,sh,0,0,tw,th)
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, tw, th)
 
   canvas.toBlob(async (blob)=>{
     if(!blob){
