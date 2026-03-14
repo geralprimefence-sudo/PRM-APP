@@ -1,5 +1,17 @@
 <style>
 @media (max-width: 820px) {
+	.acoes-dropdown .btn-editar {
+		color: #ff9800 !important;
+		font-weight: bold;
+	}
+	.acoes-dropdown .btn-apagar {
+		color: #ef4444 !important;
+		font-weight: bold;
+	}
+}
+</style>
+<style>
+@media (max-width: 820px) {
 	th, td {
 		white-space: nowrap !important;
 		min-width: 40px !important;
@@ -1386,7 +1398,7 @@ row.innerHTML = `
 <div class="acoes-dropdown-wrap">
 	<button type="button" class="btn-acoes" onclick="toggleAcoes(${r.id}, event)">Ações ▾</button>
 	<div class="acoes-dropdown" id="acoes-${r.id}" aria-hidden="false" style="position:absolute;z-index:1000;background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.08);padding:6px 0;min-width:90px;">
-		<button type="button" onclick="editar(${r.id})" class="btn-editar" style="display:block;width:100%;border:none;background:none;padding:12px 16px;text-align:left;font-size:16px;">Editar</button>
+		<button type="button" onclick="editar(${r.id})" class="btn-editar" style="display:block;width:100%;border:none;background:none;padding:12px 16px;text-align:left;font-size:16px;color:#ff9800;">Editar</button>
 		<button type="button" onclick="apagar(${r.id})" class="btn-apagar" style="display:block;width:100%;border:none;background:none;padding:12px 16px;text-align:left;color:#ef4444;font-size:16px;">Apagar</button>
 	</div>
 </div>
