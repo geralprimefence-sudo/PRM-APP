@@ -942,25 +942,28 @@ td.col-total-cell, td:nth-child(3){
 
 	<!-- Modal escolha de pasta DOCS -->
 	<div id="docsEscolhaModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:10001;">
-		<div style="background:#fff;padding:18px;border-radius:8px;max-width:420px;margin:40px auto;">
-			<h3>Escolha a pasta</h3>
+		<div style="background:#fff;padding:18px;border-radius:8px;max-width:420px;margin:40px auto;position:relative;">
+			<button onclick="closeDocsEscolhaModal()" style="position:absolute;top:10px;right:10px;background:#e2e8f0;color:#0f172a;border:none;border-radius:6px;padding:6px 12px;font-size:14px;font-weight:700;">Fechar</button>
+			<h3 style="margin-top:32px;">Escolha a pasta</h3>
 			<div style="display:flex;gap:16px;margin-top:18px;justify-content:center;">
 				<button onclick="abrirCarteiraDigital()" style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;font-size:16px;font-weight:700;">Carteira Digital</button>
 				<button onclick="abrirDocumentos()" style="background:#0b74de;color:#fff;padding:12px 24px;border-radius:8px;font-size:16px;font-weight:700;">Documentos</button>
-			</div>
-			<div style="display:flex;justify-content:flex-end;margin-top:22px;">
-				<button onclick="closeDocsEscolhaModal()" style="padding:6px 12px;border-radius:6px;background:#e2e8f0;color:#0f172a;">Cancelar</button>
 			</div>
 		</div>
 	</div>
 
 	<!-- Modal Carteira Digital -->
 	<div id="carteiraDigitalModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:10002;">
-		<div style="background:#fff;padding:16px;border-radius:8px;max-width:420px;margin:40px auto;">
-			<h3>Carteira Digital</h3>
+		<div style="background:#fff;padding:16px;border-radius:8px;max-width:420px;margin:40px auto;position:relative;">
+			<button onclick="closeCarteiraDigitalModal()" style="position:absolute;top:10px;right:10px;background:#e2e8f0;color:#0f172a;border:none;border-radius:6px;padding:6px 12px;font-size:14px;font-weight:700;">Fechar</button>
+			<h3 style="margin-top:32px;">Carteira Digital</h3>
 			<p style="margin-bottom:12px;color:#374151;font-size:15px;">Documentos pessoais: BI, Cartão de Cidadão, NIF, Segurança Social, etc.</p>
-			<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-				<button onclick="closeCarteiraDigitalModal()" style="padding:6px 12px;border-radius:6px;background:#e2e8f0;color:#0f172a;">Fechar</button>
+			<div style="display:flex;gap:12px;margin-bottom:18px;justify-content:center;">
+				<button onclick="abrirScannerFoto()" style="background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;font-size:15px;font-weight:700;">Tirar Fotografia/Scan</button>
+				<button onclick="abrirUploadDoc('carteira')" style="background:#0b74de;color:#fff;padding:10px 18px;border-radius:8px;font-size:15px;font-weight:700;">Fazer Upload</button>
+			</div>
+			<div style="display:flex;gap:12px;justify-content:center;">
+				<button onclick="downloadDocumentos('carteira')" style="background:#0f766e;color:#fff;padding:10px 18px;border-radius:8px;font-size:15px;font-weight:700;">Download</button>
 			</div>
 			<!-- Aqui pode listar ou gerir documentos pessoais -->
 		</div>
@@ -968,11 +971,16 @@ td.col-total-cell, td:nth-child(3){
 
 	<!-- Modal Documentos -->
 	<div id="documentosModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:10003;">
-		<div style="background:#fff;padding:16px;border-radius:8px;max-width:420px;margin:40px auto;">
-			<h3>Documentos</h3>
+		<div style="background:#fff;padding:16px;border-radius:8px;max-width:420px;margin:40px auto;position:relative;">
+			<button onclick="closeDocumentosModal()" style="position:absolute;top:10px;right:10px;background:#e2e8f0;color:#0f172a;border:none;border-radius:6px;padding:6px 12px;font-size:14px;font-weight:700;">Fechar</button>
+			<h3 style="margin-top:32px;">Documentos</h3>
 			<p style="margin-bottom:12px;color:#374151;font-size:15px;">Documentos, fotografias, PDFs, recibos, faturas, etc.</p>
-			<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-				<button onclick="closeDocumentosModal()" style="padding:6px 12px;border-radius:6px;background:#e2e8f0;color:#0f172a;">Fechar</button>
+			<div style="display:flex;gap:12px;margin-bottom:18px;justify-content:center;">
+				<button onclick="abrirScannerFoto()" style="background:#2563eb;color:#fff;padding:10px 18px;border-radius:8px;font-size:15px;font-weight:700;">Tirar Fotografia/Scan</button>
+				<button onclick="abrirUploadDoc('documentos')" style="background:#0b74de;color:#fff;padding:10px 18px;border-radius:8px;font-size:15px;font-weight:700;">Fazer Upload</button>
+			</div>
+			<div style="display:flex;gap:12px;justify-content:center;">
+				<button onclick="downloadDocumentos('documentos')" style="background:#0f766e;color:#fff;padding:10px 18px;border-radius:8px;font-size:15px;font-weight:700;">Download</button>
 			</div>
 			<!-- Aqui pode listar ou gerir documentos gerais -->
 		</div>
@@ -1092,6 +1100,34 @@ function abrirDocumentos() {
 }
 function closeDocumentosModal() {
 	document.getElementById('documentosModal').style.display = 'none';
+}
+// Funções para upload/download
+function abrirUploadDoc(tipo) {
+	// Abre input de ficheiro para upload
+	const input = document.createElement('input');
+	input.type = 'file';
+	input.accept = 'application/pdf,image/*';
+	input.style.display = 'none';
+	input.onchange = function() {
+		if(input.files && input.files.length){
+			// Aqui pode enviar o ficheiro para o servidor
+			alert('Upload de ' + tipo + ': ' + input.files[0].name);
+			// TODO: implementar upload real
+		}
+	};
+	document.body.appendChild(input);
+	input.click();
+	setTimeout(()=>{ document.body.removeChild(input); }, 2000);
+}
+function downloadDocumentos(tipo) {
+	// Simula download (pode adaptar para URL real)
+	alert('Download de documentos: ' + tipo);
+	// TODO: implementar download real
+}
+
+// Lógica para abrir PDF numa nova janela/aba
+function verFatura(pdfUrl) {
+	window.open(pdfUrl, '_blank');
 }
 
 let todosRegistos = []
@@ -1507,20 +1543,21 @@ function preencherAcoesFallback(){
 			const tr = td.closest('tr')
 			const id = tr && tr.dataset && tr.dataset.registo ? Number(tr.dataset.registo) : 0
 			const tituloVer = 'Abrir documento'
-			const attrsVer = id ? `onclick="verFatura(${id})"` : ''
+			const pdfUrl = r && r.documentoUrl ? r.documentoUrl : `/api/documento?ficheiro=${encodeURIComponent(r.ficheiro || '')}`
+			const attrsVer = pdfUrl ? `onclick="verFatura('${pdfUrl}')"` : ''
 			td.innerHTML = `
-				<div class="acoes-linha">
-					<button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button>
-					<div class="acoes-dropdown-wrap">
-						<button type="button" class="btn-acoes" onclick="toggleAcoes(${id}, event)">Ações ▾</button>
-						<div class="acoes-dropdown" id="acoes-${id}" aria-hidden="true">
-							<button type="button" onclick="editar(${id})" class="btn-editar">Editar</button>
-							<button type="button" onclick="apagar(${id})" class="btn-apagar">Apag.</button>
-						</div>
-					</div>
-					<button type="button" onclick="editar(${id})" class="btn-editar btn-editar-inline" style="margin-left:6px;display:none">Editar</button>
-					<button type="button" onclick="apagar(${id})" class="btn-apagar btn-apagar-inline" style="margin-left:6px;display:none">Apag.</button>
-				</div>
+			<div class="acoes-linha">
+			<button title="${tituloVer}" aria-label="${tituloVer}" ${attrsVer} class="btn-ver">Ver</button>
+			<div class="acoes-dropdown-wrap">
+			<button type="button" class="btn-acoes" onclick="toggleAcoes(${id}, event)">Ações ▾</button>
+			<div class="acoes-dropdown" id="acoes-${id}" aria-hidden="true">
+			<button type="button" onclick="editar(${id})" class="btn-editar">Editar</button>
+			<button type="button" onclick="apagar(${id})" class="btn-apagar">Apag.</button>
+			</div>
+			</div>
+			<button type="button" onclick="editar(${id})" class="btn-editar btn-editar-inline" style="margin-left:6px;display:none">Editar</button>
+			<button type="button" onclick="apagar(${id})" class="btn-apagar btn-apagar-inline" style="margin-left:6px;display:none">Apagar</button>
+			</div>
 			`
 		}catch(e){ console.warn('preencherAcoesFallback cell error', e) }
 	})
@@ -1864,4 +1901,5 @@ window.addEventListener("resize",aplicarVistaListas)
 
 
 </body>
+}
 </html>

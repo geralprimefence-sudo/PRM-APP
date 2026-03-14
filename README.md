@@ -1,53 +1,53 @@
-# PRM-APP
-
-Aplicação de registo de receitas e despesas com upload de faturas, OCR e autenticação.
+# PRM Faturas
 
 ## Funcionalidades
+
 - Registo de receitas e despesas
-- Upload e gestão de faturas
-- OCR automático (PaddleOCR ou OCRSpace)
-- Autenticação de utilizadores
-- Dashboard com filtros e exportação
+
+- Exportação para Excel/PDF
+
+- Upload de documentos
+
+- Dashboard com totais
 
 ## Requisitos
+
 - Node.js 24+
-- PostgreSQL
+
+- Docker
 
 ## Instalação e execução
+
 1. Instalar dependências:
+
    ```bash
    npm install
    ```
-2. Criar ficheiro `.env`:
+
+2. Configurar variáveis de ambiente:
+
    ```env
-   DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/DBNAME
-   SESSION_SECRET=uma-chave-forte-aqui
-   PORT=3000
+   DB_HOST=localhost
+   DB_USER=root
+   DB_PASS=1234
    ```
-3. (Opcional) Configurar OCR externo:
+
+3. Executar aplicação:
+
    ```env
-   OCRSPACE_ENABLED=1
-   OCRSPACE_API_KEY=helloworld
-   OCRSPACE_TIMEOUT_MS=15000
-   ```
-4. (Opcional) Usar PaddleOCR (self-hosted):
-   ```env
-   PADDLEOCR_ENABLED=1
+   npm start
    ```
 
 ## Como usar
+
 - Aceder ao dashboard via browser
-- Carregar faturas (PDF ou imagem)
-- Consultar receitas/despesas
-- Exportar dados (Excel/PDF)
+
+- Carregar faturas e documentos
 
 ## Deploy
+
 - Utiliza GitHub Actions para build e deploy automático
-- [Documentação Render](https://render.com/docs/deploys)
 
 ## Contacto
+
 - Para suporte, contactar o administrador do sistema
-
----
-
-<!-- Não inclui badge de workflow para manter privado -->
