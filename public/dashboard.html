@@ -1679,15 +1679,21 @@ function toggleAcoes(id, ev){
 	closeAllAcoesMenus()
 	el.style.display = isOpen ? 'none' : 'block'
 	if(el.style.display === 'block') {
-		// Corrige posição no mobile para não sair do ecrã
-		const rect = el.getBoundingClientRect()
-		const screenWidth = window.innerWidth || document.documentElement.clientWidth
-		if (rect.right > screenWidth) {
-			el.style.left = 'auto'
-			el.style.right = '0'
-		} else {
-			el.style.left = '0'
+		// Alinha dropdown imediatamente abaixo do botão Ações
+		const btn = ev && ev.target ? ev.target : document.querySelector(`.btn-acoes[onclick*='${id}']`)
+		if(btn){
+			const btnRect = btn.getBoundingClientRect()
+			el.style.position = 'absolute'
+			el.style.top = (btn.offsetTop + btn.offsetHeight + 6) + 'px' // 6px de margem
+			el.style.left = btn.offsetLeft + 'px'
 			el.style.right = 'auto'
+			el.style.minWidth = btn.offsetWidth + 'px'
+			// Corrige se sair do ecrã
+			const dropdownRect = el.getBoundingClientRect()
+			const screenWidth = window.innerWidth || document.documentElement.clientWidth
+			if(dropdownRect.right > screenWidth){
+				el.style.left = (screenWidth - dropdownRect.width - 8) + 'px'
+			}
 		}
 	}
 }
