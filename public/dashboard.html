@@ -1678,6 +1678,18 @@ function toggleAcoes(id, ev){
 	const isOpen = el.style.display === 'block'
 	closeAllAcoesMenus()
 	el.style.display = isOpen ? 'none' : 'block'
+	if(el.style.display === 'block') {
+		// Corrige posição no mobile para não sair do ecrã
+		const rect = el.getBoundingClientRect()
+		const screenWidth = window.innerWidth || document.documentElement.clientWidth
+		if (rect.right > screenWidth) {
+			el.style.left = 'auto'
+			el.style.right = '0'
+		} else {
+			el.style.left = '0'
+			el.style.right = 'auto'
+		}
+	}
 }
 
 document.addEventListener('click', ()=>{
