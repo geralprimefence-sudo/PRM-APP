@@ -78,8 +78,6 @@
 --primary:#2563eb;
 --primary-strong:#1d4ed8;
 --danger:#ef4444;
---shadow:0 6px 16px rgba(16,24,40,0.08);
-}
 }
 
 *{
@@ -934,29 +932,49 @@ td.col-total-cell, td:nth-child(3){
 <h3>Carregar Fatura</h3>
 
 <div class="upload-actions">
-  <button type="button" class="auto-upload-btn btn-camera" onclick="abrirScannerFoto()">Foto (Scan)</button>
+	<button type="button" class="auto-upload-btn btn-camera" onclick="abrirScannerFoto()">Foto (Scan)</button>
 	<form id="formDoc" action="/upload" method="POST" enctype="multipart/form-data" style="display:inline-block; position:relative;">
 		<button type="button" id="docButton" class="auto-upload-btn btn-documento">Doc/PDF</button>
 		<input id="docInput" class="auto-upload-input" type="file" name="file" accept="application/pdf" required aria-hidden="true">
-  </form>
-		<button type="button" class="auto-upload-btn btn-docs" style="margin-left:auto; background:#0b74de; color:#fff;" onclick="abrirDocs()">Docs</button>
-		<button type="button" class="auto-upload-btn" style="background:#0b74de;color:#fff;margin-left:8px;" onclick="openExportModal()">Downloads</button>
+	</form>
+	<button type="button" class="auto-upload-btn btn-docs" style="margin-left:auto; background:#0b74de; color:#fff;" onclick="abrirDocsEscolha()">Docs</button>
+	<button type="button" class="auto-upload-btn" style="background:#0b74de;color:#fff;margin-left:8px;" onclick="openExportModal()">Downloads</button>
 
-	<!-- Docs modal -->
-	<div id="docsModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:10000;">
-		<div style="background:#fff;padding:16px;border-radius:8px;max-width:420px;margin:40px auto;">
-			<h3>Guardar Documentos</h3>
-			<label style="display:block;margin-bottom:6px;">Nome do Documento
-				<input id="docsName" type="text" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:4px;" />
-			</label>
-			<label style="display:block;margin-bottom:6px;">Data
-				<input id="docsDate" type="date" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:4px;" />
-			</label>
-			<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-				<button onclick="closeDocsModal()" style="padding:6px 12px;border-radius:6px;">Cancelar</button>
-				<button onclick="submitDocsForm()" style="background:#0b74de;color:#fff;padding:6px 12px;border-radius:6px;">Guardar</button>
+	<!-- Modal escolha de pasta DOCS -->
+	<div id="docsEscolhaModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:10001;">
+		<div style="background:#fff;padding:18px;border-radius:8px;max-width:420px;margin:40px auto;">
+			<h3>Escolha a pasta</h3>
+			<div style="display:flex;gap:16px;margin-top:18px;justify-content:center;">
+				<button onclick="abrirCarteiraDigital()" style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;font-size:16px;font-weight:700;">Carteira Digital</button>
+				<button onclick="abrirDocumentos()" style="background:#0b74de;color:#fff;padding:12px 24px;border-radius:8px;font-size:16px;font-weight:700;">Documentos</button>
 			</div>
-			<div id="docsMsg" style="margin-top:8px;color:green;display:none"></div>
+			<div style="display:flex;justify-content:flex-end;margin-top:22px;">
+				<button onclick="closeDocsEscolhaModal()" style="padding:6px 12px;border-radius:6px;background:#e2e8f0;color:#0f172a;">Cancelar</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Modal Carteira Digital -->
+	<div id="carteiraDigitalModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:10002;">
+		<div style="background:#fff;padding:16px;border-radius:8px;max-width:420px;margin:40px auto;">
+			<h3>Carteira Digital</h3>
+			<p style="margin-bottom:12px;color:#374151;font-size:15px;">Documentos pessoais: BI, Cartão de Cidadão, NIF, Segurança Social, etc.</p>
+			<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+				<button onclick="closeCarteiraDigitalModal()" style="padding:6px 12px;border-radius:6px;background:#e2e8f0;color:#0f172a;">Fechar</button>
+			</div>
+			<!-- Aqui pode listar ou gerir documentos pessoais -->
+		</div>
+	</div>
+
+	<!-- Modal Documentos -->
+	<div id="documentosModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:10003;">
+		<div style="background:#fff;padding:16px;border-radius:8px;max-width:420px;margin:40px auto;">
+			<h3>Documentos</h3>
+			<p style="margin-bottom:12px;color:#374151;font-size:15px;">Documentos, fotografias, PDFs, recibos, faturas, etc.</p>
+			<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+				<button onclick="closeDocumentosModal()" style="padding:6px 12px;border-radius:6px;background:#e2e8f0;color:#0f172a;">Fechar</button>
+			</div>
+			<!-- Aqui pode listar ou gerir documentos gerais -->
 		</div>
 	</div>
 </div>
@@ -1054,6 +1072,27 @@ td.col-total-cell, td:nth-child(3){
 
 
 <script>
+// DOCS: lógica para abrir modais de escolha e pastas
+function abrirDocsEscolha() {
+	document.getElementById('docsEscolhaModal').style.display = 'flex';
+}
+function closeDocsEscolhaModal() {
+	document.getElementById('docsEscolhaModal').style.display = 'none';
+}
+function abrirCarteiraDigital() {
+	closeDocsEscolhaModal();
+	document.getElementById('carteiraDigitalModal').style.display = 'flex';
+}
+function closeCarteiraDigitalModal() {
+	document.getElementById('carteiraDigitalModal').style.display = 'none';
+}
+function abrirDocumentos() {
+	closeDocsEscolhaModal();
+	document.getElementById('documentosModal').style.display = 'flex';
+}
+function closeDocumentosModal() {
+	document.getElementById('documentosModal').style.display = 'none';
+}
 
 let todosRegistos = []
 let periodoAtual = "mes"
@@ -1668,7 +1707,12 @@ return
 }
 
 const url = "/api/registos/" + registoId + "/documento"
-// Cria pop-up HTML com iframe
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+if (isMobile) {
+	window.open(url, '_blank')
+	return
+}
+// Pop-up responsivo para desktop
 const popup = document.createElement('div')
 popup.style.position = 'fixed'
 popup.style.top = '0'
@@ -1681,9 +1725,10 @@ popup.style.display = 'flex'
 popup.style.alignItems = 'center'
 popup.style.justifyContent = 'center'
 popup.innerHTML = `
-	<div style="background:#fff;border-radius:10px;max-width:900px;width:90vw;max-height:90vh;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.18);position:relative;">
+	<div style="background:#fff;border-radius:10px;width:95vw;max-width:900px;max-height:90vh;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.18);position:relative;">
 		<button onclick="this.parentElement.parentElement.remove()" style="position:absolute;top:8px;right:8px;background:#0b74de;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:16px;z-index:2;">Fechar</button>
-		<iframe src="${url}" style="width:900px;max-width:90vw;height:80vh;border:none;" allowfullscreen sandbox="allow-scripts allow-same-origin" frameborder="0"></iframe>
+		<iframe src="${url}" style="width:100%;height:80vh;border:none;" allowfullscreen sandbox="allow-scripts allow-same-origin" frameborder="0"></iframe>
+		<embed src="${url}" type="application/pdf" style="width:100%;height:80vh;border:none;display:block;" />
 	</div>
 `
 document.body.appendChild(popup)
