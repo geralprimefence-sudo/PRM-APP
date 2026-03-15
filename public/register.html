@@ -11,33 +11,72 @@
 <body>
 
 <div class="login-container">
-
-<img src="/logo.png" alt="Logo">
-
-<div id="mensagem" class="form-message hidden"></div>
-
-<form action="/register" method="POST">
-<input type="text" name="username" placeholder="Novo utilizador" required>
-<input type="password" name="password" placeholder="Nova password" required>
-
-<select name="tipoEntidade" id="tipoEntidade" required>
-<option value="" selected disabled>Escolhe: empresa ou pessoal</option>
-<option value="empresa">Empresa</option>
-<option value="pessoal">Pessoal</option>
-</select>
-
-<input type="text" name="nome" placeholder="Nome" required>
-
-<div id="campoContribuinte" class="hidden">
-<input type="text" name="contribuinte" id="contribuinte" placeholder="Contribuinte (NIF da empresa)">
+	<img src="/logo.png" alt="Logo">
+	<div id="mensagem" class="form-message hidden"></div>
+	<form action="/register" method="POST">
+		<input type="text" name="username" id="usernameInput" placeholder="Novo utilizador" required>
+		<input type="password" name="password" id="passwordInput" placeholder="Nova password" required>
+		<select name="tipoEntidade" id="tipoEntidade" required>
+			<option value="" selected disabled id="tipoEntidadePrompt">Escolhe: empresa ou pessoal</option>
+			<option value="empresa" id="empresaOpt">Empresa</option>
+			<option value="pessoal" id="pessoalOpt">Pessoal</option>
+		</select>
+		<input type="text" name="nome" id="nomeInput" placeholder="Nome" required>
+		<div id="campoContribuinte" class="hidden">
+			<input type="text" name="contribuinte" id="contribuinte" placeholder="Contribuinte (NIF da empresa)">
+		</div>
+		<input type="text" name="endereco" id="enderecoInput" placeholder="Endereco" required>
+		<input type="email" name="email" id="emailInput" placeholder="Email" required>
+		<input type="text" name="telefone" id="telefoneInput" placeholder="Telefone" required>
+		<button type="submit" id="registerBtn">Criar Conta</button>
+	</form>
+	<select id="langSelectRegister" style="margin-top:16px;font-size:14px;padding:6px 12px;border-radius:8px;background:#fff;color:#111827;border:1px solid #cbd5e1;">
+		<option value="pt">Português</option>
+		<option value="es">Español</option>
+		<option value="en">English</option>
+		<option value="fr">Français</option>
+		<option value="da">Dansk</option>
+		<option value="it">Italiano</option>
+		<option value="de">Deutsch</option>
+		<option value="sv">Svenska</option>
+		<option value="pl">Polski</option>
+		<option value="hu">Magyar</option>
+	</select>
 </div>
-
-<input type="text" name="endereco" placeholder="Endereco" required>
-<input type="email" name="email" placeholder="Email" required>
-<input type="text" name="telefone" placeholder="Telefone" required>
-
-<button type="submit">Criar Conta</button>
-</form>
+<script>
+const translationsRegister = {
+	pt: {user: "Novo utilizador", pass: "Nova password", tipoPrompt: "Escolhe: empresa ou pessoal", empresa: "Empresa", pessoal: "Pessoal", nome: "Nome", contribuinte: "Contribuinte (NIF da empresa)", endereco: "Endereco", email: "Email", telefone: "Telefone", criar: "Criar Conta"},
+	es: {user: "Nuevo usuario", pass: "Nueva contraseña", tipoPrompt: "Elige: empresa o personal", empresa: "Empresa", pessoal: "Personal", nome: "Nombre", contribuinte: "NIF de la empresa", endereco: "Dirección", email: "Correo", telefone: "Teléfono", criar: "Crear cuenta"},
+	en: {user: "New user", pass: "New password", tipoPrompt: "Choose: company or personal", empresa: "Company", pessoal: "Personal", nome: "Name", contribuinte: "Company tax ID", endereco: "Address", email: "Email", telefone: "Phone", criar: "Create account"},
+	fr: {user: "Nouvel utilisateur", pass: "Nouveau mot de passe", tipoPrompt: "Choisissez: entreprise ou personnel", empresa: "Entreprise", pessoal: "Personnel", nome: "Nom", contribuinte: "NIF de l'entreprise", endereco: "Adresse", email: "Email", telefone: "Téléphone", criar: "Créer un compte"},
+	da: {user: "Ny bruger", pass: "Ny adgangskode", tipoPrompt: "Vælg: virksomhed eller personlig", empresa: "Virksomhed", pessoal: "Personlig", nome: "Navn", contribuinte: "Virksomhedens CVR", endereco: "Adresse", email: "Email", telefone: "Telefon", criar: "Opret konto"},
+	it: {user: "Nuovo utente", pass: "Nuova password", tipoPrompt: "Scegli: azienda o personale", empresa: "Azienda", pessoal: "Personale", nome: "Nome", contribuinte: "Partita IVA azienda", endereco: "Indirizzo", email: "Email", telefone: "Telefono", criar: "Crea account"},
+	de: {user: "Neuer Benutzer", pass: "Neues Passwort", tipoPrompt: "Wähle: Firma oder privat", empresa: "Firma", pessoal: "Privat", nome: "Name", contribuinte: "USt-IdNr der Firma", endereco: "Adresse", email: "Email", telefone: "Telefon", criar: "Konto erstellen"},
+	sv: {user: "Ny användare", pass: "Nytt lösenord", tipoPrompt: "Välj: företag eller privat", empresa: "Företag", pessoal: "Privat", nome: "Namn", contribuinte: "Företagets momsnummer", endereco: "Adress", email: "Email", telefone: "Telefon", criar: "Skapa konto"},
+	pl: {user: "Nowy użytkownik", pass: "Nowe hasło", tipoPrompt: "Wybierz: firma lub osobiste", empresa: "Firma", pessoal: "Osobiste", nome: "Imię", contribuinte: "NIP firmy", endereco: "Adres", email: "Email", telefone: "Telefon", criar: "Utwórz konto"},
+	hu: {user: "Új felhasználó", pass: "Új jelszó", tipoPrompt: "Válassz: cég vagy magán", empresa: "Cég", pessoal: "Magán", nome: "Név", contribuinte: "Cég adószáma", endereco: "Cím", email: "Email", telefone: "Telefon", criar: "Fiók létrehozása"}
+};
+function updateRegisterTexts(lang) {
+	const t = translationsRegister[lang] || translationsRegister.pt;
+	document.getElementById('usernameInput').placeholder = t.user;
+	document.getElementById('passwordInput').placeholder = t.pass;
+	document.getElementById('tipoEntidadePrompt').innerText = t.tipoPrompt;
+	document.getElementById('empresaOpt').innerText = t.empresa;
+	document.getElementById('pessoalOpt').innerText = t.pessoal;
+	document.getElementById('nomeInput').placeholder = t.nome;
+	document.getElementById('contribuinte').placeholder = t.contribuinte;
+	document.getElementById('enderecoInput').placeholder = t.endereco;
+	document.getElementById('emailInput').placeholder = t.email;
+	document.getElementById('telefoneInput').placeholder = t.telefone;
+	document.getElementById('registerBtn').innerText = t.criar;
+}
+document.getElementById('langSelectRegister').addEventListener('change', function() {
+	updateRegisterTexts(this.value);
+});
+window.addEventListener('DOMContentLoaded', function() {
+	updateRegisterTexts(document.getElementById('langSelectRegister').value);
+});
+</script>
 
 <p class="form-link">Ja tens conta? <a href="/login">Entrar</a></p>
 

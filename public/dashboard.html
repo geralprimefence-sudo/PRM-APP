@@ -825,13 +825,196 @@ td.col-total-cell, td:nth-child(3){
 <body>
 
 <header>
-	<div style="display:flex;align-items:center;width:100%;">
-		<img src="/logo.png" alt="Contabill" class="header-logo" style="margin-right:auto;">
-		<a href="/logout" style="margin-left:0;align-self:center;">
-			<button class="logout" style="font-size:13px;padding:7px 18px;border-radius:8px;min-width:70px;">Logout</button>
-		</a>
-	</div>
+		<div style="display:flex;align-items:center;width:100%;">
+				<img src="/logo.png" alt="Contabill" class="header-logo" style="margin-right:auto;">
+				<div style="display:flex;align-items:center;gap:16px;">
+						<select id="langSelect" style="font-size:14px;padding:6px 12px;border-radius:8px;background:#fff;color:#111827;border:1px solid #cbd5e1;">
+								<option value="pt">Português</option>
+								<option value="es">Español</option>
+								<option value="en">English</option>
+								<option value="fr">Français</option>
+								<option value="da">Dansk</option>
+								<option value="it">Italiano</option>
+								<option value="de">Deutsch</option>
+								<option value="sv">Svenska</option>
+								<option value="pl">Polski</option>
+								<option value="hu">Magyar</option>
+						</select>
+						<a href="/logout" style="margin-left:0;align-self:center;">
+								<button class="logout" style="font-size:13px;padding:7px 18px;border-radius:8px;min-width:70px;">Logout</button>
+						</a>
+				</div>
+		</div>
 </header>
+<script>
+const translations = {
+	pt: {
+		receitas: "Receitas",
+		despesas: "Despesas",
+		saldo: "Saldo",
+		iva: "IVA",
+		carregarFatura: "Carregar Fatura",
+		pesquisar: "Pesquisar fornecedor ou valor...",
+		hoje: "Hoje",
+		dias14: "14 dias",
+		trimestre: "Trimestre",
+		mes: "Mes",
+		ano: "Ano",
+		logout: "Logout"
+	},
+	es: {
+		receitas: "Ingresos",
+		despesas: "Gastos",
+		saldo: "Saldo",
+		iva: "IVA",
+		carregarFatura: "Cargar Factura",
+		pesquisar: "Buscar proveedor o valor...",
+		hoje: "Hoy",
+		dias14: "14 días",
+		trimestre: "Trimestre",
+		mes: "Mes",
+		ano: "Año",
+		logout: "Salir"
+	},
+	en: {
+		receitas: "Income",
+		despesas: "Expenses",
+		saldo: "Balance",
+		iva: "VAT",
+		carregarFatura: "Upload Invoice",
+		pesquisar: "Search supplier or value...",
+		hoje: "Today",
+		dias14: "14 days",
+		trimestre: "Quarter",
+		mes: "Month",
+		ano: "Year",
+		logout: "Logout"
+	},
+	fr: {
+		receitas: "Recettes",
+		despesas: "Dépenses",
+		saldo: "Solde",
+		iva: "TVA",
+		carregarFatura: "Charger Facture",
+		pesquisar: "Rechercher fournisseur ou valeur...",
+		hoje: "Aujourd'hui",
+		dias14: "14 jours",
+		trimestre: "Trimestre",
+		mes: "Mois",
+		ano: "Année",
+		logout: "Déconnexion"
+	},
+	da: {
+		receitas: "Indtægter",
+		despesas: "Udgifter",
+		saldo: "Saldo",
+		iva: "Moms",
+		carregarFatura: "Upload Faktura",
+		pesquisar: "Søg leverandør eller beløb...",
+		hoje: "I dag",
+		dias14: "14 dage",
+		trimestre: "Kvartal",
+		mes: "Måned",
+		ano: "År",
+		logout: "Log ud"
+	},
+	it: {
+		receitas: "Entrate",
+		despesas: "Spese",
+		saldo: "Saldo",
+		iva: "IVA",
+		carregarFatura: "Carica Fattura",
+		pesquisar: "Cerca fornitore o valore...",
+		hoje: "Oggi",
+		dias14: "14 giorni",
+		trimestre: "Trimestre",
+		mes: "Mese",
+		ano: "Anno",
+		logout: "Logout"
+	},
+	de: {
+		receitas: "Einnahmen",
+		despesas: "Ausgaben",
+		saldo: "Saldo",
+		iva: "MwSt",
+		carregarFatura: "Rechnung hochladen",
+		pesquisar: "Lieferant oder Wert suchen...",
+		hoje: "Heute",
+		dias14: "14 Tage",
+		trimestre: "Quartal",
+		mes: "Monat",
+		ano: "Jahr",
+		logout: "Abmelden"
+	},
+	sv: {
+		receitas: "Intäkter",
+		despesas: "Utgifter",
+		saldo: "Saldo",
+		iva: "Moms",
+		carregarFatura: "Ladda upp faktura",
+		pesquisar: "Sök leverantör eller värde...",
+		hoje: "Idag",
+		dias14: "14 dagar",
+		trimestre: "Kvartal",
+		mes: "Månad",
+		ano: "År",
+		logout: "Logga ut"
+	},
+	pl: {
+		receitas: "Przychody",
+		despesas: "Wydatki",
+		saldo: "Saldo",
+		iva: "VAT",
+		carregarFatura: "Załaduj fakturę",
+		pesquisar: "Szukaj dostawcy lub wartości...",
+		hoje: "Dziś",
+		dias14: "14 dni",
+		trimestre: "Kwartał",
+		mes: "Miesiąc",
+		ano: "Rok",
+		logout: "Wyloguj"
+	},
+	hu: {
+		receitas: "Bevételek",
+		despesas: "Kiadások",
+		saldo: "Egyenleg",
+		iva: "ÁFA",
+		carregarFatura: "Számla feltöltése",
+		pesquisar: "Szállító vagy érték keresése...",
+		hoje: "Ma",
+		dias14: "14 nap",
+		trimestre: "Negyedév",
+		mes: "Hónap",
+		ano: "Év",
+		logout: "Kijelentkezés"
+	}
+};
+
+function updateTexts(lang) {
+	const t = translations[lang] || translations.pt;
+	document.querySelector('h3').innerText = t.receitas;
+	document.querySelectorAll('.card h3')[0].innerText = t.receitas;
+	document.querySelectorAll('.card h3')[1].innerText = t.despesas;
+	document.querySelectorAll('.card h3')[2].innerText = t.saldo;
+	document.querySelectorAll('.card h3')[3].innerText = t.iva;
+	document.querySelector('.upload h3').innerText = t.carregarFatura;
+	document.getElementById('pesquisaInput').placeholder = t.pesquisar;
+	document.querySelectorAll('.btn-curto')[0].innerText = t.hoje;
+	document.querySelectorAll('.btn-curto')[1].innerText = t.dias14;
+	document.querySelectorAll('.btn-periodo')[0].innerText = t.trimestre;
+	document.querySelectorAll('.btn-periodo')[1].innerText = t.mes;
+	document.querySelectorAll('.btn-periodo')[2].innerText = t.ano;
+	document.querySelector('.logout').innerText = t.logout;
+}
+
+document.getElementById('langSelect').addEventListener('change', function() {
+	updateTexts(this.value);
+});
+
+window.addEventListener('DOMContentLoaded', function() {
+	updateTexts(document.getElementById('langSelect').value);
+});
+</script>
 
 
 <div class="container">

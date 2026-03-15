@@ -14,27 +14,58 @@
 <body>
 
 <div class="login-container">
-
-<img src="/logo.png">
-
-<div id="mensagem" class="form-message hidden"></div>
-
-<form id="loginForm" action="/login" method="POST">
-
-<input id="usernameInput" type="text" name="username" placeholder="Utilizador" required>
-
-<div class="password-wrap">
-<input id="passwordInput" type="password" name="password" placeholder="Password" required>
-<button id="togglePasswordBtn" type="button" class="toggle-password" aria-label="Mostrar password">Ver</button>
+	<img src="/logo.png">
+	<div id="mensagem" class="form-message hidden"></div>
+	<form id="loginForm" action="/login" method="POST">
+		<input id="usernameInput" type="text" name="username" placeholder="Utilizador" required>
+		<div class="password-wrap">
+			<input id="passwordInput" type="password" name="password" placeholder="Password" required>
+			<button id="togglePasswordBtn" type="button" class="toggle-password" aria-label="Mostrar password">Ver</button>
+		</div>
+		<button type="submit" id="loginBtn">Entrar</button>
+	</form>
+	<p class="form-link" id="registerPrompt">Ainda nao tens conta? <a href="/register" id="registerLink">Criar conta</a></p>
+	<select id="langSelectLogin" style="margin-top:16px;font-size:14px;padding:6px 12px;border-radius:8px;background:#fff;color:#111827;border:1px solid #cbd5e1;">
+		<option value="pt">Português</option>
+		<option value="es">Español</option>
+		<option value="en">English</option>
+		<option value="fr">Français</option>
+		<option value="da">Dansk</option>
+		<option value="it">Italiano</option>
+		<option value="de">Deutsch</option>
+		<option value="sv">Svenska</option>
+		<option value="pl">Polski</option>
+		<option value="hu">Magyar</option>
+	</select>
 </div>
-
-<button type="submit">Entrar</button>
-
-</form>
-
-<p class="form-link">Ainda nao tens conta? <a href="/register">Criar conta</a></p>
-
-</div>
+<script>
+const translationsLogin = {
+	pt: {user: "Utilizador", pass: "Password", entrar: "Entrar", ver: "Ver", prompt: "Ainda nao tens conta?", criar: "Criar conta"},
+	es: {user: "Usuario", pass: "Contraseña", entrar: "Entrar", ver: "Ver", prompt: "¿Aún no tienes cuenta?", criar: "Crear cuenta"},
+	en: {user: "Username", pass: "Password", entrar: "Login", ver: "Show", prompt: "Don't have an account?", criar: "Create account"},
+	fr: {user: "Utilisateur", pass: "Mot de passe", entrar: "Entrer", ver: "Voir", prompt: "Vous n'avez pas de compte?", criar: "Créer un compte"},
+	da: {user: "Brugernavn", pass: "Adgangskode", entrar: "Log ind", ver: "Vis", prompt: "Har du ikke en konto?", criar: "Opret konto"},
+	it: {user: "Utente", pass: "Password", entrar: "Accedi", ver: "Vedi", prompt: "Non hai un account?", criar: "Crea account"},
+	de: {user: "Benutzername", pass: "Passwort", entrar: "Anmelden", ver: "Anzeigen", prompt: "Noch kein Konto?", criar: "Konto erstellen"},
+	sv: {user: "Användarnamn", pass: "Lösenord", entrar: "Logga in", ver: "Visa", prompt: "Har du inget konto?", criar: "Skapa konto"},
+	pl: {user: "Użytkownik", pass: "Hasło", entrar: "Zaloguj", ver: "Pokaż", prompt: "Nie masz konta?", criar: "Utwórz konto"},
+	hu: {user: "Felhasználó", pass: "Jelszó", entrar: "Belépés", ver: "Mutat", prompt: "Még nincs fiókod?", criar: "Fiók létrehozása"}
+};
+function updateLoginTexts(lang) {
+	const t = translationsLogin[lang] || translationsLogin.pt;
+	document.getElementById('usernameInput').placeholder = t.user;
+	document.getElementById('passwordInput').placeholder = t.pass;
+	document.getElementById('loginBtn').innerText = t.entrar;
+	document.getElementById('togglePasswordBtn').innerText = t.ver;
+	document.getElementById('registerPrompt').innerHTML = `${t.prompt} <a href='/register' id='registerLink'>${t.criar}</a>`;
+}
+document.getElementById('langSelectLogin').addEventListener('change', function() {
+	updateLoginTexts(this.value);
+});
+window.addEventListener('DOMContentLoaded', function() {
+	updateLoginTexts(document.getElementById('langSelectLogin').value);
+});
+</script>
 
 <script>
 const params = new URLSearchParams(window.location.search)
