@@ -1077,6 +1077,183 @@ td.col-total-cell, td:nth-child(3){
 
 
 <script>
+// --- Tradução automática robusta ---
+const textosTraduzidos = {
+	pt: {
+		receitas: "Receitas",
+		despesas: "Despesas",
+		saldo: "Saldo",
+		iva: "IVA",
+		carregarFatura: "Carregar Fatura",
+		fotoScan: "Foto (Scan)",
+		docPdf: "Doc/PDF",
+		docs: "Docs",
+		downloads: "Downloads",
+		hoje: "Hoje",
+		dias14: "14 dias",
+		mes: "Mes",
+		trimestre: "Trimestre",
+		ano: "Ano",
+		cliente: "Cliente",
+		fornecedor: "Fornecedor",
+		valor: "Valor",
+		acoes: "Ações",
+		editar: "Editar",
+		apagar: "Apagar",
+		semReceitas: "Sem receitas.",
+		semDespesas: "Sem despesas.",
+		exportar: "Exportar",
+		cancelar: "Cancelar",
+		dataInicio: "Data início",
+		dataFim: "Data fim",
+		exportarBtn: "Exportar",
+		ambos: "Ambos (Receitas + Despesas)",
+		exportReceitas: "Receitas",
+		exportDespesas: "Despesas",
+		excel: "Excel (XLSX)",
+		pdf: "PDF",
+		logout: "Logout",
+		pesquisaPlaceholder: "Data/Valor/Fornecedor"
+	},
+	es: {
+		receitas: "Ingresos",
+		despesas: "Gastos",
+		saldo: "Saldo",
+		iva: "IVA",
+		carregarFatura: "Cargar Factura",
+		fotoScan: "Foto (Scan)",
+		docPdf: "Doc/PDF",
+		docs: "Docs",
+		downloads: "Descargas",
+		hoje: "Hoy",
+		dias14: "14 días",
+		mes: "Mes",
+		trimestre: "Trimestre",
+		ano: "Año",
+		cliente: "Cliente",
+		fornecedor: "Proveedor",
+		valor: "Valor",
+		acoes: "Acciones",
+		editar: "Editar",
+		apagar: "Eliminar",
+		semReceitas: "Sin ingresos.",
+		semDespesas: "Sin gastos.",
+		exportar: "Exportar",
+		cancelar: "Cancelar",
+		dataInicio: "Fecha inicio",
+		dataFim: "Fecha fin",
+		exportarBtn: "Exportar",
+		ambos: "Ambos (Ingresos + Gastos)",
+		exportReceitas: "Ingresos",
+		exportDespesas: "Gastos",
+		excel: "Excel (XLSX)",
+		pdf: "PDF",
+		logout: "Salir",
+		pesquisaPlaceholder: "Fecha/Valor/Proveedor"
+	},
+	en: {
+		receitas: "Income",
+		despesas: "Expenses",
+		saldo: "Balance",
+		iva: "VAT",
+		carregarFatura: "Upload Invoice",
+		fotoScan: "Photo (Scan)",
+		docPdf: "Doc/PDF",
+		docs: "Docs",
+		downloads: "Downloads",
+		hoje: "Today",
+		dias14: "14 days",
+		mes: "Month",
+		trimestre: "Quarter",
+		ano: "Year",
+		cliente: "Client",
+		fornecedor: "Supplier",
+		valor: "Amount",
+		acoes: "Actions",
+		editar: "Edit",
+		apagar: "Delete",
+		semReceitas: "No income.",
+		semDespesas: "No expenses.",
+		exportar: "Export",
+		cancelar: "Cancel",
+		dataInicio: "Start date",
+		dataFim: "End date",
+		exportarBtn: "Export",
+		ambos: "Both (Income + Expenses)",
+		exportReceitas: "Income",
+		exportDespesas: "Expenses",
+		excel: "Excel (XLSX)",
+		pdf: "PDF",
+		logout: "Logout",
+		pesquisaPlaceholder: "Date/Amount/Supplier"
+	}
+	// Adicionar outras línguas conforme necessário
+};
+
+function updateTexts(lang) {
+	const t = textosTraduzidos[lang] || textosTraduzidos.pt;
+	try {
+		document.querySelectorAll('.card h3')[0].innerText = t.receitas;
+		document.querySelectorAll('.card h3')[1].innerText = t.despesas;
+		document.querySelectorAll('.card h3')[2].innerText = t.saldo;
+		document.querySelectorAll('.card h3')[3].innerText = t.iva;
+		document.querySelector('.upload h3').innerText = t.carregarFatura;
+		document.querySelector('.btn-camera').innerText = t.fotoScan;
+		document.querySelector('.btn-documento').innerText = t.docPdf;
+		document.querySelector('.btn-docs').innerText = t.docs;
+		document.querySelector('.btn-docs + .auto-upload-btn').innerText = t.downloads;
+		document.querySelectorAll('.btn-curto')[0].innerText = t.hoje;
+		document.querySelectorAll('.btn-curto')[1].innerText = t.dias14;
+		document.querySelectorAll('.btn-periodo')[0].innerText = t.mes;
+		document.querySelectorAll('.btn-periodo')[1].innerText = t.trimestre;
+		document.querySelectorAll('.btn-periodo')[2].innerText = t.ano;
+		document.getElementById('btnMobileReceitas').innerText = t.receitas;
+		document.getElementById('btnMobileDespesas').innerText = t.despesas;
+		document.querySelector('#blocoReceitas h3').innerText = t.receitas;
+		document.querySelector('#blocoDespesas h3').innerText = t.despesas;
+		document.querySelectorAll('#blocoReceitas th')[0].innerText = t.dataInicio;
+		document.querySelectorAll('#blocoReceitas th')[1].innerText = t.cliente;
+		document.querySelectorAll('#blocoReceitas th')[2].innerText = t.valor;
+		document.querySelectorAll('#blocoReceitas th')[3].innerText = t.iva;
+		document.querySelectorAll('#blocoReceitas th')[4].innerText = t.acoes;
+		document.querySelectorAll('#blocoDespesas th')[0].innerText = t.dataInicio;
+		document.querySelectorAll('#blocoDespesas th')[1].innerText = t.fornecedor;
+		document.querySelectorAll('#blocoDespesas th')[2].innerText = t.valor;
+		document.querySelectorAll('#blocoDespesas th')[3].innerText = t.iva;
+		document.querySelectorAll('#blocoDespesas th')[4].innerText = t.acoes;
+		document.getElementById('pesquisaInput').placeholder = t.pesquisaPlaceholder;
+		document.querySelector('#exportModal h3').innerText = t.exportar;
+		document.querySelector('#exportModal button').innerText = t.cancelar;
+		document.querySelector('#exportModal .btn-docs + .auto-upload-btn').innerText = t.exportarBtn;
+		document.querySelectorAll('input[name="exportTipo"]')[0].nextSibling.textContent = t.ambos;
+		document.querySelectorAll('input[name="exportTipo"]')[1].nextSibling.textContent = t.exportReceitas;
+		document.querySelectorAll('input[name="exportTipo"]')[2].nextSibling.textContent = t.exportDespesas;
+		document.querySelectorAll('input[name="exportFormat"]')[0].nextSibling.textContent = t.excel;
+		document.querySelectorAll('input[name="exportFormat"]')[1].nextSibling.textContent = t.pdf;
+		document.getElementById('exportStartDate').previousSibling.textContent = t.dataInicio;
+		document.getElementById('exportEndDate').previousSibling.textContent = t.dataFim;
+		document.querySelector('.logout').innerText = t.logout;
+	} catch (e) {
+		console.warn('Erro ao atualizar textos:', e);
+	}
+}
+
+function setLanguage(lang) {
+	localStorage.setItem('lang', lang);
+	updateTexts(lang);
+}
+
+document.getElementById('langSelect').addEventListener('change', function() {
+	setLanguage(this.value);
+	updateTexts(this.value);
+});
+
+window.addEventListener('DOMContentLoaded', function() {
+	const lang = localStorage.getItem('lang') || 'pt';
+	document.getElementById('langSelect').value = lang;
+	updateTexts(lang);
+});
+// --- Fim tradução automática robusta ---
 // --- Tradução automática ---
 const textosTraduzidos = {
 	pt: {
